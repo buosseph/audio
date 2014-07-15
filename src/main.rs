@@ -9,4 +9,6 @@ fn main() {
 	println!("{}\n", version);
 
 	wave::read_file_data("../wav/Warrior Concerto - no meta.wav");
+
+	wave::get_audio("../wav/Warrior Concerto - no meta.wav");
 }
