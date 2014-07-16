@@ -1,3 +1,5 @@
+#![feature(struct_variant)]
+
 pub mod wave;
 
 #[allow(dead_code)]
@@ -11,6 +13,10 @@ fn main() {
 	wave::read_file_data("../wav/Warrior Concerto - no meta.wav");
 
 	//wave::write_test_wav("../wav/test.wav");
+
 	wave::get_audio("../wav/test.wav");
+
+	//wave::get_audio("../wav/test-pcm-mono.wav");
+	//wave::get_audio("../wav/test-pcm-stereo.wav");
 
 }

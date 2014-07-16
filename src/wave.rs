@@ -1,16 +1,15 @@
 
-
 use std::str;
 use std::io::File;
 use std::path::posix::{Path};
 
 
-/*pub mod pcm {
-	pub struct PCM<T> {
-		num_of_channels: uint;
-		data: Vec<T>
+
+pub mod pcm {
+	pub enum PCM {
+		PCM16 {pub num_of_channels: uint, pub size: uint, pub data: Vec<i16>},
 	}
-}*/
+}
 
 pub fn read_file_data(wav_file_path: &str) {
 
@@ -76,7 +75,7 @@ pub fn read_file_data(wav_file_path: &str) {
 
 
 #[allow(unreachable_code)]
-pub fn get_audio(wav_file_path: &str) {
+pub fn get_audio(wav_file_path: &str) -> pcm::PCM {
 	
 	let path = Path::new(wav_file_path);
 	match File::open(&path) {
@@ -167,21 +166,22 @@ pub fn get_audio(wav_file_path: &str) {
 										}
 									}
 								}
-
-								// Can't return Vec as will be different types depending on bitrate
-								//data
+								pcm::PCM16{ num_of_channels: num_of_channels as uint, size: data.len(), data: data }
 
 							},
 
 							// Mono
 							(1, 2) => {
 
-								//unimplemented!();
+								unimplemented!();
 
-								// Is this suppose to be unsigned?
-								let mut data: Vec<u16> = Vec::with_capacity(data_size as uint);
+								// Though this was suppose to be unsigned...
+								// Using test.wav requires data to be read as u16
+								// Using test-pcm-mono.wav requires data to be read as i16
+
+								let mut data: Vec<i16> = Vec::with_capacity(data_size as uint);
 								for i in range(0, data_size) {
-									match wav_file.read_le_u16() {
+									match wav_file.read_le_i16() {
 										Ok(sample) => {
 											println!("{}: {}", i, sample);
 											data.push(sample);
@@ -266,12 +266,14 @@ pub fn write_test_wav(filename: &str) {
 
 }
 
+
 #[cfg(test)]
 mod tests {
 	use std::str;
 	use std::io::File;
 	use std::path::posix::{Path};
 
+	#[test]
 	pub fn write_test_wav(filename: &str) {
 
 		let path = Path::new(filename);
