@@ -4,10 +4,11 @@ use std::str;
 use std::io::File;
 use std::path::posix::{Path};
 
-/*
-pub mod pcm {
-	pub struct PCM {
-		data
+
+/*pub mod pcm {
+	pub struct PCM<T> {
+		num_of_channels: uint;
+		data: Vec<T>
 	}
 }*/
 
@@ -74,7 +75,8 @@ pub fn read_file_data(wav_file_path: &str) {
 }
 
 
-pub fn get_audio(wav_file_path: &str) -> Vec<i16> {
+#[allow(unreachable_code)]
+pub fn get_audio(wav_file_path: &str) {
 	
 	let path = Path::new(wav_file_path);
 	match File::open(&path) {
@@ -131,35 +133,145 @@ pub fn get_audio(wav_file_path: &str) -> Vec<i16> {
 				);
 
 
-			// Assume 16-bit, uses signed ints, doesn't distinguish channels
-			let size = data_size as uint / 2;
-			let mut data: Vec<i16> = Vec::with_capacity(size);
-			loop {
-				match wav_file.read_le_i16() {
-					Ok(sample) => {
-						println!("{}", sample);
-						data.push(sample);
+			/* Reading:
+			 * - Check if PCM
+			 * - Check bitrate
+			 * - Check channels and block size
+			 */
+
+			if format_tag == 1 {
+				match bit_rate {
+
+					// Uses signed ints (8-bit uses uints)
+					16 => {
+						match (num_of_channels, block_size) {
+							// Stereo
+							(2, 4) => {
+
+								// Vec holds each channel sample independently for now (e.g. data[0] = L, data[1] = R)
+								let mut data: Vec<i16> = Vec::with_capacity(data_size as uint);
+								for i in range(0, data_size) {
+									match wav_file.read_le_i16() {
+										Ok(sample) => {
+											if i % 2 == 0 {
+												println!("L: {}", sample);
+											}
+											else {
+												println!("R: {}", sample);
+											}
+											data.push(sample);
+										},
+										Err(e)	=> {
+											println!("{}", e);	// EOF
+											break; 
+										}
+									}
+								}
+
+								// Can't return Vec as will be different types depending on bitrate
+								//data
+
+							},
+
+							// Mono
+							(1, 2) => {
+
+								//unimplemented!();
+
+								// Is this suppose to be unsigned?
+								let mut data: Vec<u16> = Vec::with_capacity(data_size as uint);
+								for i in range(0, data_size) {
+									match wav_file.read_le_u16() {
+										Ok(sample) => {
+											println!("{}: {}", i, sample);
+											data.push(sample);
+										},
+										Err(e)	=> {
+											println!("{}", e);	// EOF
+											break;
+										}
+									}
+								}
+
+								// Can't return Vec as will be different types depending on bitrate
+								//data
+
+							},
+
+							(_, _) => {
+								fail!("This file is encoded using an unsupported number of channels.");
+							}
+						}
+
 					},
-					Err(e)	=> {
-						// EOF
-						println!("Error: {}", e);
-						break;
+
+					_ => {
+						fail!("This file is encoded using an unsupported bitrate.");
 					}
 				}
 			}
-			data
+			else {
+				fail!("This file is not encoded using PCM.");
+			}
 			
-			
-
 		}
 		Err(e) => fail!("{}", e)
 	}
 
 }
 
+pub fn write_test_wav(filename: &str) {
 
-[cfg(test)]
+	let path = Path::new(filename);
+	let mut wav_file = File::create(&path);
+
+	// Assume 44 byte header for now
+	let riff_header = "RIFF";
+	let file_size: u32 = 88244;
+	let file_type_header = "WAVE";
+
+	let format_chunk_marker = "fmt ";
+	let format_chunk_length: u32 = 16;
+	let format_tag: u16 = 1;
+	let num_of_channels: u16 = 1;
+	let samples_per_sec: u32 = 44100;
+	let data_rate: u32 = 88200;
+	let block_size: u16 = 2;
+	let bit_rate: u16 = 16;
+
+	let data_chunk_header = "data";
+	let data_size: u32 = 44100;		// 1 second
+
+
+
+	wav_file.write_str(riff_header).unwrap();
+	wav_file.write_le_u32(file_size).unwrap();
+	wav_file.write_str(file_type_header).unwrap();
+
+	wav_file.write_str(format_chunk_marker).unwrap();
+	wav_file.write_le_u32(format_chunk_length).unwrap();
+	wav_file.write_le_u16(format_tag).unwrap();
+	wav_file.write_le_u16(num_of_channels).unwrap();
+	wav_file.write_le_u32(samples_per_sec).unwrap();
+	wav_file.write_le_u32(data_rate).unwrap();
+	wav_file.write_le_u16(block_size).unwrap();
+	wav_file.write_le_u16(bit_rate).unwrap();
+
+	wav_file.write_str(data_chunk_header).unwrap();
+	wav_file.write_le_u32(data_size).unwrap();
+
+	for i in range(0, data_size) {
+		wav_file.write_le_i16(i as i16).unwrap();
+	}
+
+}
+
+#[cfg(test)]
 mod tests {
+	use std::str;
+	use std::io::File;
+	use std::path::posix::{Path};
+
 	pub fn write_test_wav(filename: &str) {
 
 		let path = Path::new(filename);
@@ -167,7 +279,7 @@ mod tests {
 
 		// Assume 44 byte header for now
 		let riff_header = "RIFF";
-		let file_size: u32 = 44100;		// 1 second
+		let file_size: u32 = 88244;
 		let file_type_header = "WAVE";
 
 		let format_chunk_marker = "fmt ";
@@ -180,30 +292,30 @@ mod tests {
 		let bit_rate: u16 = 16;
 
 		let data_chunk_header = "data";
-		let data_size: u32 = 44100;
+		let data_size: u32 = 44100;		// 1 second
 
 
 
-		wav_file.write_str(riff_header);
-		wav_file.write_le_u32(file_size);
-		wav_file.write_str(file_type_header);
+		wav_file.write_str(riff_header).unwrap();
+		wav_file.write_le_u32(file_size).unwrap();
+		wav_file.write_str(file_type_header).unwrap();
 
-		wav_file.write_str(format_chunk_marker);
-		wav_file.write_le_u32(format_chunk_length);
-		wav_file.write_le_u16(format_tag);
-		wav_file.write_le_u16(num_of_channels);
-		wav_file.write_le_u32(samples_per_sec);
-		wav_file.write_le_u32(data_rate);
-		wav_file.write_le_u16(block_size);
-		wav_file.write_le_u16(bit_rate);
+		wav_file.write_str(format_chunk_marker).unwrap();
+		wav_file.write_le_u32(format_chunk_length).unwrap();
+		wav_file.write_le_u16(format_tag).unwrap();
+		wav_file.write_le_u16(num_of_channels).unwrap();
+		wav_file.write_le_u32(samples_per_sec).unwrap();
+		wav_file.write_le_u32(data_rate).unwrap();
+		wav_file.write_le_u16(block_size).unwrap();
+		wav_file.write_le_u16(bit_rate).unwrap();
 
-		wav_file.write_str(data_chunk_header);
-		wav_file.write_le_u32(data_size);
+		wav_file.write_str(data_chunk_header).unwrap();
+		wav_file.write_le_u32(data_size).unwrap();
 
 		for i in range(0, data_size) {
-			wav_file.write_le_u16(i as u16);
+			wav_file.write_le_u16(i as u16).unwrap();
 		}
-		
+
 	}
 }
 

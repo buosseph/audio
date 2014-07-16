@@ -10,6 +10,7 @@ fn main() {
 
 	wave::read_file_data("../wav/Warrior Concerto - no meta.wav");
 
-	//wave::get_audio("../wav/Warrior Concerto - no meta.wav");
+	//wave::write_test_wav("../wav/test.wav");
+	wave::get_audio("../wav/test.wav");
 
 }
