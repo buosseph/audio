@@ -3,7 +3,20 @@ use std::str;
 use std::io::File;
 use std::path::posix::{Path};
 
+#[deriving(Show)]
+pub enum SampleOrder {
+	MONO,
+	INTERLEAVED,
+	REVERSED,
+	PLANAR,
+}
 
+#[deriving(Show)]
+pub struct RawAudio {
+	pub num_of_channels: uint,
+	pub order: SampleOrder,
+	pub samples: Vec<f32>,
+}
 
 pub fn read_file_data(wav_file_path: &str) {
 
@@ -70,7 +83,7 @@ pub fn read_file_data(wav_file_path: &str) {
 
 
 #[allow(unreachable_code)]
-pub fn read_file(wav_file_path: &str) -> Vec<f32> {
+pub fn read_file(wav_file_path: &str) -> RawAudio {
 	
 	let path = Path::new(wav_file_path);
 	match File::open(&path) {
@@ -163,7 +176,8 @@ pub fn read_file(wav_file_path: &str) -> Vec<f32> {
 									}
 								}
 								
-								data
+								// Assume interleved for now
+								RawAudio{ num_of_channels: 2, order: INTERLEAVED, samples: data}
 
 							},
 
@@ -185,7 +199,8 @@ pub fn read_file(wav_file_path: &str) -> Vec<f32> {
 									}
 								}
 
-								data
+								// Assume interleved for now
+								RawAudio{ num_of_channels: 1, order: MONO, samples: data}
 
 							},
 
