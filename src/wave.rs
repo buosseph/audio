@@ -5,12 +5,6 @@ use std::path::posix::{Path};
 
 
 
-pub mod pcm {
-	pub enum PCM {
-		PCM16 {pub num_of_channels: uint, pub size: uint, pub data: Vec<i16>},
-	}
-}
-
 pub fn read_file_data(wav_file_path: &str) {
 
 	let path = Path::new(wav_file_path);
@@ -74,8 +68,9 @@ pub fn read_file_data(wav_file_path: &str) {
 }
 
 
+
 #[allow(unreachable_code)]
-pub fn get_audio(wav_file_path: &str) -> pcm::PCM {
+pub fn read_file(wav_file_path: &str) -> Vec<f32> {
 	
 	let path = Path::new(wav_file_path);
 	match File::open(&path) {
@@ -148,17 +143,18 @@ pub fn get_audio(wav_file_path: &str) -> pcm::PCM {
 							(2, 4) => {
 
 								// Vec holds each channel sample independently for now (e.g. data[0] = L, data[1] = R)
-								let mut data: Vec<i16> = Vec::with_capacity(data_size as uint);
+								let mut data: Vec<f32> = Vec::with_capacity(data_size as uint);
 								for i in range(0, data_size) {
 									match wav_file.read_le_i16() {
 										Ok(sample) => {
+											let float_sample = sample as f32 / 32768f32;
 											if i % 2 == 0 {
-												println!("L: {}", sample);
+												print!("L: {} -> {}\t", sample, float_sample);
 											}
 											else {
-												println!("R: {}", sample);
+												println!("R: {} -> {}", sample, float_sample);
 											}
-											data.push(sample);
+											data.push(float_sample);
 										},
 										Err(e)	=> {
 											println!("{}", e);	// EOF
@@ -166,25 +162,21 @@ pub fn get_audio(wav_file_path: &str) -> pcm::PCM {
 										}
 									}
 								}
-								pcm::PCM16{ num_of_channels: num_of_channels as uint, size: data.len(), data: data }
+								
+								data
 
 							},
 
 							// Mono
 							(1, 2) => {
 
-								unimplemented!();
-
-								// Though this was suppose to be unsigned...
-								// Using test.wav requires data to be read as u16
-								// Using test-pcm-mono.wav requires data to be read as i16
-
-								let mut data: Vec<i16> = Vec::with_capacity(data_size as uint);
+								let mut data: Vec<f32> = Vec::with_capacity(data_size as uint);
 								for i in range(0, data_size) {
 									match wav_file.read_le_i16() {
 										Ok(sample) => {
-											println!("{}: {}", i, sample);
-											data.push(sample);
+											let float_sample = sample as f32 / 32768f32;
+											println!("{}: {} -> {}", i, sample, float_sample);
+											data.push(float_sample);
 										},
 										Err(e)	=> {
 											println!("{}", e);	// EOF
@@ -193,8 +185,7 @@ pub fn get_audio(wav_file_path: &str) -> pcm::PCM {
 									}
 								}
 
-								// Can't return Vec as will be different types depending on bitrate
-								//data
+								data
 
 							},
 
@@ -220,9 +211,9 @@ pub fn get_audio(wav_file_path: &str) -> pcm::PCM {
 
 }
 
-pub fn write_test_wav(filename: &str) {
+pub fn write_file(wav_file_path: &str) {
 
-	let path = Path::new(filename);
+	let path = Path::new(wav_file_path);
 	let mut wav_file = File::create(&path);
 
 	// Assume 44 byte header for now
@@ -269,12 +260,11 @@ pub fn write_test_wav(filename: &str) {
 
 #[cfg(test)]
 mod tests {
-	use std::str;
-	use std::io::File;
-	use std::path::posix::{Path};
+	use super::*;
 
+	/*
 	#[test]
-	pub fn write_test_wav(filename: &str) {
+	fn write_test_wav(filename: &str) {
 
 		let path = Path::new(filename);
 		let mut wav_file = File::create(&path);
@@ -318,6 +308,21 @@ mod tests {
 			wav_file.write_le_u16(i as u16).unwrap();
 		}
 
-	}
+	}*/
+
+	/*
+	#[test]
+	fn test_read_wave() {
+
+		let raw_pcm_mono_data = vec!(0i, 0, 5924, -3298, 4924, 5180, -1770, -1768, -6348, -23005, -3524, -3548, -12783, 3354);
+
+		match read_file("../wav/test-pcm-mono.wav") {
+			PCMi16 => {
+				assert_eq!(PCMi16.num_of_channels, 1);
+			}
+		}
+		
+		//assert_eq!(mono_audio.data, raw_pcm_mono_data);
+	}*/
 }
 
