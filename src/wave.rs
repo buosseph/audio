@@ -13,6 +13,8 @@ pub enum SampleOrder {
 
 #[deriving(Show)]
 pub struct RawAudio {
+	pub bit_rate: uint,
+	pub sampling_rate: uint,
 	pub num_of_channels: uint,
 	pub order: SampleOrder,
 	pub samples: Vec<f32>,
@@ -107,7 +109,7 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 			let data_chunk_header = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
 			let data_size = wav_file.read_le_u32().unwrap(); // Read this many bytes for data
 
-
+			
 			println!(
 	"master_riff_chunk:
 		{}
@@ -138,6 +140,7 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 				data_chunk_header,
 				data_size
 				);
+			
 
 
 			/* Reading:
@@ -155,18 +158,11 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 							// Stereo
 							(2, 4) => {
 
-								// Vec holds each channel sample independently for now (e.g. data[0] = L, data[1] = R)
 								let mut data: Vec<f32> = Vec::with_capacity(data_size as uint);
-								for i in range(0, data_size) {
+								for _ in range(0, data_size) {
 									match wav_file.read_le_i16() {
 										Ok(sample) => {
 											let float_sample = sample as f32 / 32768f32;
-											if i % 2 == 0 {
-												print!("L: {} -> {}\t", sample, float_sample);
-											}
-											else {
-												println!("R: {} -> {}", sample, float_sample);
-											}
 											data.push(float_sample);
 										},
 										Err(e)	=> {
@@ -175,9 +171,9 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 										}
 									}
 								}
-								
+
 								// Assume interleved for now
-								RawAudio{ num_of_channels: 2, order: INTERLEAVED, samples: data}
+								RawAudio{ bit_rate: bit_rate as uint, sampling_rate: samples_per_sec as uint, num_of_channels: num_of_channels as uint, order: INTERLEAVED, samples: data}
 
 							},
 
@@ -185,11 +181,10 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 							(1, 2) => {
 
 								let mut data: Vec<f32> = Vec::with_capacity(data_size as uint);
-								for i in range(0, data_size) {
+								for _ in range(0, data_size) {
 									match wav_file.read_le_i16() {
 										Ok(sample) => {
 											let float_sample = sample as f32 / 32768f32;
-											println!("{}: {} -> {}", i, sample, float_sample);
 											data.push(float_sample);
 										},
 										Err(e)	=> {
@@ -199,8 +194,7 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 									}
 								}
 
-								// Assume interleved for now
-								RawAudio{ num_of_channels: 1, order: MONO, samples: data}
+								RawAudio{ bit_rate: bit_rate as uint, sampling_rate: samples_per_sec as uint, num_of_channels: num_of_channels as uint, order: MONO, samples: data}
 
 							},
 
@@ -226,27 +220,36 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 
 }
 
-pub fn write_file(wav_file_path: &str) {
+
+// Only allow writing as PCM at the moment
+pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 
 	let path = Path::new(wav_file_path);
 	let mut wav_file = File::create(&path);
 
+	let block_size: uint = raw_audio.num_of_channels * raw_audio.bit_rate / 8;
+
 	// Assume 44 byte header for now
 	let riff_header = "RIFF";
-	let file_size: u32 = 88244;
+	let file_size: u32 =  (4 + 8 + 16 + 8 + raw_audio.samples.len() * block_size) as u32;	// = 4 + (8 + fmt_chunk size) + (8 + (data_chunk size * block_size)) (NOTE: 8 bytes are purposely missing for riff_header and file_size)
 	let file_type_header = "WAVE";
 
+	// Audio format as determined as function argument? 
 	let format_chunk_marker = "fmt ";
-	let format_chunk_length: u32 = 16;
-	let format_tag: u16 = 1;
-	let num_of_channels: u16 = 1;
-	let samples_per_sec: u32 = 44100;
-	let data_rate: u32 = 88200;
-	let block_size: u16 = 2;
-	let bit_rate: u16 = 16;
+	let format_chunk_length: u32 = 16;		// 16 if PCM
+	let format_tag: u16 = 1;				// 1 if PCM
+
+	// NOTE: variables above are determined by audio format (e.g. PCM, float, A-Law, etc.)
+
+
+
+	let num_of_channels: u16 = raw_audio.num_of_channels as u16;
+	let samples_per_sec: u32 = raw_audio.sampling_rate as u32;
+	let data_rate: u32 = (raw_audio.sampling_rate * raw_audio.num_of_channels * raw_audio.bit_rate / 8) as u32;
+	let bit_rate: u16 = raw_audio.bit_rate as u16;
 
 	let data_chunk_header = "data";
-	let data_size: u32 = 44100;		// 1 second
+	let data_size: u32 = (raw_audio.samples.len() * block_size) as u32;		// = data_chunk size * block_size
 
 
 
@@ -260,15 +263,30 @@ pub fn write_file(wav_file_path: &str) {
 	wav_file.write_le_u16(num_of_channels).unwrap();
 	wav_file.write_le_u32(samples_per_sec).unwrap();
 	wav_file.write_le_u32(data_rate).unwrap();
-	wav_file.write_le_u16(block_size).unwrap();
+	wav_file.write_le_u16(block_size as u16).unwrap();
 	wav_file.write_le_u16(bit_rate).unwrap();
 
 	wav_file.write_str(data_chunk_header).unwrap();
 	wav_file.write_le_u32(data_size).unwrap();
 
-	for i in range(0, data_size) {
-		wav_file.write_le_i16(i as i16).unwrap();
+
+
+	for sample in raw_audio.samples.iter() {
+
+		let mut pcm_sample = sample * 32768f32;
+
+		if pcm_sample > 32767f32 {
+			pcm_sample = 32767f32;
+		}
+		if pcm_sample < -32768f32 {
+			pcm_sample = -32768f32;
+		}
+		println!("{} -> {}", sample, pcm_sample);
+		wav_file.write_le_i16(pcm_sample as i16).unwrap();
+
 	}
+
+	true
 
 }
 
@@ -277,67 +295,27 @@ pub fn write_file(wav_file_path: &str) {
 mod tests {
 	use super::*;
 
-	/*
 	#[test]
-	fn write_test_wav(filename: &str) {
-
-		let path = Path::new(filename);
-		let mut wav_file = File::create(&path);
-
-		// Assume 44 byte header for now
-		let riff_header = "RIFF";
-		let file_size: u32 = 88244;
-		let file_type_header = "WAVE";
-
-		let format_chunk_marker = "fmt ";
-		let format_chunk_length: u32 = 16;
-		let format_tag: u16 = 1;
-		let num_of_channels: u16 = 1;
-		let samples_per_sec: u32 = 44100;
-		let data_rate: u32 = 88200;
-		let block_size: u16 = 2;
-		let bit_rate: u16 = 16;
-
-		let data_chunk_header = "data";
-		let data_size: u32 = 44100;		// 1 second
-
-
-
-		wav_file.write_str(riff_header).unwrap();
-		wav_file.write_le_u32(file_size).unwrap();
-		wav_file.write_str(file_type_header).unwrap();
-
-		wav_file.write_str(format_chunk_marker).unwrap();
-		wav_file.write_le_u32(format_chunk_length).unwrap();
-		wav_file.write_le_u16(format_tag).unwrap();
-		wav_file.write_le_u16(num_of_channels).unwrap();
-		wav_file.write_le_u32(samples_per_sec).unwrap();
-		wav_file.write_le_u32(data_rate).unwrap();
-		wav_file.write_le_u16(block_size).unwrap();
-		wav_file.write_le_u16(bit_rate).unwrap();
-
-		wav_file.write_str(data_chunk_header).unwrap();
-		wav_file.write_le_u32(data_size).unwrap();
-
-		for i in range(0, data_size) {
-			wav_file.write_le_u16(i as u16).unwrap();
-		}
-
-	}*/
-
-	/*
-	#[test]
-	fn test_read_wave() {
-
-		let raw_pcm_mono_data = vec!(0i, 0, 5924, -3298, 4924, 5180, -1770, -1768, -6348, -23005, -3524, -3548, -12783, 3354);
-
-		match read_file("../wav/test-pcm-mono.wav") {
-			PCMi16 => {
-				assert_eq!(PCMi16.num_of_channels, 1);
-			}
-		}
+	fn test_write_file() {
+		let test_files = vec!(
+		"test-pcm-mono.wav",
+		"test-pcm-stereo.wav",
+		);
 		
-		//assert_eq!(mono_audio.data, raw_pcm_mono_data);
-	}*/
+		for filename in test_files.iter() {
+			let read_prefix = "../wav/".to_string();
+			let path_to_read = read_prefix.append(*filename);
+
+			let raw_audio = read_file(path_to_read.as_slice());
+			println!("{}", raw_audio);
+
+			let write_prefix = "../test/wav/".to_string();
+			let path_to_write = write_prefix.append(*filename);
+
+			assert!(write_file(raw_audio, path_to_write.as_slice()));
+
+		}
+	}
+
 }
 
