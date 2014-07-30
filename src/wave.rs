@@ -234,11 +234,17 @@ pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 	let path = Path::new(wav_file_path);
 	let mut wav_file = File::create(&path);
 
+	let num_of_channels: u16 = raw_audio.num_of_channels as u16;
+	let samples_per_sec: u32 = raw_audio.sampling_rate as u32;
+	let data_rate: u32 = (raw_audio.sampling_rate * raw_audio.num_of_channels * raw_audio.bit_rate / 8) as u32;
+	let bit_rate: u16 = raw_audio.bit_rate as u16;
 	let block_size: uint = raw_audio.num_of_channels * raw_audio.bit_rate / 8;
+
+
 
 	// Assume 44 byte header for now
 	let riff_header = "RIFF";
-	let file_size: u32 =  (4 + 8 + 16 + 8 + raw_audio.samples.len() * block_size) as u32;	// = 4 + (8 + fmt_chunk size) + (8 + (data_chunk size * block_size)) (NOTE: 8 bytes are purposely missing for riff_header and file_size)
+	let file_size: u32 =  (4 + 8 + 16 + 8 + raw_audio.samples.len() * block_size / raw_audio.num_of_channels) as u32;	// = 4 + (8 + fmt_chunk size) + (8 + (data_chunk size * block_size)) (NOTE: 8 bytes are purposely missing for riff_header and file_size)
 	let file_type_header = "WAVE";
 
 	// Audio format as determined as function argument? 
@@ -250,13 +256,9 @@ pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 
 
 
-	let num_of_channels: u16 = raw_audio.num_of_channels as u16;
-	let samples_per_sec: u32 = raw_audio.sampling_rate as u32;
-	let data_rate: u32 = (raw_audio.sampling_rate * raw_audio.num_of_channels * raw_audio.bit_rate / 8) as u32;
-	let bit_rate: u16 = raw_audio.bit_rate as u16;
-
 	let data_chunk_header = "data";
-	let data_size: u32 = (raw_audio.samples.len() * block_size) as u32;		// = data_chunk size * block_size
+	let data_size: u32 = (raw_audio.samples.len() * block_size / raw_audio.num_of_channels) as u32;		// = data_chunk size * block_size
+
 
 
 
