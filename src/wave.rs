@@ -3,6 +3,15 @@ use std::str;
 use std::io::File;
 use std::path::posix::{Path};
 
+/*
+	Consider this:
+	Does a sample represent the single value in one channel? Or does it represent the group of values from all channels?
+	(In interleaved data does a pair of values make a sample or two?)
+	If it's the latter, then consider abstracting samples to a struct or tuple, which can make interleaving easier in most cases
+
+	For now assume a sample is of a single channel
+*/
+
 #[deriving(Show)]
 pub enum SampleOrder {
 	MONO,
@@ -113,7 +122,7 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 			println!(
 	"master_riff_chunk:
 		{}
-		File size: {}
+		File size: {} bytes
 		File type: {}
 	{}_chunk:
 		Chunk length: {},
@@ -149,6 +158,7 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 			 * - Check channels and block size
 			 */
 
+			let number_of_samples: uint = data_size as uint / num_of_channels as uint;
 			if format_tag == 1 {
 				match bit_rate {
 
@@ -157,17 +167,15 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 						match (num_of_channels, block_size) {
 							// Stereo
 							(2, 4) => {
-
-								let mut data: Vec<f32> = Vec::with_capacity(data_size as uint);
-								for _ in range(0, data_size) {
+								let mut data: Vec<f32> = Vec::with_capacity(number_of_samples as uint);
+								for _ in range(0, number_of_samples as uint) {
 									match wav_file.read_le_i16() {
 										Ok(sample) => {
 											let float_sample = sample as f32 / 32768f32;
 											data.push(float_sample);
 										},
 										Err(e)	=> {
-											println!("{}", e);	// EOF
-											break; 
+											fail!("Error: {}", e);
 										}
 									}
 								}
@@ -179,17 +187,16 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 
 							// Mono
 							(1, 2) => {
-
-								let mut data: Vec<f32> = Vec::with_capacity(data_size as uint);
-								for _ in range(0, data_size) {
+								
+								let mut data: Vec<f32> = Vec::with_capacity(number_of_samples as uint);
+								for _ in range(0, number_of_samples as uint) {
 									match wav_file.read_le_i16() {
 										Ok(sample) => {
 											let float_sample = sample as f32 / 32768f32;
 											data.push(float_sample);
 										},
 										Err(e)	=> {
-											println!("{}", e);	// EOF
-											break;
+											fail!("Error: {}", e);
 										}
 									}
 								}
@@ -281,7 +288,7 @@ pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 		if pcm_sample < -32768f32 {
 			pcm_sample = -32768f32;
 		}
-		println!("{} -> {}", sample, pcm_sample);
+
 		wav_file.write_le_i16(pcm_sample as i16).unwrap();
 
 	}
