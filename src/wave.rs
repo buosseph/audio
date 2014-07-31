@@ -310,6 +310,38 @@ impl RawAudio {
 		}
 		true
 	}
+
+	pub fn reverse_channels(&mut self) -> bool {
+		for i in range(0, self.samples.len()) {
+			if i % self.num_of_channels == self.num_of_channels - 1 {
+
+				for j in range(0, self.num_of_channels / 2) {
+					let left_index = i - ( (i - j) % self.num_of_channels );
+					let right_index = i - j;
+
+					if left_index != right_index {
+						let temp = *self.samples.get_mut(left_index);
+						*self.samples.get_mut(left_index) = *self.samples.get_mut(right_index);
+						*self.samples.get_mut(right_index) = temp;
+					}
+				}
+
+			}
+		}
+
+		true
+	}
+
+	pub fn reverse(&mut self) -> bool {
+		self.samples.reverse();
+		self.reverse_channels()
+	}
+
+	// Also reverses channels
+	pub fn full_reverse(&mut self) -> bool {
+		self.samples.reverse();
+		true
+	}
 }
 
 
