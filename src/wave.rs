@@ -300,6 +300,19 @@ pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 }
 
 
+
+impl RawAudio {
+
+	// Create test to write and test checking for phase cancellation
+	pub fn invert(&mut self) -> bool {
+		for sample in self.samples.mut_iter() {
+			*sample = -*sample;
+		}
+		true
+	}
+}
+
+
 #[cfg(test)]
 mod tests {
 	use super::*;
