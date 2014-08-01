@@ -300,8 +300,19 @@ pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 }
 
 
-
+// Process
 impl RawAudio {
+
+	//	Can't use decibel values until std::num::Float is further implemented
+	//	gain = 10^(decibels / 20), decibels = 20 * log10(gain)
+	//	Amplify by 7.94328 (18db)
+	//	Allows clipping
+	pub fn amplify(&mut self, gain: f32) -> bool {
+		for sample in self.samples.mut_iter() {
+			*sample = *sample * gain;
+		}
+		true
+	}
 
 	// Create test to write and test checking for phase cancellation
 	pub fn invert(&mut self) -> bool {
@@ -344,6 +355,13 @@ impl RawAudio {
 	}
 }
 
+
+// Generate
+/*impl RawAudio {
+	pub fn add_silence(&mut self, ) -> bool {
+
+	}
+}*/
 
 #[cfg(test)]
 mod tests {
