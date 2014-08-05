@@ -314,6 +314,30 @@ impl RawAudio {
 		true
 	}
 
+
+	// Issue: result is half length of desired
+	pub fn stereo_to_mono(&mut self) -> bool {
+		match self.num_of_channels {
+			2 => {
+				let mut mono_buffer: Vec<f32> = Vec::with_capacity(self.samples.len() / 2);
+				let mut first_channel_value: f32 = 0.;
+				for i in range(0, self.samples.len()) {
+					// Every second value
+					if i % 2 == 1 {
+						let second_channel_value: f32 = *self.samples.get_mut(i);
+						let mono_value: f32 = (first_channel_value + second_channel_value) / 2.;
+						mono_buffer.push(mono_value);
+					}
+					first_channel_value = *self.samples.get_mut(i);
+				}
+				self.samples = mono_buffer;
+
+				true
+			},
+			_ => false
+		}
+	}
+
 	// Create test to write and test checking for phase cancellation
 	pub fn invert(&mut self) -> bool {
 		for sample in self.samples.mut_iter() {
@@ -355,13 +379,6 @@ impl RawAudio {
 	}
 }
 
-
-// Generate
-/*impl RawAudio {
-	pub fn add_silence(&mut self, ) -> bool {
-
-	}
-}*/
 
 #[cfg(test)]
 mod tests {
