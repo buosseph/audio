@@ -4,12 +4,10 @@ use std::io::File;
 use std::path::posix::{Path};
 
 /*
-	Consider this:
-	Does a sample represent the single value in one channel? Or does it represent the group of values from all channels?
-	(In interleaved data does a pair of values make a sample or two?)
-	If it's the latter, then consider abstracting samples to a struct or tuple, which can make interleaving easier in most cases
+	Sample = singular f32 value (independent of channel)
+	Clip = Group of samples along time domain (Should always include all channels)
 
-	For now assume a sample is of a single channel
+	Separate channels into separate tracks for processing
 */
 
 #[deriving(Show)]
@@ -314,7 +312,6 @@ impl RawAudio {
 		true
 	}
 
-
 	// Issue: result is half length of desired
 	pub fn stereo_to_mono(&mut self) -> bool {
 		match self.num_of_channels {
@@ -376,6 +373,23 @@ impl RawAudio {
 	pub fn full_reverse(&mut self) -> bool {
 		self.samples.reverse();
 		true
+	}
+
+	pub fn delay(&mut self) -> bool {
+		let delay: f32 = 1.0;
+		let decay: f32 = 0.5;
+
+		let blockSize = (self.sampling_rate as f32 * delay) as int;
+
+		if blockSize < 1 || blockSize > self.samples.len() as int {
+			return false
+		}
+
+		for sample in self.samples.mut_iter() {
+			*sample = *sample + *sample * decay;
+		}
+		return true
+
 	}
 }
 
