@@ -1,3 +1,4 @@
+//use audio::Audio;
 
 use std::str;
 use std::io::File;
@@ -10,6 +11,7 @@ use std::path::posix::{Path};
 	Separate channels into separate tracks for processing
 */
 
+/*
 #[deriving(Show)]
 pub enum SampleOrder {
 	MONO,
@@ -18,6 +20,7 @@ pub enum SampleOrder {
 	PLANAR,
 }
 
+
 #[deriving(Show)]
 pub struct RawAudio {
 	pub bit_rate: uint,
@@ -25,8 +28,9 @@ pub struct RawAudio {
 	pub num_of_channels: uint,
 	pub order: SampleOrder,
 	pub samples: Vec<f32>,
-}
+}*/
 
+/*
 pub fn read_file_data(wav_file_path: &str) {
 
 	let path = Path::new(wav_file_path);
@@ -87,10 +91,13 @@ pub fn read_file_data(wav_file_path: &str) {
 		Err(e) => fail!("{}", e)
 	}
 
-}
+}*/
 
+// pub fn meta_data(audio: Audio) {
+// 	println!("bit_rate: {}, sampling_rate: {}, num_of_channels: {}, order: {}", audio.bit_rate, audio.sampling_rate, audio.num_of_channels, audio.order);
+// }
 
-
+/*
 #[allow(unreachable_code)]
 pub fn read_file(wav_file_path: &str) -> RawAudio {
 	
@@ -150,11 +157,11 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 			
 
 
-			/* Reading:
-			 * - Check if PCM
-			 * - Check bitrate
-			 * - Check channels and block size
-			 */
+			// Reading:
+			// - Check if PCM
+			// - Check bitrate
+			// - Check channels and block size
+			
 
 			let number_of_samples: uint = data_size as uint / num_of_channels as uint;
 			if format_tag == 1 {
@@ -224,8 +231,9 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 	}
 
 }
+*/
 
-
+/*
 // Only allow writing as PCM at the moment
 pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 
@@ -295,9 +303,11 @@ pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 
 	true
 
-}
+}*/
 
 
+
+/*
 // Process
 impl RawAudio {
 
@@ -392,12 +402,14 @@ impl RawAudio {
 
 	}
 }
+*/
 
-
+/*
 #[cfg(test)]
 mod tests {
 	use super::*;
 
+	// Tests need fixing
 	#[test]
 	fn test_write_file() {
 		let test_files = vec!(
@@ -420,5 +432,5 @@ mod tests {
 		}
 	}
 
-}
+}*/
 
