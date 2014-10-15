@@ -23,20 +23,11 @@ impl RawAudio {
 	pub fn print_samples(&self) {
 		println!("Samples: {}", self.samples);
 	}
-
 }
 
+// pub trait AudioDecoder {
+// }
 
 pub trait Dynamics {
-	fn invert(&mut self) -> bool;
-}
-impl Dynamics for RawAudio {
-	// Create test to write and test checking for phase cancellation
-	// Optimization: traverse using merge sort? -> O(log n)
-	fn invert(&mut self) -> bool {
-		for sample in self.samples.iter_mut() {
-			*sample = -*sample;
-		}
-		true
-	}
+	fn amplify(&mut self, gain: f64) -> bool;
 }

@@ -8,14 +8,13 @@ pub use audio:: {
 	REVERSED,
 	PLANAR
 };
-
 pub mod audio;
 
 // Codecs
 pub mod wave;
 
 // Processing
-//pub mod dynamics;
+pub mod dynamics;
 
 #[test]
 fn it_works() {
