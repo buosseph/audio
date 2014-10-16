@@ -1,9 +1,8 @@
 //use audio::AudioDecoder;
+//use audio::{RawAudio, SampleOrder};
 
-use audio::{RawAudio, SampleOrder};
-
-use std::str;
-use std::io::{File, IoResult};
+use std::str::from_utf8;
+use std::io::{File};
 use std::path::posix::{Path};
 
 // Sample = singular f64 value (independent of channel)
@@ -24,25 +23,27 @@ pub fn read_file_data(wav_file_path: &str) {
 	};
 
 	// Assume 44 byte header for now
-	let double_word = match wav_file.read_exact(4) {
-		Ok(bytes)	=> bytes,
-		Err(e)		=> fail!("Error: {}", e),
-	};
-	let riff_header = str::from_utf8(double_word.as_slice()).unwrap(); //str::from_utf8_owned(double_word).unwrap();
-	let file_size = wav_file.read_le_u32().unwrap();
-	let file_type_header = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
+	let double_word = wav_file.read_exact(4).unwrap();
+	let riff_header = from_utf8(double_word.as_slice()).unwrap();
 
-	let format_chunk_marker = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
+	let file_size = wav_file.read_le_u32().unwrap();
+
+	let double_word = wav_file.read_exact(4).unwrap();
+	let file_type_header = from_utf8(double_word.as_slice()).unwrap();
+
+	let double_word = wav_file.read_exact(4).unwrap();
+	let format_chunk_marker = from_utf8(double_word.as_slice()).unwrap();
+	
 	let format_chunk_length = wav_file.read_le_u32().unwrap();
 	let format_tag = wav_file.read_le_u16().unwrap();
-
 	let num_of_channels = wav_file.read_le_u16().unwrap();
 	let samples_per_sec = wav_file.read_le_u32().unwrap();
 	let data_rate = wav_file.read_le_u32().unwrap();
 	let block_size = wav_file.read_le_u16().unwrap();
 	let bit_rate = wav_file.read_le_u16().unwrap();
 
-	let data_chunk_header = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
+	let double_word = wav_file.read_exact(4).unwrap();
+	let data_chunk_header = from_utf8(double_word.as_slice()).unwrap();
 	let data_size = wav_file.read_le_u32().unwrap(); // Read this many bytes for data
 
 
