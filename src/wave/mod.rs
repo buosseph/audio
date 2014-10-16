@@ -5,6 +5,8 @@ use std::str::from_utf8;
 use std::io::{File};
 use std::path::posix::{Path};
 
+pub mod chunk;
+
 // Sample = singular f64 value (independent of channel)
 // Clip = Group of samples along time domain (Should always include all channels)
 // Separate channels into separate tracks for processing
@@ -31,21 +33,17 @@ pub fn read_file_data(wav_file_path: &str) {
 	let double_word = wav_file.read_exact(4).unwrap();
 	let file_type_header = from_utf8(double_word.as_slice()).unwrap();
 
+
 	let double_word = wav_file.read_exact(4).unwrap();
 	let format_chunk_marker = from_utf8(double_word.as_slice()).unwrap();
-	
-	let format_chunk_length = wav_file.read_le_u32().unwrap();
-	let format_tag = wav_file.read_le_u16().unwrap();
-	let num_of_channels = wav_file.read_le_u16().unwrap();
-	let samples_per_sec = wav_file.read_le_u32().unwrap();
-	let data_rate = wav_file.read_le_u32().unwrap();
-	let block_size = wav_file.read_le_u16().unwrap();
-	let bit_rate = wav_file.read_le_u16().unwrap();
+
+	let fmt = chunk::FormatChunk::read_chunk(&mut wav_file).unwrap();
+
 
 	let double_word = wav_file.read_exact(4).unwrap();
 	let data_chunk_header = from_utf8(double_word.as_slice()).unwrap();
-	let data_size = wav_file.read_le_u32().unwrap(); // Read this many bytes for data
 
+	let data = chunk::DataChunk::read_chunk(&mut wav_file).unwrap();
 
 	println!(
 		"master_riff_chunk:
@@ -67,15 +65,15 @@ pub fn read_file_data(wav_file_path: &str) {
 		file_size,
 		file_type_header,
 		format_chunk_marker,
-		format_chunk_length,
-		format_tag,
-		num_of_channels,
-		samples_per_sec,
-		data_rate,
-		block_size,
-		bit_rate,
+		fmt.size,
+		fmt.compression_code,
+		fmt.num_of_channels,
+		fmt.sampling_rate,
+		fmt.data_rate,
+		fmt.block_size,
+		fmt.bit_rate,
 		data_chunk_header,
-		data_size
+		data.size,
 		);
 
 }
