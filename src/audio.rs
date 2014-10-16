@@ -28,6 +28,14 @@ impl RawAudio {
 // pub trait AudioDecoder {
 // }
 
+pub trait Utilities {
+	fn stereo_to_mono(&mut self) -> bool;
+	fn invert(&mut self) -> bool;
+	fn reverse_channels(&mut self) -> bool;
+	fn reverse(&mut self) -> bool;
+	fn full_reverse(&mut self) -> bool;
+}
+
 pub trait Dynamics {
 	fn amplify(&mut self, gain: f64) -> bool;
 }

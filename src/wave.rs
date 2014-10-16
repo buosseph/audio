@@ -1,40 +1,19 @@
 //use audio::AudioDecoder;
 
-//use audio::Audio;
+use audio::{RawAudio, SampleOrder};
 
-// use std::str;
-// use std::io::File;
-// use std::path::posix::{Path};
-
-/*
-	Sample = singular f32 value (independent of channel)
-	Clip = Group of samples along time domain (Should always include all channels)
-
-	Separate channels into separate tracks for processing
-*/
-
-/*
-#[deriving(Show)]
-pub enum SampleOrder {
-	MONO,
-	INTERLEAVED,
-	REVERSED,
-	PLANAR,
-}
+use std::str;
+use std::io::File;
+use std::path::posix::{Path};
 
 
-#[deriving(Show)]
-pub struct RawAudio {
-	pub bit_rate: uint,
-	pub sampling_rate: uint,
-	pub num_of_channels: uint,
-	pub order: SampleOrder,
-	pub samples: Vec<f32>,
-}*/
+// Sample = singular f64 value (independent of channel)
+// Clip = Group of samples along time domain (Should always include all channels)
+// Separate channels into separate tracks for processing
 
-/*
+// All functions need to be rewritten!
+
 pub fn read_file_data(wav_file_path: &str) {
-
 	let path = Path::new(wav_file_path);
 	match File::open(&path) {
 		Ok(mut wav_file) => {
@@ -93,11 +72,7 @@ pub fn read_file_data(wav_file_path: &str) {
 		Err(e) => fail!("{}", e)
 	}
 
-}*/
-
-// pub fn meta_data(audio: Audio) {
-// 	println!("bit_rate: {}, sampling_rate: {}, num_of_channels: {}, order: {}", audio.bit_rate, audio.sampling_rate, audio.num_of_channels, audio.order);
-// }
+}
 
 /*
 #[allow(unreachable_code)]
@@ -307,102 +282,6 @@ pub fn write_file(raw_audio: RawAudio, wav_file_path: &str) -> bool {
 
 }*/
 
-/*
-// Process
-impl RawAudio {
-
-	//	Can't use decibel values until std::num::Float is further implemented
-	//	gain = 10^(decibels / 20), decibels = 20 * log10(gain)
-	//	Amplify by 7.94328 (18db)
-	//	Allows clipping
-	pub fn amplify(&mut self, gain: f32) -> bool {
-		for sample in self.samples.mut_iter() {
-			*sample = *sample * gain;
-		}
-		true
-	}
-
-	// Issue: result is half length of desired
-	pub fn stereo_to_mono(&mut self) -> bool {
-		match self.num_of_channels {
-			2 => {
-				let mut mono_buffer: Vec<f32> = Vec::with_capacity(self.samples.len() / 2);
-				let mut first_channel_value: f32 = 0.;
-				for i in range(0, self.samples.len()) {
-					// Every second value
-					if i % 2 == 1 {
-						let second_channel_value: f32 = *self.samples.get_mut(i);
-						let mono_value: f32 = (first_channel_value + second_channel_value) / 2.;
-						mono_buffer.push(mono_value);
-					}
-					first_channel_value = *self.samples.get_mut(i);
-				}
-				self.samples = mono_buffer;
-
-				true
-			},
-			_ => false
-		}
-	}
-
-	// Create test to write and test checking for phase cancellation
-	pub fn invert(&mut self) -> bool {
-		for sample in self.samples.mut_iter() {
-			*sample = -*sample;
-		}
-		true
-	}
-
-	pub fn reverse_channels(&mut self) -> bool {
-		for i in range(0, self.samples.len()) {
-			if i % self.num_of_channels == self.num_of_channels - 1 {
-
-				for j in range(0, self.num_of_channels / 2) {
-					let left_index = i - ( (i - j) % self.num_of_channels );
-					let right_index = i - j;
-
-					if left_index != right_index {
-						let temp = *self.samples.get_mut(left_index);
-						*self.samples.get_mut(left_index) = *self.samples.get_mut(right_index);
-						*self.samples.get_mut(right_index) = temp;
-					}
-				}
-
-			}
-		}
-
-		true
-	}
-
-	pub fn reverse(&mut self) -> bool {
-		self.samples.reverse();
-		self.reverse_channels()
-	}
-
-	// Also reverses channels
-	pub fn full_reverse(&mut self) -> bool {
-		self.samples.reverse();
-		true
-	}
-
-	pub fn delay(&mut self) -> bool {
-		let delay: f32 = 1.0;
-		let decay: f32 = 0.5;
-
-		let blockSize = (self.sampling_rate as f32 * delay) as int;
-
-		if blockSize < 1 || blockSize > self.samples.len() as int {
-			return false
-		}
-
-		for sample in self.samples.mut_iter() {
-			*sample = *sample + *sample * decay;
-		}
-		return true
-
-	}
-}
-*/
 
 /*
 #[cfg(test)]
