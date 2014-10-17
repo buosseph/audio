@@ -7,6 +7,28 @@ pub trait Chunk {
 
 // Only implment reading 16-bit (i16) data for now
 
+pub struct RiffHeader {
+	// id: u32, // 0x52494646 => "RIFF"
+	pub size: u32,
+	pub format: u32, // 0x57415645 => "WAVE"
+}
+
+impl RiffHeader {
+	pub fn read_chunk(file: &mut File) -> IoResult<RiffHeader> {
+
+		let file_size			= try!(file.read_le_u32());
+		let file_type_header	= try!(file.read_le_u32());
+
+		// Verify file_type_header is "WAVE"
+
+		Ok(
+			RiffHeader {
+				size: file_size,
+				format: file_type_header,
+			}
+		)
+	}
+}
 
 #[allow(dead_code)]
 #[deriving(Show)]
@@ -67,22 +89,22 @@ impl FormatChunk {
 pub struct DataChunk {
 	// id: u32, // 0x64617461 => "data"
 	pub size: u32,
-	pub data: Vec<f64>,
+	pub data: Vec<u8>,	// Uninterpreted data
 }
 
 impl DataChunk {
 	// Does not read for id
-	// For now don't read actual sample data
 	pub fn read_chunk(file: &mut File) -> IoResult<DataChunk> {
 		// let double_word = wav_file.read_exact(4).unwrap();
 		// let data_chunk_header = from_utf8(double_word.as_slice()).unwrap();
 
-		let size = try!(file.read_le_u32()); // Read this many bytes for data
+		let size = try!(file.read_le_u32());
+		let data = try!(file.read_exact(size as uint));	// Data still not interprete based on bit_rate
 
 		Ok(
 			DataChunk {
 				size: size,
-				data: vec![0f64],	// temporary
+				data: data,
 			}
 		)
 	}

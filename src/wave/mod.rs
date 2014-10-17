@@ -29,7 +29,6 @@ pub fn read_file_data(wav_file_path: &str) {
 	let riff_header = from_utf8(double_word.as_slice()).unwrap();
 
 	let file_size = wav_file.read_le_u32().unwrap();
-
 	let double_word = wav_file.read_exact(4).unwrap();
 	let file_type_header = from_utf8(double_word.as_slice()).unwrap();
 
@@ -39,11 +38,10 @@ pub fn read_file_data(wav_file_path: &str) {
 
 	let fmt = chunk::FormatChunk::read_chunk(&mut wav_file).unwrap();
 
-
+	// Quicker to read next few bytes rather than entire DataChunk
 	let double_word = wav_file.read_exact(4).unwrap();
 	let data_chunk_header = from_utf8(double_word.as_slice()).unwrap();
-
-	let data = chunk::DataChunk::read_chunk(&mut wav_file).unwrap();
+	let data_size = wav_file.read_le_u32().unwrap(); // In bytes
 
 	println!(
 		"master_riff_chunk:
@@ -73,7 +71,7 @@ pub fn read_file_data(wav_file_path: &str) {
 		fmt.block_size,
 		fmt.bit_rate,
 		data_chunk_header,
-		data.size,
+		data_size,
 		);
 
 }
