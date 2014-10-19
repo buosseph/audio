@@ -89,7 +89,7 @@ impl FormatChunk {
 pub struct DataChunk {
 	// id: u32, // 0x64617461 => "data"
 	pub size: u32,
-	pub data: Vec<u8>,	// Uninterpreted data
+	pub data: Vec<u8>,	// Uninterpreted data -> needs to be able to be read as i16
 }
 
 impl DataChunk {

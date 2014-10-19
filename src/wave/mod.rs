@@ -76,141 +76,111 @@ pub fn read_file_data(wav_file_path: &str) {
 
 }
 
-/*
+// Incomplete (won't compile)
 #[allow(unreachable_code)]
 pub fn read_file(wav_file_path: &str) -> RawAudio {
 	
 	let path = Path::new(wav_file_path);
-	match File::open(&path) {
-		Ok(mut wav_file) => {
+	let mut wav_file = match File::open(&path) {
+		Ok(file)	=> file,
+		Err(e)		=> fail!("File error: {}", e),
+	};
 
-			// Assume 44 byte header for now
-			let riff_header = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
-			let file_size = wav_file.read_le_u32().unwrap();
-			let file_type_header = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
+	// Assume 44 byte header for now
+	let double_word = wav_file.read_exact(4).unwrap();
+	let riff_header = from_utf8(double_word.as_slice()).unwrap();
+	let file_size = wav_file.read_le_u32().unwrap();
+	let double_word = wav_file.read_exact(4).unwrap();
+	let file_type_header = from_utf8(double_word.as_slice()).unwrap();
 
-			let format_chunk_marker = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
-			let format_chunk_length = wav_file.read_le_u32().unwrap();
-			let format_tag = wav_file.read_le_u16().unwrap();
 
-			let num_of_channels = wav_file.read_le_u16().unwrap();	// 1 = mono, 2 = stereo
-			let samples_per_sec = wav_file.read_le_u32().unwrap();	// 44100, 88200, etc...
-			let data_rate = wav_file.read_le_u32().unwrap();		// = samples_per_sec * num_of_channels * bit_rate / 8
-			let block_size = wav_file.read_le_u16().unwrap();	// 2 = 1 byte (mono), 4 = 2 bytes (L+R), use this to determine how to read/ = num_of_channels * bit_rate / 8
-			let bit_rate = wav_file.read_le_u16().unwrap();		// If 16+ data is signed, 
+	let double_word = wav_file.read_exact(4).unwrap();
+	let format_chunk_marker = from_utf8(double_word.as_slice()).unwrap();
+	let fmt = chunk::FormatChunk::read_chunk(&mut wav_file).unwrap();
 
-			let data_chunk_header = str::from_utf8_owned(wav_file.read_exact(4).unwrap()).unwrap();
-			let data_size = wav_file.read_le_u32().unwrap(); // Read this many bytes for data
 
-			
-			println!(
-	"master_riff_chunk:
-		{}
-		File size: {} bytes
-		File type: {}
-	{}_chunk:
-		Chunk length: {},
-		Format: {} (1 = PCM, 3 = IEEE float, ...),
-		Channels: {},
-		Sample rate: {},
-		Data rate: {},
-		Block size: {},
-		Bit rate: {}
-	{}_chunk:
-		Data size: {} bytes
-	",
-				riff_header,
-				file_size,
-				file_type_header,
-				format_chunk_marker,
-				format_chunk_length,
-				format_tag,
-				num_of_channels,
-				samples_per_sec,
-				data_rate,
-				block_size,
-				bit_rate,
-				data_chunk_header,
-				data_size
-				);
+	let double_word = wav_file.read_exact(4).unwrap();
+	let data_chunk_marker = from_utf8(double_word.as_slice()).unwrap();
+	let data = chunk::DataChunk::read_chunk(&mut wav_file).unwrap();
 			
 
 
-			// Reading:
-			// - Check if PCM
-			// - Check bitrate
-			// - Check channels and block size
-			
+	// Reading:
+	// - Check if PCM
+	// - Check bitrate
+	// - Check channels and block size
+	
 
-			let number_of_samples: uint = data_size as uint / num_of_channels as uint;
-			if format_tag == 1 {
-				match bit_rate {
+	let number_of_samples: uint = data.size as uint / fmt.num_of_channels as uint;
+	if fmt.compression_code == 1 {
+		match fmt.bit_rate as uint {
 
-					// Uses signed ints (8-bit uses uints)
-					16 => {
-						match (num_of_channels, block_size) {
-							// Stereo
-							(2, 4) => {
-								let mut data: Vec<f32> = Vec::with_capacity(number_of_samples as uint);
-								for _ in range(0, number_of_samples as uint) {
-									match wav_file.read_le_i16() {
-										Ok(sample) => {
-											let float_sample = sample as f32 / 32768f32;
-											data.push(float_sample);
-										},
-										Err(e)	=> {
-											fail!("Error: {}", e);
-										}
-									}
+			// Uses signed ints (8-bit uses uints)
+			16 => {
+				match (fmt.num_of_channels as uint, fmt.block_size as uint) {
+					// Stereo
+					// (2, 4) => {
+					// 	let mut data: Vec<f64> = Vec::with_capacity(number_of_samples as uint);
+					// 	for _ in range(0, number_of_samples as uint) {
+					// 		match wav_file.read_le_i16() {
+					// 			Ok(sample) => {
+					// 				let float_sample = sample as f32 / 32768f32;
+					// 				data.push(float_sample);
+					// 			},
+					// 			Err(e)	=> {
+					// 				fail!("Error: {}", e);
+					// 			}
+					// 		}
+					// 	}
+
+					// 	// Assume interleved for now
+					// 	RawAudio{ bit_rate: bit_rate as uint, sampling_rate: samples_per_sec as uint, num_of_channels: num_of_channels as uint, order: INTERLEAVED, samples: data}
+
+					// },
+
+					// Mono
+					(1, 2) => {
+						
+						let mut samples: Vec<f64> = Vec::with_capacity(number_of_samples as uint);
+						for _ in range(0, number_of_samples as uint) {
+							match data.data.read_le_i16() {
+								Ok(sample) => {
+									let float_sample = sample as f64 / 32768f64;
+									data.push(float_sample);
+								},
+								Err(e)	=> {
+									fail!("Error: {}", e);
 								}
-
-								// Assume interleved for now
-								RawAudio{ bit_rate: bit_rate as uint, sampling_rate: samples_per_sec as uint, num_of_channels: num_of_channels as uint, order: INTERLEAVED, samples: data}
-
-							},
-
-							// Mono
-							(1, 2) => {
-								
-								let mut data: Vec<f32> = Vec::with_capacity(number_of_samples as uint);
-								for _ in range(0, number_of_samples as uint) {
-									match wav_file.read_le_i16() {
-										Ok(sample) => {
-											let float_sample = sample as f32 / 32768f32;
-											data.push(float_sample);
-										},
-										Err(e)	=> {
-											fail!("Error: {}", e);
-										}
-									}
-								}
-
-								RawAudio{ bit_rate: bit_rate as uint, sampling_rate: samples_per_sec as uint, num_of_channels: num_of_channels as uint, order: MONO, samples: data}
-
-							},
-
-							(_, _) => {
-								fail!("This file is encoded using an unsupported number of channels.");
 							}
 						}
 
+						RawAudio {
+							bit_rate: fmt.bit_rate as uint,
+							sampling_rate: fmt.sampling_rate as uint,
+							num_of_channels: fmt.num_of_channels as uint,
+							order: INTERLEAVED,
+							samples: samples,
+						}
 					},
 
-					_ => {
-						fail!("This file is encoded using an unsupported bitrate.");
+					(_, _) => {
+						fail!("This file is encoded using an unsupported number of channels.");
 					}
 				}
+
+			},
+
+			_ => {
+				fail!("This file is encoded using an unsupported bitrate.");
 			}
-			else {
-				fail!("This file is not encoded using PCM.");
-			}
-			
 		}
-		Err(e) => fail!("{}", e)
+	}
+	else {
+		fail!("This file is not encoded using PCM.");
 	}
 
 }
-*/
+
 
 /*
 // Only allow writing as PCM at the moment
