@@ -77,6 +77,7 @@ pub fn read_file_data(wav_file_path: &str) {
 }
 
 // Incomplete (won't compile)
+/*
 #[allow(unreachable_code)]
 pub fn read_file(wav_file_path: &str) -> RawAudio {
 	
@@ -180,7 +181,7 @@ pub fn read_file(wav_file_path: &str) -> RawAudio {
 	}
 
 }
-
+*/
 
 /*
 // Only allow writing as PCM at the moment

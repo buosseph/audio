@@ -18,8 +18,9 @@ pub use audio::Utilities;
 
 pub mod audio;
 
-// Codecs
+// Formats
 pub mod wave;
+pub mod aiff;
 
 // Processing
 pub mod utilities;
