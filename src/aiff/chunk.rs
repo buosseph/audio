@@ -3,10 +3,6 @@ use std::io::{File, IoResult};
 // Byte order: Big-endian
 // For dealing with extended, use FFI? (http://www.onicos.com/staff/iz/formats/aiff.html)
 
-// const FORM = 0x464F524D;
-// const COMM = 0x434F4D4D;
-// const SSND = 0x53534E44;
-
 pub struct IFFHeader {
 	// id: u32, // 0x464F524D => "FORM"
 	pub size: i32, // size + 8 = total size including this and id

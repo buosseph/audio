@@ -1,11 +1,16 @@
 //use audio::AudioDecoder;
 //use audio::{RawAudio, SampleOrder};
 
-use std::str::from_utf8;
+
 use std::io::{File};
 use std::path::posix::{Path};
 
 pub mod chunk;
+
+
+const FORM: i32 = 0x464F524D;
+const COMM: i32 = 0x434F4D4D;
+const SSND: i32 = 0x53534E44;
 
 
 pub fn read_file_data(file_path: &str) {
@@ -15,21 +20,25 @@ pub fn read_file_data(file_path: &str) {
 		Err(e)	=> fail!("File error: {}", e),
 	};
 
-	let double_word = file.read_exact(4).unwrap();
-	let iff_header = from_utf8(double_word.as_slice()).unwrap();
-	// If FORM => read IffHeader, else fail
+
+	let iff_header =  file.read_be_i32().unwrap();
+	if iff_header != FORM {
+		fail!("File is not valid IFF container.");
+	}
 	let header = chunk::IFFHeader::read_chunk(&mut file).unwrap();
 
 
-	let double_word = file.read_exact(4).unwrap();
-	let comm_chunk_marker = from_utf8(double_word.as_slice()).unwrap();
-	// If COMM => read CommonChunk, else fail
+	let comm_chunk_marker = file.read_be_i32().unwrap();
+	if comm_chunk_marker != COMM {
+		fail!("File does not contain required common chunk.");
+	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
 
 
-	let double_word = file.read_exact(4).unwrap();
-	let ssnd_chunk_marker = from_utf8(double_word.as_slice()).unwrap();
-	// If SSND => read SoundDataChunk, else fail
+	let ssnd_chunk_marker = file.read_be_i32().unwrap();
+	if ssnd_chunk_marker != SSND {
+		fail!("File does not contain required sound data chunk.");
+	}
 	let ssnd = chunk::SoundDataChunk::read_chunk(&mut file).unwrap();
 
 
