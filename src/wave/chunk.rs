@@ -1,20 +1,20 @@
 use std::io::{File, IoResult};
 
-// Unused
-pub trait Chunk {
-	fn read_chunk(file: &mut File) -> IoResult<Self>;
-}
-
+// Byte-order: Little-endian
 // Only implment reading 16-bit (i16) data for now
 
-pub struct RiffHeader {
+// Hex Contants must be stored as big endian
+//const WAVE: u32 = 0x57415645;
+
+pub struct RIFFHeader {
 	// id: u32, // 0x52494646 => "RIFF"
 	pub size: u32,
 	pub format: u32, // 0x57415645 => "WAVE"
 }
 
-impl RiffHeader {
-	pub fn read_chunk(file: &mut File) -> IoResult<RiffHeader> {
+impl RIFFHeader {
+	// Assume 44 byte header for now
+	pub fn read_chunk(file: &mut File) -> IoResult<RIFFHeader> {
 
 		let file_size			= try!(file.read_le_u32());
 		let file_type_header	= try!(file.read_le_u32());
@@ -22,7 +22,7 @@ impl RiffHeader {
 		// Verify file_type_header is "WAVE"
 
 		Ok(
-			RiffHeader {
+			RIFFHeader {
 				size: file_size,
 				format: file_type_header,
 			}

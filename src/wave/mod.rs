@@ -1,7 +1,6 @@
 //use audio::AudioDecoder;
 //use audio::{RawAudio, SampleOrder};
 
-use std::str::from_utf8;
 use std::io::{File};
 use std::path::posix::{Path};
 
@@ -11,58 +10,60 @@ pub mod chunk;
 // Clip = Group of samples along time domain (Should always include all channels)
 // Separate channels into separate tracks for processing
 
-
-const RIFF: u32 = 0x52494646;
-
+// Hex Contants must be stored as big endian
+const RIFF: u32 = 0x46464952;
+const FMT:	u32 = 0x20746D66;
+const DATA: u32 = 0x61746164;
 
 // All functions need to be rewritten!
 
-pub fn read_file_data(wav_file_path: &str) {
-	let path = Path::new(wav_file_path);
-	let mut wav_file = match File::open(&path) {
-		Ok(file)	=> file,
+pub fn read_file_data(file_path: &str) {
+	let path = Path::new(file_path);
+	let mut file = match File::open(&path) {
+		Ok(f)	=> f,
 		Err(e)		=> fail!("File error: {}", e),
 	};
 
-	// Assume 44 byte header for now
-	let double_word = wav_file.read_exact(4).unwrap();
-	let riff_header = from_utf8(double_word.as_slice()).unwrap();
 
-	let file_size = wav_file.read_le_u32().unwrap();
-	let double_word = wav_file.read_exact(4).unwrap();
-	let file_type_header = from_utf8(double_word.as_slice()).unwrap();
+	let riff_header = file.read_le_u32().unwrap();
+	if riff_header != RIFF {
+		fail!("File is not valid WAVE.");
+	}
+	let header = chunk::RIFFHeader::read_chunk(&mut file).unwrap();
 
 
-	let double_word = wav_file.read_exact(4).unwrap();
-	let format_chunk_marker = from_utf8(double_word.as_slice()).unwrap();
+	let format_chunk_marker = file.read_le_u32().unwrap();
+	if format_chunk_marker != FMT {
+		fail!("File is not valid WAVE. Does not contain required format chunk.");
+	}
+	let fmt = chunk::FormatChunk::read_chunk(&mut file).unwrap();
 
-	let fmt = chunk::FormatChunk::read_chunk(&mut wav_file).unwrap();
 
-	// Quicker to read next few bytes rather than entire DataChunk
-	let double_word = wav_file.read_exact(4).unwrap();
-	let data_chunk_header = from_utf8(double_word.as_slice()).unwrap();
-	let data_size = wav_file.read_le_u32().unwrap(); // In bytes
+	let data_chunk_marker = file.read_le_u32().unwrap();
+	if data_chunk_marker != DATA {
+		fail!("Files is not valid WAVE. Does not contain required data chunk.");
+	}
+	let data = chunk::DataChunk::read_chunk(&mut file).unwrap();
 
 	println!(
-		"master_riff_chunk:
-			{}
-			File size: {}
-			File type: {}
-		{}_chunk:
-			Chunk length: {},
-			Format: {} (1 = PCM, 3 = IEEE float, ...),
-			Channels: {},
-			Sample rate: {},
-			Data rate: {},
-			Block size: {},
-			Bit rate: {}
-		{}_chunk:
-			Data size: {} bytes
-		",
+	"master_riff_chunk:
+		(RIFF) {}
+		File size: {}
+		File type: (WAVE) {}
+	fmt_chunk:
+		Chunk size: {},
+		Format: {} (1 = PCM, 3 = IEEE float, ...),
+		Channels: {},
+		Sample rate: {},
+		Data rate: {},
+		Block size: {},
+		Bit rate: {}
+	data_chunk:
+		Data size: {} bytes
+	",
 		riff_header,
-		file_size,
-		file_type_header,
-		format_chunk_marker,
+		header.size,
+		header.format,
 		fmt.size,
 		fmt.compression_code,
 		fmt.num_of_channels,
@@ -70,8 +71,7 @@ pub fn read_file_data(wav_file_path: &str) {
 		fmt.data_rate,
 		fmt.block_size,
 		fmt.bit_rate,
-		data_chunk_header,
-		data_size,
+		data.size,
 		);
 
 }
