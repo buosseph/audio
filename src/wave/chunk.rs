@@ -1,19 +1,13 @@
 use std::io::{File, IoResult};
 
 // Byte-order: Little-endian
-// Only implment reading 16-bit (i16) data for now
-
-// Hex Contants must be stored as big endian
-//const WAVE: u32 = 0x57415645;
 
 pub struct RIFFHeader {
-	// id: u32, // 0x52494646 => "RIFF"
 	pub size: u32,
-	pub format: u32, // 0x57415645 => "WAVE"
+	pub format: u32,
 }
 
 impl RIFFHeader {
-	// Assume 44 byte header for now
 	pub fn read_chunk(file: &mut File) -> IoResult<RIFFHeader> {
 
 		let file_size			= try!(file.read_le_u32());
@@ -39,7 +33,6 @@ pub enum CompressionCode {
 
 #[allow(dead_code)]
 pub struct FormatChunk {
-	//id: u32, // 0x666D7420 => "fmt"
 	pub size: u32,
 	pub compression_code: CompressionCode,
 	pub num_of_channels: u16,
@@ -51,7 +44,6 @@ pub struct FormatChunk {
 }
 
 impl FormatChunk {
-	// Does not read for id
 	pub fn read_chunk(file: &mut File) -> IoResult<FormatChunk> {
 		let chunk_size							= try!(file.read_le_u32());
 		let compression_code: CompressionCode	= 
@@ -70,9 +62,16 @@ impl FormatChunk {
 		let block_size							= try!(file.read_le_u16());
 		let bit_rate							= try!(file.read_le_u16());
 
+		// Extra bytes
+		if chunk_size > 16 {
+			let extra_length = chunk_size - 16;
+			for _ in range(0, extra_length) {
+				try!(file.read_u8());
+			}
+		}
+
 		Ok(
 			FormatChunk {
-				//id: 
 				size: chunk_size,
 				compression_code: compression_code,
 				num_of_channels: num_of_channels,
@@ -85,9 +84,9 @@ impl FormatChunk {
 	}
 }
 
+// Not used, bad implementation
 // Multi-channel samples are always interleaved
 pub struct DataChunk {
-	// id: u32, // 0x64617461 => "data"
 	pub size: u32,
 	pub data: Vec<u8>,	// Uninterpreted data -> needs to be able to be read as i16
 }
