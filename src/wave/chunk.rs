@@ -1,6 +1,10 @@
 use std::io::{File, IoResult};
 
+use super::WAVE;
+
 // Byte-order: Little-endian
+
+// TODO: Replace fails with IoErrors
 
 pub struct RIFFHeader {
 	pub size: u32,
@@ -13,7 +17,9 @@ impl RIFFHeader {
 		let file_size			= try!(file.read_le_u32());
 		let file_type_header	= try!(file.read_le_u32());
 
-		// Verify file_type_header is "WAVE"
+		if file_type_header != WAVE {
+			fail!("File is not valid WAVE.");
+		}
 
 		Ok(
 			RIFFHeader {
