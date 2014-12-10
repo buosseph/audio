@@ -9,27 +9,27 @@ pub fn read_file_data(file_path: &str) {
 	let path = Path::new(file_path);
 	let mut file = match File::open(&path) {
 		Ok(f)	=> f,
-		Err(e)	=> fail!("File error: {}", e),
+		Err(e)	=> panic!("File error: {}", e),
 	};
 
 
 	let iff_header =  file.read_be_i32().unwrap();
 	if iff_header != FORM {
-		fail!("File is not valid AIFF.");
+		panic!("File is not valid AIFF.");
 	}
 	let header = chunk::IFFHeader::read_chunk(&mut file).unwrap();
 
 
 	let comm_chunk_marker = file.read_be_i32().unwrap();
 	if comm_chunk_marker != COMM {
-		fail!("File is not valid AIFF. Does not contain required common chunk.");
+		panic!("File is not valid AIFF. Does not contain required common chunk.");
 	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
 
 
 	let ssnd_chunk_marker = file.read_be_i32().unwrap();
 	if ssnd_chunk_marker != SSND {
-		fail!("File is not valid AIFF. Does not contain required sound data chunk.");
+		panic!("File is not valid AIFF. Does not contain required sound data chunk.");
 	}
 	let ssnd = chunk::SoundDataChunk::read_chunk(&mut file).unwrap();
 

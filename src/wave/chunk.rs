@@ -17,7 +17,7 @@ impl RIFFHeader {
 		let file_type_header	= try!(file.read_le_u32());
 
 		if file_type_header != WAVE {
-			fail!("File is not valid WAVE.");
+			panic!("File is not valid WAVE.");
 		}
 
 		Ok(
@@ -54,11 +54,11 @@ impl FormatChunk {
 			match file.read_le_u16() {
 				Ok(code)	=> {
 					match code {
-						1 => PCM,
-						_ => Unknown,
+						1 => CompressionCode::PCM,
+						_ => CompressionCode::Unknown,
 					}
 				},
-				Err(e)		=> {fail!("Error: {}", e)},
+				Err(e)		=> {panic!("Error: {}", e)},
 			};
 		let num_of_channels						= try!(file.read_le_u16());
 		let sampling_rate						= try!(file.read_le_u32());

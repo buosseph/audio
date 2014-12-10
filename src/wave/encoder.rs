@@ -61,7 +61,7 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 	try!(file.write_le_u32(data_size));
 
 	for sample in raw_audio.samples.iter() {
-		let mut pcm_sample = sample * 32768f64;
+		let mut pcm_sample = *sample * 32768f64;
 
 		if pcm_sample > 32768f64 {
 			pcm_sample = 32768f64;
