@@ -13,7 +13,6 @@ pub struct RIFFHeader {
 
 impl RIFFHeader {
 	pub fn read_chunk(file: &mut File) -> IoResult<RIFFHeader> {
-
 		let file_size			= try!(file.read_le_u32());
 		let file_type_header	= try!(file.read_le_u32());
 
@@ -46,7 +45,6 @@ pub struct FormatChunk {
 	pub data_rate: u32,
 	pub block_size: u16,
 	pub bit_rate: u16,
-	// Extra fmt bytes? (unused in PCM)
 }
 
 impl FormatChunk {
@@ -68,7 +66,7 @@ impl FormatChunk {
 		let block_size							= try!(file.read_le_u16());
 		let bit_rate							= try!(file.read_le_u16());
 
-		// Extra bytes
+		// Extra bytes (unused in PCM)
 		if chunk_size > 16 {
 			let extra_length = chunk_size - 16;
 			for _ in range(0, extra_length) {

@@ -221,3 +221,10 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	}
 
 }
+
+#[cfg(test)]
+mod tests {
+	fn it_works() {
+		
+	}
+}
