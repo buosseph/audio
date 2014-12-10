@@ -1,39 +1,33 @@
+use audio::AudioError;
+use audio::AudioResult;
 use audio::RawAudio;
 use audio::SampleOrder;
 
-use std::io::{File, IoResult};
-use std::path::posix::{Path};
+use std::io::File;
+use std::path::posix::Path;
 
 use super::chunk;
 use super::{RIFF, FMT, DATA};
 
-// TODO: Replace fails with IoErrors
-
-pub fn read_file_meta(file_path: &str) {
+pub fn read_file_meta(file_path: &str) -> AudioResult<()> {
 	let path = Path::new(file_path);
-	let mut file = match File::open(&path) {
-		Ok(f)	=> f,
-		Err(e)		=> panic!("File error: {}", e),
-	};
+	let mut file = try!(File::open(&path));
 
-
-	let riff_header = file.read_le_u32().unwrap();
+	let riff_header = try!(file.read_le_u32());
 	if riff_header != RIFF {
-		panic!("File is not valid WAVE.");
+		return Err(AudioError::FormatError("File is not valid WAVE.".to_string()))
 	}
 	let header = chunk::RIFFHeader::read_chunk(&mut file).unwrap();
 
-
-	let format_chunk_marker = file.read_le_u32().unwrap();
+	let format_chunk_marker = try!(file.read_le_u32());
 	if format_chunk_marker != FMT {
-		panic!("File is not valid WAVE. Does not contain required format chunk.");
+		return Err(AudioError::FormatError("File is not valid WAVE. Does not contain required format chunk.".to_string()))
 	}
 	let fmt = chunk::FormatChunk::read_chunk(&mut file).unwrap();
 
-
-	let data_chunk_marker = file.read_le_u32().unwrap();
+	let data_chunk_marker = try!(file.read_le_u32());
 	if data_chunk_marker != DATA {
-		panic!("Files is not valid WAVE. Does not contain required data chunk.");
+		return Err(AudioError::FormatError("Files is not valid WAVE. Does not contain required data chunk.".to_string()))
 	}
 	let data_size = file.read_le_u32().unwrap();
 
@@ -66,36 +60,30 @@ pub fn read_file_meta(file_path: &str) {
 		data_size,
 		);
 
+	Ok(())
 }
 
-#[allow(unreachable_code)]
-pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
+pub fn read_file(file_path: &str) -> AudioResult<RawAudio> {
 	// Assume 44 byte header for now (if fmt chunk is longer than )
 
 	let path = Path::new(file_path);
-	let mut file = match File::open(&path) {
-		Ok(f)	=> f,
-		Err(e)	=> panic!("\nError opening file at path: {}\n\n{}", file_path, e),
-	};
-
+	let mut file = try!(File::open(&path));
 
 	let riff_header = try!(file.read_le_u32());
 	if riff_header != RIFF {
-		panic!("File is not valid WAVE.");
+		return Err(AudioError::FormatError("File is not valid WAVE.".to_string()))
 	}
 	let header = chunk::RIFFHeader::read_chunk(&mut file).unwrap();
 
-
 	let format_chunk_marker = try!(file.read_le_u32());
 	if format_chunk_marker != FMT {
-		panic!("File is not valid WAVE. Does not contain required format chunk.");
+		return Err(AudioError::FormatError("File is not valid WAVE. Does not contain required format chunk.".to_string()))
 	}
 	let fmt = chunk::FormatChunk::read_chunk(&mut file).unwrap();
 
-
 	let data_chunk_marker = try!(file.read_le_u32());
 	if data_chunk_marker != DATA {
-		panic!("Files is not valid WAVE. Does not contain required data chunk.");
+		return Err(AudioError::FormatError("Files is not valid WAVE. Does not contain required data chunk.".to_string()))
 	}
 	let data_size = file.read_le_u32().unwrap();
 
@@ -136,7 +124,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 
 	let number_of_samples: uint = data_size as uint / fmt.block_size as uint ;
 		// = data_size / block_size = data_size * 8 / (num_of_channels * bit_rate) 
-	println!("{}", number_of_samples);
+
 	if fmt.compression_code as uint == 1 {
 		match fmt.bit_rate as uint {
 			// Uses signed ints (8-bit uses uints)
@@ -150,14 +138,18 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 							let left_sample = match file.read_le_i16() {
 								Ok(sample) => {sample},
 								Err(e)	=> {
-									panic!("Error reading left sample {} from file: {}", i, e);
+									return Err(AudioError::FormatError(format!(
+										"Error reading left sample {} from file: {}", i, e
+									)))
 								}
 							};
 
 							let right_sample = match file.read_le_i16() {
 								Ok(sample) => {sample},
 								Err(e)	=> {
-									panic!("Error reading right sample {} from file: {}", i, e);
+									return Err(AudioError::FormatError(format!(
+										"Error reading right sample {} from file: {}", i, e
+									)))
 								}
 							};
 
@@ -189,7 +181,9 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 									samples.push(float_sample);
 								},
 								Err(e)	=> {
-									panic!("Error reading sample {} from file: {}", i, e);
+									return Err(AudioError::FormatError(format!(
+										"Error reading sample {} from file: {}", i, e
+									)))
 								}
 							}
 						}
@@ -206,21 +200,26 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 					},
 
 					(_, _) => {
-						panic!("This file is encoded using an unsupported number of channels.");
+						return Err(AudioError::UnsupportedError(format!(
+							"This file is encoded using an unsupported number of channels. Cannot read {}-channel files.",
+							fmt.num_of_channels
+						)))
 					}
 				}
 
 			},
 
 			_ => {
-				panic!("This file is encoded using an unsupported bitrate. Cannot read {}-bit files.", fmt.bit_rate);
+				return Err(AudioError::UnsupportedError(format!(
+					"This file is encoded using an unsupported bitrate. Cannot read {}-bit files.",
+					fmt.bit_rate
+				)))
 			}
 		}
 	}
 	else {
-		panic!("This file is not encoded using PCM.");
+		return Err(AudioError::FormatError("This file is not encoded using PCM.".to_string()))
 	}
-
 }
 
 #[cfg(test)]
