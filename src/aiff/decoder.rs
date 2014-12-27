@@ -118,14 +118,14 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 		ssnd.block_size
 		);
 
-	let num_of_samples: uint = comm.num_of_frames as uint;
+	let num_of_frames: uint = comm.num_of_frames as uint;
 
 	match comm.bit_rate {
 		16 	=> {
 			match (comm.num_of_channels) {
 				2 	=> {
-					let mut samples: Vec<f64> = Vec::with_capacity(num_of_samples);
-					for i in range(0, num_of_samples) {
+					let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames);
+					for i in range(0, num_of_frames) {
 						let left_sample = match file.read_be_i16() {
 							Ok(sample) => {sample},
 							Err(e)	=> {
@@ -163,8 +163,8 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 				},
 
 				1 	=> {
-					let mut samples: Vec<f64> = Vec::with_capacity(num_of_samples);
-					for i in range(0, num_of_samples) {
+					let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames);
+					for i in range(0, num_of_frames) {
 						match file.read_be_i16() {
 							Ok(sample) => {
 								let float_sample = sample as f64 / 32768f64;
