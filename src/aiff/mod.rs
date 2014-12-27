@@ -1,5 +1,6 @@
-pub mod decoder;
 pub mod chunk;
+pub mod decoder;
+pub mod encoder;
 
 // Hex constants are stored, read, and written as big endian
 const FORM: i32 = 0x464F524D;
