@@ -4,3 +4,13 @@
 */.DS_Store
 .DS_Store
 .DS_Store?
+
+/16-bit_pcm
+*.txt
+*.zip
+
+*.wav
+*.aiff
+*.raw
+
+main
