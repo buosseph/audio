@@ -67,7 +67,9 @@ pub struct SoundDataChunk {
 	pub size: i32, // Includes offset and block_size => (data_size + 8)
 	pub offset: u32,
 	pub block_size: u32,
+	//pub comment: Vec<u8>,		// Comment of (offset) bytes
 	//pub data: Vec<u8>,	// Uninterpreted data -> needs to be able to be read as i16
+			// Size of data = size - offset - 8
 }
 
 impl SoundDataChunk {
