@@ -3,6 +3,7 @@ use audio::SampleOrder;
 
 use std::io::{File, IoResult};
 use std::path::posix::{Path};
+use std::num;
 
 use super::chunk;
 use super::{FORM, COMM, SSND};
@@ -205,5 +206,47 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 			))
 		}
 	}
-
 }
+
+// fn ieee_u32_to_f64(num: u32) -> f64 {
+// 	((num - 2147483647u32 - 1) as i32) as f64 + 2147483648f64
+// }
+
+// fn convert_from_ieee_extended(bytes: Vec<u8>) -> f64 {
+// 	let mut num: f64;
+// 	let mut exponent: int;
+// 	let mut hi_mant: u32;
+// 	let mut low_mant: u32;
+
+// 	exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as int;
+// 	hi_mant = 	(bytes[2] & 0xff) as u32 	<< 24
+// 			| 	(bytes[3] & 0xff) as u32 	<< 16
+// 			| 	(bytes[4] & 0xff) as u32 	<< 8
+// 			| 	(bytes[5] & 0xff) as u32;
+// 	low_mant = 	(bytes[6] & 0xff) as u32 	<< 24
+// 			| 	(bytes[7] & 0xff) as u32 	<< 16
+// 			| 	(bytes[8] & 0xff) as u32 	<< 8
+// 			| 	(bytes[9] & 0xff) as u32;
+
+// 	if exponent == 0 && hi_mant == 0 && low_mant == 0 {
+// 		return 0f64;
+// 	}
+
+// 	if exponent == 0x7fff {
+// 		panic!("Sampling rate is not a number!");
+// 	}
+// 	else {
+// 		exponent -= 16383;
+// 		exponent -= 31;
+// 		num	= std::num::FloatMath::ldexp(ieee_u32_to_f64(hi_mant), exponent);		
+// 		exponent -= 32;
+// 		num  += std::num::FloatMath::ldexp(ieee_u32_to_f64(low_mant), exponent);
+// 	}
+
+// 	if bytes[0] & 0x80 > 0 {
+// 		return -num;
+// 	}
+// 	else {
+// 		return num;
+// 	}
+// }
