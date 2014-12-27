@@ -1,19 +1,9 @@
-use std::error::FromError;
-use std::io;
+// TODOs:
+//	- Add raw data reader, may not need own module
+//	- Unit tests!
+//	- Aiff encoder
+//	- Look into other file types.
 
-pub enum AudioError {
-	FormatError(String),
-	UnsupportedError(String),
-	IoError(io::IoError),
-}
-
-impl FromError<io::IoError> for AudioError {
-	fn from_error(err: io::IoError) -> AudioError {
-		AudioError::IoError(err)
-	}
-}
-
-pub type AudioResult<T> = Result<T, AudioError>;
 
 #[deriving(Show)]
 pub enum SampleOrder {
