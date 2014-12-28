@@ -1,9 +1,7 @@
 use audio::RawAudio;
 use audio::SampleOrder;
-
 use std::io::{File, IoResult};
 use std::path::posix::{Path};
-
 use super::chunk;
 use super::{FORM, COMM, SSND};
 
@@ -123,7 +121,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 
 	match comm.bit_rate {
 		16 	=> {
-			match (comm.num_of_channels) {
+			match comm.num_of_channels {
 				2 	=> {
 					let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames);
 					for i in range(0, num_of_frames) {
