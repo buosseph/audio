@@ -3,7 +3,6 @@ use audio::SampleOrder;
 
 use std::io::{File, IoResult};
 use std::path::posix::{Path};
-use std::num;
 
 use super::chunk;
 use super::{FORM, COMM, SSND};
@@ -24,6 +23,7 @@ pub fn read_file_data(file_path: &str) -> IoResult<()> {
 		panic!("File is not valid AIFF. Does not contain required common chunk.".to_string())
 	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
+	let sample_rate: f64 = convert_from_ieee_extended(comm.sampling_rate);
 
 
 	let ssnd_chunk_marker = file.read_be_i32().unwrap();
@@ -56,7 +56,7 @@ pub fn read_file_data(file_path: &str) -> IoResult<()> {
 		comm.num_of_channels,
 		comm.num_of_frames,
 		comm.bit_rate,
-		comm.sampling_rate,
+		sample_rate,
 		ssnd.size,
 		ssnd.offset,
 		ssnd.block_size
@@ -81,7 +81,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 		panic!("File is not valid AIFF. Does not contain required common chunk.".to_string())
 	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
-
+	let sample_rate: uint = convert_from_ieee_extended(comm.sampling_rate) as uint;
 
 	let ssnd_chunk_marker = file.read_be_i32().unwrap();
 	if ssnd_chunk_marker != SSND {
@@ -100,7 +100,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 		Channels: {},
 		Frames: {},
 		Bit rate: {},
-		Sample rate (extended): {},
+		Sample rate: {},
 	SSND_chunk:
 		Chunk size: {},
 		Offset: {},
@@ -113,7 +113,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 		comm.num_of_channels,
 		comm.num_of_frames,
 		comm.bit_rate,
-		comm.sampling_rate,
+		sample_rate,
 		ssnd.size,
 		ssnd.offset,
 		ssnd.block_size
@@ -154,11 +154,11 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 
 					Ok(
 						RawAudio{
-							bit_rate: comm.bit_rate as uint,
-							sampling_rate: 22050 as uint,	// Only for current test file, need to update
-							num_of_channels: comm.num_of_channels as uint,
-							order: SampleOrder::INTERLEAVED,
-							samples: samples,
+							bit_rate: 			comm.bit_rate as uint,
+							sampling_rate: 		sample_rate,
+							num_of_channels: 	comm.num_of_channels as uint,
+							order: 				SampleOrder::INTERLEAVED,
+							samples: 			samples,
 						}
 					)
 				},
@@ -181,11 +181,11 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 
 					Ok(
 						RawAudio {
-							bit_rate: comm.bit_rate as uint,
-							sampling_rate: 22050 as uint,	// Only for current test file, need to update
-							num_of_channels: comm.num_of_channels as uint,
-							order: SampleOrder::MONO,
-							samples: samples,
+							bit_rate: 			comm.bit_rate as uint,
+							sampling_rate: 		sample_rate,
+							num_of_channels: 	comm.num_of_channels as uint,
+							order: 				SampleOrder::MONO,
+							samples: 			samples,
 						}
 					)
 				},
@@ -208,45 +208,45 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	}
 }
 
-// fn ieee_u32_to_f64(num: u32) -> f64 {
-// 	((num - 2147483647u32 - 1) as i32) as f64 + 2147483648f64
-// }
+fn ieee_u32_to_f64(num: u32) -> f64 {
+	((num - 2147483647u32 - 1) as i32) as f64 + 2147483648f64
+}
 
-// fn convert_from_ieee_extended(bytes: Vec<u8>) -> f64 {
-// 	let mut num: f64;
-// 	let mut exponent: int;
-// 	let mut hi_mant: u32;
-// 	let mut low_mant: u32;
+fn convert_from_ieee_extended(bytes: Vec<u8>) -> f64 {
+	let mut num: f64;
+	let mut exponent: int;
+	let mut hi_mant: u32;
+	let mut low_mant: u32;
 
-// 	exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as int;
-// 	hi_mant = 	(bytes[2] & 0xff) as u32 	<< 24
-// 			| 	(bytes[3] & 0xff) as u32 	<< 16
-// 			| 	(bytes[4] & 0xff) as u32 	<< 8
-// 			| 	(bytes[5] & 0xff) as u32;
-// 	low_mant = 	(bytes[6] & 0xff) as u32 	<< 24
-// 			| 	(bytes[7] & 0xff) as u32 	<< 16
-// 			| 	(bytes[8] & 0xff) as u32 	<< 8
-// 			| 	(bytes[9] & 0xff) as u32;
+	exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as int;
+	hi_mant = 	(bytes[2] & 0xff) as u32 	<< 24
+			| 	(bytes[3] & 0xff) as u32 	<< 16
+			| 	(bytes[4] & 0xff) as u32 	<< 8
+			| 	(bytes[5] & 0xff) as u32;
+	low_mant = 	(bytes[6] & 0xff) as u32 	<< 24
+			| 	(bytes[7] & 0xff) as u32 	<< 16
+			| 	(bytes[8] & 0xff) as u32 	<< 8
+			| 	(bytes[9] & 0xff) as u32;
 
-// 	if exponent == 0 && hi_mant == 0 && low_mant == 0 {
-// 		return 0f64;
-// 	}
+	if exponent == 0 && hi_mant == 0 && low_mant == 0 {
+		return 0f64;
+	}
 
-// 	if exponent == 0x7fff {
-// 		panic!("Sampling rate is not a number!");
-// 	}
-// 	else {
-// 		exponent -= 16383;
-// 		exponent -= 31;
-// 		num	= std::num::FloatMath::ldexp(ieee_u32_to_f64(hi_mant), exponent);		
-// 		exponent -= 32;
-// 		num  += std::num::FloatMath::ldexp(ieee_u32_to_f64(low_mant), exponent);
-// 	}
+	if exponent == 0x7fff {
+		panic!("Sampling rate is not a number!");
+	}
+	else {
+		exponent -= 16383;
+		exponent -= 31;
+		num	= ::std::num::FloatMath::ldexp(ieee_u32_to_f64(hi_mant), exponent);		
+		exponent -= 32;
+		num  += ::std::num::FloatMath::ldexp(ieee_u32_to_f64(low_mant), exponent);
+	}
 
-// 	if bytes[0] & 0x80 > 0 {
-// 		return -num;
-// 	}
-// 	else {
-// 		return num;
-// 	}
-// }
+	if bytes[0] & 0x80 > 0 {
+		return -num;
+	}
+	else {
+		return num;
+	}
+}
