@@ -6,8 +6,9 @@
 pub use audio::RawAudio as RawAudio;
 
 // Traits
-pub use audio::Dynamics;
-pub use audio::Utilities;
+pub use audio::Dynamics as Dynamics;
+// pub use audio::Utilities as Utilities;
+pub use audio::Filter as Filter;
 
 pub mod audio;
 
@@ -17,7 +18,7 @@ pub mod aiff;
 
 // Processing (Need to be refactored)
 // pub mod utilities;
-// pub mod dynamics;
+pub mod dynamics;
 
 #[test]
 fn it_works() {
