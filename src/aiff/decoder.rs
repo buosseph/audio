@@ -246,21 +246,3 @@ fn convert_from_ieee_extended(bytes: Vec<u8>) -> f64 {
 		return num;
 	}
 }
-
-
-// #[cfg(test)]
-// mod tests {
-// 	fn test_write() {
-// 		// Stereo
-// 		data = "Warrior Concerto - no meta.aiff";
-// 		let mut audio = audio::aiff::decoder::read_file(data).unwrap();
-// 		let written = audio::aiff::encoder::write_file(audio, "tmp.aiff").unwrap();
-// 		let verify = audio::aiff::decoder::read_file("tmp.aiff").unwrap();
-
-// 		// Assert written file is same length as read file!
-// 		assert_eq!(audio.samples.len(), verify.samples.len());
-// 		assert_eq!(audio.num_of_channels, verify.num_of_channels);
-// 		assert_eq!(audio.bit_rate, verify.bit_rate);
-// 		assert_eq!(audio.sample_rate, verify.sample_rate);
-// 	}
-// }
