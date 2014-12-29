@@ -120,19 +120,15 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	// - Check bitrate
 	// - Check channels and block size
 
-	let total_samples: uint = data_size as uint / fmt.block_size as uint ;
-		// = data_size / block_size = data_size * 8 / (num_of_channels * bit_rate)
-	let num_of_frames: uint = total_samples / fmt.num_of_channels as uint;
-
+	let num_of_frames: uint = data_size as uint / fmt.block_size as uint ;
+	let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * fmt.num_of_channels as uint);
 	if fmt.compression_code as uint == 1 {
 		match fmt.bit_rate as uint {
 			// Uses signed ints (8-bit uses uints)
 			16 => {
 				match (fmt.num_of_channels as uint, fmt.block_size as uint) {
-
 					// Stereo
 					(2, 4) => {
-						let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames);
 						for i in range(0, num_of_frames) {
 							let left_sample = match file.read_le_i16() {
 								Ok(sample) => {sample},
@@ -172,7 +168,6 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 
 					// Mono
 					(1, 2) => {
-						let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames);
 						for i in range(0, num_of_frames) {
 							match file.read_le_i16() {
 								Ok(sample) => {
