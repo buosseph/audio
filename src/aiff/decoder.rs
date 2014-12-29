@@ -118,12 +118,11 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 		);
 
 	let num_of_frames: uint = comm.num_of_frames as uint;
-
+	let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * comm.num_of_channels as uint);
 	match comm.bit_rate {
 		16 	=> {
 			match comm.num_of_channels {
 				2 	=> {
-					let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames);
 					for i in range(0, num_of_frames) {
 						let left_sample = match file.read_be_i16() {
 							Ok(sample) => {sample},
@@ -162,7 +161,6 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 				},
 
 				1 	=> {
-					let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames);
 					for i in range(0, num_of_frames) {
 						match file.read_be_i16() {
 							Ok(sample) => {
@@ -248,3 +246,21 @@ fn convert_from_ieee_extended(bytes: Vec<u8>) -> f64 {
 		return num;
 	}
 }
+
+
+// #[cfg(test)]
+// mod tests {
+// 	fn test_write() {
+// 		// Stereo
+// 		data = "Warrior Concerto - no meta.aiff";
+// 		let mut audio = audio::aiff::decoder::read_file(data).unwrap();
+// 		let written = audio::aiff::encoder::write_file(audio, "tmp.aiff").unwrap();
+// 		let verify = audio::aiff::decoder::read_file("tmp.aiff").unwrap();
+
+// 		// Assert written file is same length as read file!
+// 		assert_eq!(audio.samples.len(), verify.samples.len());
+// 		assert_eq!(audio.num_of_channels, verify.num_of_channels);
+// 		assert_eq!(audio.bit_rate, verify.bit_rate);
+// 		assert_eq!(audio.sample_rate, verify.sample_rate);
+// 	}
+// }
