@@ -15,7 +15,6 @@ fn valid_file_path(filename: &str) -> bool{
 	true
 }
 
-#[allow(unreachable_code)]
 pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 
 	if !valid_file_path(file_path) {

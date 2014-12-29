@@ -1,8 +1,6 @@
 use audio::RawAudio;
-
 use std::io::{File, IoResult};
 use std::path::posix::{Path};
-
 use super::{RIFF, WAVE, FMT, DATA};
 
 fn valid_file_path(filename: &str) -> bool{

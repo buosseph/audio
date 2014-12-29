@@ -1,10 +1,6 @@
 use std::io::{File, IoResult};
 
-// Byte order: Big-endian
-// For dealing with extended, use FFI? (http://www.onicos.com/staff/iz/formats/aiff.html)
-
 pub struct IFFHeader {
-	// id: u32, // 0x464F524D => "FORM"
 	pub size: i32, // size + 8 = total size including this and id
 	pub form_type: i32, // 0x41494646 => "AIFF"
 }
@@ -25,11 +21,9 @@ impl IFFHeader {
 	}
 }
 
-
 // Required Chunk
 #[allow(dead_code)]
 pub struct CommonChunk {
-	//id: u32,					// 0x434F4D4D => "COMM"
 	pub size: i32,				// Always 18
 	pub num_of_channels: i16,
 	pub num_of_frames: u32,		// Frame = set of all channels with single sample
@@ -63,13 +57,10 @@ impl CommonChunk {
 // Required Chunk
 #[allow(dead_code)]
 pub struct SoundDataChunk {
-	// id: u32, // 0x53534E44 => "SSND"
 	pub size: i32, // Includes offset and block_size => (data_size + 8)
 	pub offset: u32,
 	pub block_size: u32,
 	//pub comment: Vec<u8>,		// Comment of (offset) bytes
-	//pub data: Vec<u8>,	// Uninterpreted data -> needs to be able to be read as i16
-			// Size of data = size - offset - 8
 }
 
 impl SoundDataChunk {

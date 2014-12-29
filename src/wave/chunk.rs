@@ -1,10 +1,5 @@
 use std::io::{File, IoResult};
-
 use super::WAVE;
-
-// Byte-order: Little-endian
-
-// TODO: Replace fails with IoErrors
 
 pub struct RIFFHeader {
 	pub size: u32,
@@ -96,11 +91,7 @@ pub struct DataChunk {
 }
 
 impl DataChunk {
-	// Does not read for id
 	pub fn read_chunk(file: &mut File) -> IoResult<DataChunk> {
-		// let double_word = wav_file.read_exact(4).unwrap();
-		// let data_chunk_header = from_utf8(double_word.as_slice()).unwrap();
-
 		let size = try!(file.read_le_u32());
 		let data = try!(file.read_exact(size as uint));	// Data still not interprete based on bit_rate
 
