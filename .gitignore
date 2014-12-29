@@ -9,8 +9,15 @@
 *.txt
 *.zip
 
-*.wav
-*.aiff
-*.raw
-
 main
+tmp.*
+
+BrassAttack4.*
+Warrior Concerto.*
+filtered.*
+processed.*
+raw.*
+sample.*
+sine-440.*
+test.*
+written.*

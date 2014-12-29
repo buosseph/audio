@@ -14,23 +14,35 @@ mod tests {
 	#[test]
 	fn test_read_write_eq() {
 		use super::*;
-		// Stereo
-		let data = "Warrior Concerto - no meta.aiff";
-		let mut audio = decoder::read_file(data).unwrap();
-		let total_samples = audio.samples.len();
-		let channels = audio.num_of_channels;
-		let bit_rate = audio.bit_rate;
-		let sample_rate = audio.sampling_rate;
+		use std::str;
 
-		let written = encoder::write_file(audio, "tmp.aiff").unwrap();
-		assert!(written);
+		let folder: String = String::from_str("test/aiff/");
+		let files = vec![
+			"i16-pcm-mono.aiff",
+			"i16-pcm-stereo.aiff",
+			"Warrior Concerto - no meta.aiff"
+		];
 
-		let verify = decoder::read_file("tmp.aiff").unwrap();
+		for file in files.iter() {
+			let mut path: String = folder.clone();
+			path.push_str(*file);
 
-		// Assert written file is same length as read file!
-		assert_eq!(total_samples, verify.samples.len());
-		assert_eq!(channels, verify.num_of_channels);
-		assert_eq!(bit_rate, verify.bit_rate);
-		assert_eq!(sample_rate, verify.sampling_rate);
+			let mut audio = decoder::read_file(path.as_slice()).unwrap();
+			let total_samples = audio.samples.len();
+			let channels = audio.num_of_channels;
+			let bit_rate = audio.bit_rate;
+			let sample_rate = audio.sampling_rate;
+
+			let written = encoder::write_file(audio, "tmp.aiff").unwrap();
+			assert!(written);
+
+			let verify = decoder::read_file("tmp.aiff").unwrap();
+
+			// Assert written file is same length as read file!
+			assert_eq!(total_samples, verify.samples.len());
+			assert_eq!(channels, verify.num_of_channels);
+			assert_eq!(bit_rate, verify.bit_rate);
+			assert_eq!(sample_rate, verify.sampling_rate);
+		}
 	}
 }
