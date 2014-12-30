@@ -2,14 +2,18 @@
 
 #![feature(globs)]
 
-// Audio structs
-pub use audio::RawAudio as RawAudio;
-pub use audio::SampleOrder as SampleOrder;
+pub use audio::RawAudio;
+pub use audio::SampleOrder::{
+	MONO,
+	INTERLEAVED,
+	REVERSED,
+	PLANAR,
+};
 
-// Traits
-pub use audio::Dynamics as Dynamics;
-pub use audio::Utilities as Utilities;
-pub use audio::Filter as Filter;
+
+pub use audio::Dynamics;
+pub use audio::Utilities;
+pub use audio::Filter;
 
 pub mod audio;
 
@@ -17,11 +21,7 @@ pub mod audio;
 pub mod wave;
 pub mod aiff;
 
-// Processing (Need to be refactored)
+// Processing
 // pub mod utilities;
 pub mod dynamics;
 pub mod filter;
-
-#[test]
-fn it_works() {
-}

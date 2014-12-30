@@ -10,7 +10,7 @@
  *	Clip	- A set of frames representing an interval of time within or containing the entire read sound
  */
 
-#[deriving(Show)]
+#[deriving(Show, Clone)]
 pub enum SampleOrder {
 	MONO,
 	INTERLEAVED,
@@ -18,7 +18,7 @@ pub enum SampleOrder {
 	PLANAR,
 }
 
-#[deriving(Show)]
+#[deriving(Show, Clone)]
 pub struct RawAudio {
 	pub bit_rate: uint,
 	pub sampling_rate: uint,
