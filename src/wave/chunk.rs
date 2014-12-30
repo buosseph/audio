@@ -1,6 +1,7 @@
 use std::io::{File, IoResult};
 use super::WAVE;
 
+#[deriving(Copy)]
 pub struct RIFFHeader {
 	pub size: u32,
 	pub format: u32,
@@ -25,13 +26,13 @@ impl RIFFHeader {
 }
 
 #[allow(dead_code)]
-#[deriving(Show)]
+#[deriving(Show, Copy)]
 pub enum CompressionCode {
 	Unknown	= 0,
 	PCM		= 1,
 }
 
-#[allow(dead_code)]
+#[deriving(Copy)]
 pub struct FormatChunk {
 	pub size: u32,
 	pub compression_code: CompressionCode,

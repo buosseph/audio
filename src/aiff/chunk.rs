@@ -1,5 +1,7 @@
 use std::io::{File, IoResult};
+use super::AIFF;
 
+#[deriving(Copy)]
 pub struct IFFHeader {
 	pub size: i32, // size + 8 = total size including this and id
 	pub form_type: i32, // 0x41494646 => "AIFF"
@@ -11,7 +13,10 @@ impl IFFHeader {
 		let file_size		= try!(file.read_be_i32());
 		let file_form_type	= try!(file.read_be_i32());
 
-		// Verify form_type is "AIFF"
+		if file_form_type != AIFF {
+			panic!("File is not valid AIFF.");
+		}
+
 		Ok(
 			IFFHeader {
 				size: file_size,
@@ -55,7 +60,7 @@ impl CommonChunk {
 
 // Multi-channel samples are always interleaved
 // Required Chunk
-#[allow(dead_code)]
+#[deriving(Copy)]
 pub struct SoundDataChunk {
 	pub size: i32, // Includes offset and block_size => (data_size + 8)
 	pub offset: u32,

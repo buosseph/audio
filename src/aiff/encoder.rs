@@ -30,7 +30,6 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 
 
 	let offset			: u32 	= 0;
-	let block_size		: uint 	= raw_audio.channels * raw_audio.bit_rate / 8;
 	let data_size		: u32 	= (raw_audio.samples.len() * raw_audio.channels) as u32;
 	let ssnd_chunk_size	: u32 	= 8 + data_size;
 

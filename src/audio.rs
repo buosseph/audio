@@ -12,7 +12,7 @@
 
 use std::fmt;
 
-#[deriving(Show, Clone)]
+#[deriving(Show, Clone, Copy)]
 pub enum SampleOrder {
 	MONO,
 	INTERLEAVED,

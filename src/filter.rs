@@ -3,21 +3,18 @@ use audio::SampleOrder;
 use audio::Filter;
 
 impl Filter for RawAudio {
-	fn one_pole_lowpass(&mut self, cutoff: f64) {
-		let mut sampling_frequency = self.sample_rate as f64;
-		let mut db_gain = 0f64;
-		let mut q = 0.71f64;	// like Bitwig
+	// y[n] = (b0/a0)*x[n] + (b1/a0)*x[n-1] + (b2/a0)*x[n-2] 
+						// - (a1/a0)*y[n-1] - (a2/a0)*y[n-2]
 
-		let a = ::std::num::Float::sqrt(
-			::std::num::Float::powi( (db_gain / 20f64), 10 )
-		);
+	fn one_pole_lowpass(&mut self, cutoff: f64) {
+		let sampling_frequency = self.sample_rate as f64;
+		let q = 0.71f64;	// like Bitwig
+
+		// Intermidiates
 		let w0: f64 = ::std::f64::consts::PI_2 * cutoff / sampling_frequency;
 		let cos_w0 = ::std::num::FloatMath::cos(w0);
 		let sin_w0 = ::std::num::FloatMath::sin(w0);
 		let alpha = sin_w0 / (2f64 * q);
-
-		// y[n] = (b0/a0)*x[n] + (b1/a0)*x[n-1] + (b2/a0)*x[n-2] 
-							// - (a1/a0)*y[n-1] - (a2/a0)*y[n-2]
 
 		let b0 = (1f64 - cos_w0) / 2f64;
 		let b1 = 1f64 - cos_w0;
@@ -26,7 +23,7 @@ impl Filter for RawAudio {
 		let a1 = -2f64 * cos_w0;
 		let a2 = 1f64 - alpha;
 
-		// lowpass coefficients
+		// Coefficients
 		let cx0 = b0/a0;
 		let cx1 = b1/a0;
 		let cx2 = b2/a0;
@@ -36,10 +33,10 @@ impl Filter for RawAudio {
 		for i in range(0, self.channels) {
 			let mut xn0 = 0f64;	// x[n]
 			let mut xn1 = 0f64;	// x[n-1]
-			let mut xn2 = 0f64;	// x[n-2]
+			let mut xn2;		// x[n-2]
 			let mut yn0 = 0f64;	// y[n]
 			let mut yn1 = 0f64;	// y[n-1]
-			let mut yn2 = 0f64;	// y[n-2]
+			let mut yn2;		// y[n-2]
 
 			match self.order {
 				SampleOrder::INTERLEAVED => {
