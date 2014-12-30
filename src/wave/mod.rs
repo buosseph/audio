@@ -39,9 +39,9 @@ mod tests {
 
 			// Assert written file is same length as read file!
 			assert_eq!(total_samples, verify.samples.len());
-			assert_eq!(channels, verify.num_of_channels);
+			assert_eq!(channels, verify.channels);
 			assert_eq!(bit_rate, verify.bit_rate);
-			assert_eq!(sample_rate, verify.sampling_rate);
+			assert_eq!(sample_rate, verify.sample_rate);
 		}
 	}
 }

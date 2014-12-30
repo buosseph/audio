@@ -10,6 +10,8 @@
  *	Clip	- A set of frames representing an interval of time within or containing the entire read sound
  */
 
+use std::fmt;
+
 #[deriving(Show, Clone)]
 pub enum SampleOrder {
 	MONO,
@@ -18,7 +20,7 @@ pub enum SampleOrder {
 	PLANAR,
 }
 
-#[deriving(Show, Clone)]
+#[deriving(Clone)]
 pub struct RawAudio {
 	pub bit_rate: uint,
 	pub sample_rate: uint,
@@ -30,6 +32,21 @@ pub struct RawAudio {
 impl RawAudio {
 	pub fn print_samples(&self) {
 		println!("Samples: {}", self.samples);
+	}
+}
+
+#[experimental = "waiting on Show stability"]
+impl fmt::Show for RawAudio {
+	fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+		write!(
+			formatter,
+			"RawAudio: \n\tbit_rate: {},\n\tsample_rate: {},\n\tchannels: {},\n\torder: {},\n\t{} samples\n",
+			self.bit_rate,
+			self.sample_rate,
+			self.channels,
+			self.order,
+			self.samples.len()
+		)
 	}
 }
 
