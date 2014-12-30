@@ -21,17 +21,13 @@ pub enum SampleOrder {
 #[deriving(Show, Clone)]
 pub struct RawAudio {
 	pub bit_rate: uint,
-	pub sampling_rate: uint,
-	pub num_of_channels: uint,
+	pub sample_rate: uint,
+	pub channels: uint,
 	pub order: SampleOrder,
 	pub samples: Vec<f64>,
 }
 
 impl RawAudio {
-	pub fn print_meta_data(&self) {
-		println!("bit_rate: {}, sampling_rate: {}, num_of_channels: {}, order: {}", self.bit_rate, self.sampling_rate, self.num_of_channels, self.order);
-	}
-
 	pub fn print_samples(&self) {
 		println!("Samples: {}", self.samples);
 	}

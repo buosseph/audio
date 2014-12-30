@@ -4,7 +4,7 @@ use audio::Filter;
 impl Filter for RawAudio {
 	// Only works for mono, need to update for stereo usage
 	fn one_pole_lowpass(&mut self, cutoff: f64) {
-		let mut sampling_frequency = self.sampling_rate as f64;
+		let mut sampling_frequency = self.sample_rate as f64;
 		let mut db_gain = 0f64;
 		let mut q = 0.71f64;	// like Bitwig
 

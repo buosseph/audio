@@ -24,12 +24,12 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 	let path 		= Path::new(file_path);
 	let mut file 	= File::create(&path);
 
-	let num_of_channels	: u16 		= raw_audio.num_of_channels as u16;
-	let sampling_rate	: u32 		= raw_audio.sampling_rate as u32;
-	let data_rate		: u32 		= (raw_audio.sampling_rate * raw_audio.num_of_channels * raw_audio.bit_rate / 8) as u32;
+	let num_of_channels	: u16 		= raw_audio.channels as u16;
+	let sampling_rate	: u32 		= raw_audio.sample_rate as u32;
+	let data_rate		: u32 		= (raw_audio.sample_rate * raw_audio.channels * raw_audio.bit_rate / 8) as u32;
 	let bit_rate		: u16 		= raw_audio.bit_rate as u16;
-	let block_size		: uint 		= raw_audio.num_of_channels * raw_audio.bit_rate / 8;
-	let num_of_frames	: uint		= raw_audio.samples.len() / raw_audio.num_of_channels;
+	let block_size		: uint 		= raw_audio.channels * raw_audio.bit_rate / 8;
+	let num_of_frames	: uint		= raw_audio.samples.len() / raw_audio.channels;
 	let data_size		: u32 		= (num_of_frames * block_size) as u32;
 	let total_bytes					= 44 + data_size;	// Assume 44 byte header for now
 	let file_size		: u32 		=  (total_bytes - 8) as u32;

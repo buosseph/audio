@@ -29,9 +29,9 @@ mod tests {
 
 			let mut audio = decoder::read_file(path.as_slice()).unwrap();
 			let total_samples = audio.samples.len();
-			let channels = audio.num_of_channels;
+			let channels = audio.channels;
 			let bit_rate = audio.bit_rate;
-			let sample_rate = audio.sampling_rate;
+			let sample_rate = audio.sample_rate;
 
 			let written = encoder::write_file(audio, "tmp.aiff").unwrap();
 			assert!(written);
@@ -40,9 +40,9 @@ mod tests {
 
 			// Assert written file is same length as read file!
 			assert_eq!(total_samples, verify.samples.len());
-			assert_eq!(channels, verify.num_of_channels);
+			assert_eq!(channels, verify.channels);
 			assert_eq!(bit_rate, verify.bit_rate);
-			assert_eq!(sample_rate, verify.sampling_rate);
+			assert_eq!(sample_rate, verify.sample_rate);
 		}
 	}
 }

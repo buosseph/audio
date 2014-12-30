@@ -28,9 +28,9 @@ mod tests {
 
 			let mut audio = decoder::read_file(path.as_slice()).unwrap();
 			let total_samples = audio.samples.len();
-			let channels = audio.num_of_channels;
+			let channels = audio.channels;
 			let bit_rate = audio.bit_rate;
-			let sample_rate = audio.sampling_rate;
+			let sample_rate = audio.sample_rate;
 
 			let written = encoder::write_file(audio, "tmp.wav").unwrap();
 			assert!(written);

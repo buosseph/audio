@@ -24,20 +24,20 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 	let path = Path::new(file_path);
 	let mut file = File::create(&path);
 
-	let num_of_channels	: u16 	= raw_audio.num_of_channels as u16;
-	let sampling_rate	: uint 	= raw_audio.sampling_rate;
+	let num_of_channels	: u16 	= raw_audio.channels as u16;
+	let sampling_rate	: uint 	= raw_audio.sample_rate;
 	let bit_rate		: u16 	= raw_audio.bit_rate as u16;
 
 
 	let offset			: u32 	= 0;
-	let block_size		: uint 	= raw_audio.num_of_channels * raw_audio.bit_rate / 8;
-	let data_size		: u32 	= (raw_audio.samples.len() * raw_audio.num_of_channels) as u32;
+	let block_size		: uint 	= raw_audio.channels * raw_audio.bit_rate / 8;
+	let data_size		: u32 	= (raw_audio.samples.len() * raw_audio.channels) as u32;
 	let ssnd_chunk_size	: u32 	= 8 + data_size;
 
 
 	let total_bytes 					= 12 + 26 + 8 + ssnd_chunk_size;	// = [FORM: 12] + [COMM: 26] + [SSND: 8 + chunk_size]
 	let file_size			: u32 		= total_bytes - 8;
-	let num_of_frames		: u32 		= (raw_audio.samples.len() / raw_audio.num_of_channels) as u32;
+	let num_of_frames		: u32 		= (raw_audio.samples.len() / raw_audio.channels) as u32;
 	let sample_rate_buffer	: Vec<u8> 	= convert_to_ieee_extended(sampling_rate);
 
 	// FORM

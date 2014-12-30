@@ -5,7 +5,7 @@ impl Utilities for RawAudio {
 
 	// Issue: result is half length of desired
 	fn stereo_to_mono(&mut self) -> bool {
-		match self.num_of_channels {
+		match self.channels {
 			2 => {
 				let mut mono_buffer: Vec<f64> = Vec::with_capacity(self.samples.len() / 2);
 				let mut first_channel_value: f64 = 0.;
@@ -36,10 +36,10 @@ impl Utilities for RawAudio {
 
 	fn reverse_channels(&mut self) -> bool {
 		for i in range(0, self.samples.len()) {
-			if i % self.num_of_channels == self.num_of_channels - 1 {
+			if i % self.channels == self.channels - 1 {
 
-				for j in range(0, self.num_of_channels / 2) {
-					let left_index = i - ( (i - j) % self.num_of_channels );
+				for j in range(0, self.channels / 2) {
+					let left_index = i - ( (i - j) % self.channels );
 					let right_index = i - j;
 
 					if left_index != right_index {

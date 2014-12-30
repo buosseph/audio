@@ -152,8 +152,8 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 					Ok(
 						RawAudio{
 							bit_rate: 			comm.bit_rate as uint,
-							sampling_rate: 		sample_rate,
-							num_of_channels: 	comm.num_of_channels as uint,
+							sample_rate: 		sample_rate,
+							channels: 	comm.num_of_channels as uint,
 							order: 				SampleOrder::INTERLEAVED,
 							samples: 			samples,
 						}
@@ -178,8 +178,8 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 					Ok(
 						RawAudio {
 							bit_rate: 			comm.bit_rate as uint,
-							sampling_rate: 		sample_rate,
-							num_of_channels: 	comm.num_of_channels as uint,
+							sample_rate: 		sample_rate,
+							channels: 	comm.num_of_channels as uint,
 							order: 				SampleOrder::MONO,
 							samples: 			samples,
 						}
