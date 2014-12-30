@@ -1,8 +1,8 @@
 use audio::RawAudio;
+use audio::SampleOrder;
 use audio::Filter;
 
 impl Filter for RawAudio {
-	// Only works for mono, need to update for stereo usage
 	fn one_pole_lowpass(&mut self, cutoff: f64) {
 		let mut sampling_frequency = self.sample_rate as f64;
 		let mut db_gain = 0f64;
@@ -33,24 +33,32 @@ impl Filter for RawAudio {
 		let cy1 = a1/a0;
 		let cy2 = a2/a0;
 
-		let mut xn0 = 0f64;	// x[n]
-		let mut xn1 = 0f64;	// x[n-1]
-		let mut xn2 = 0f64;	// x[n-2]
-		let mut yn0 = 0f64;	// y[n]
-		let mut yn1 = 0f64;	// y[n-1]
-		let mut yn2 = 0f64;	// y[n-2]
+		for i in range(0, self.channels) {
+			let mut xn0 = 0f64;	// x[n]
+			let mut xn1 = 0f64;	// x[n-1]
+			let mut xn2 = 0f64;	// x[n-2]
+			let mut yn0 = 0f64;	// y[n]
+			let mut yn1 = 0f64;	// y[n-1]
+			let mut yn2 = 0f64;	// y[n-2]
 
-		// Assume mono
-		for i in range(0, self.samples.len()) {
-			xn2 = xn1;
-			xn1 = xn0;
-			xn0 = self.samples[i];
+			match self.order {
+				SampleOrder::INTERLEAVED => {
+					for j in range(0, self.samples.len()) {
+						if j % self.channels == i {
+							xn2 = xn1;
+							xn1 = xn0;
+							xn0 = self.samples[j];
 
-			yn2 = yn1;
-			yn1 = yn0;
-			yn0 = cx0 * xn0 + cx1 * xn1 + cx2 * xn2 - cy1 * yn1 - cy2 * yn2;
+							yn2 = yn1;
+							yn1 = yn0;
+							yn0 = cx0 * xn0 + cx1 * xn1 + cx2 * xn2 - cy1 * yn1 - cy2 * yn2;
 
-			self.samples[i] = yn0;
+							self.samples[j] = yn0;
+						}
+					}
+				},
+				_ => {panic!("Samples must be INTERLEAVED for filter")}
+			}
 		}
 	}
 }
