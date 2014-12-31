@@ -68,4 +68,5 @@ pub trait Filter {
 	fn one_pole_highpass(&mut self, cutoff: f64);
 	fn one_pole_bandpass(&mut self, cutoff: f64);
 	fn one_pole_bandpass_bw(&mut self, cutoff: f64);
+	fn one_pole_notch(&mut self, cutoff: f64);
 }
