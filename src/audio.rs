@@ -66,4 +66,6 @@ pub trait Filter {
 	// Reference: http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
 	fn one_pole_lowpass(&mut self, cutoff: f64);
 	fn one_pole_highpass(&mut self, cutoff: f64);
+	fn one_pole_bandpass(&mut self, cutoff: f64);
+	fn one_pole_bandpass_bw(&mut self, cutoff: f64);
 }
