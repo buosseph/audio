@@ -9,6 +9,7 @@
 *.txt
 *.zip
 
+main.rs
 main
 tmp.*
 
