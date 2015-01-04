@@ -5,6 +5,7 @@ use std::path::posix::Path;
 use super::chunk;
 use super::chunk::CompressionCode;
 use super::{RIFF, FMT, DATA};
+use super::le_u8_array_to_i16;
 
 pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 	let path = Path::new(file_path);
@@ -128,7 +129,6 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 				// Uses signed ints (8-bit uses uints)
 				16 => {
 					match (fmt.num_of_channels, fmt.block_size) {
-						// Stereo
 						(2, 4) => {
 							let mut frame: [u8, ..4] = [0, ..4];
 							for i in range(0, num_of_frames) {
@@ -147,28 +147,18 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 									}
 								};
 
-								let left_sample: i16 = (frame[1] as i16 << 8) | frame[0] as i16;
-								let right_sample: i16 = (frame[3] as i16 << 8) | frame[1] as i16;
+								// let left_sample: i16 = (frame[1] as i16 << 8) | frame[0] as i16;
+								let left_sample	: i16 	= le_u8_array_to_i16(&[frame[0], frame[1]]);
+								let right_sample: i16 	= le_u8_array_to_i16(&[frame[2], frame[3]]);
 
-								let float_left: f64 = left_sample as f64 / 32768f64;
-								let float_right: f64 = right_sample as f64 / 32768f64;
+								let float_left	: f64 	= left_sample as f64 / 32768f64;
+								let float_right	: f64 	= right_sample as f64 / 32768f64;
 
 								samples.push(float_left);
 								samples.push(float_right);
 							}
-
-							Ok(
-								RawAudio{
-									bit_rate: fmt.bit_rate as uint,
-									sample_rate: fmt.sampling_rate as uint,
-									channels: fmt.num_of_channels as uint,
-									order: SampleOrder::INTERLEAVED,
-									samples: samples,
-								}
-							)
 						},
 
-						// Mono
 						(1, 2) => {
 							for i in range(0, num_of_frames) {
 								match file.read_le_i16() {
@@ -183,16 +173,6 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 									}
 								}
 							}
-
-							Ok(
-								RawAudio {
-									bit_rate: fmt.bit_rate as uint,
-									sample_rate: fmt.sampling_rate as uint,
-									channels: fmt.num_of_channels as uint,
-									order: SampleOrder::MONO,
-									samples: samples,
-								}
-							)
 						},
 
 						(_, _) => {
@@ -202,7 +182,6 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 							))
 						}
 					}
-
 				},
 
 				_ => {
@@ -217,6 +196,16 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 			panic!("This file is not encoded using PCM.".to_string())
 		}
 	}
+
+	Ok(
+		RawAudio {
+			bit_rate: fmt.bit_rate as uint,
+			sample_rate: fmt.sampling_rate as uint,
+			channels: fmt.num_of_channels as uint,
+			order: SampleOrder::MONO,
+			samples: samples,
+		}
+	)
 }
 
 #[cfg(test)]
