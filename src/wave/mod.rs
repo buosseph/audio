@@ -13,7 +13,7 @@ mod tests {
 	#[test]
 	fn test_read_write_eq() {
 		use super::*;
-		use std::str;
+		// use std::str;
 
 		let folder: String = String::from_str("test/wav/");
 		let files = vec![
