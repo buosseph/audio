@@ -26,6 +26,7 @@ pub mod audio;
 // Formats
 pub mod wave;
 pub mod aiff;
+pub mod mp3;
 
 // Processing
 // pub mod utilities;
