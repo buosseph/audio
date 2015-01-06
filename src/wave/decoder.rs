@@ -5,7 +5,6 @@ use std::path::posix::Path;
 use super::chunk;
 use super::chunk::CompressionCode;
 use super::{RIFF, FMT, DATA};
-use super::le_u8_array_to_i16;
 
 pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 	let path = Path::new(file_path);
@@ -130,26 +129,46 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 				16 => {
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 4) => {
-							let mut frame: [u8, ..4] = [0, ..4];
+							// let mut frame: [u8; 4] = [0, ..4];
 							for i in range(0, num_of_frames) {
-								match file.read(&mut frame) {
-									Ok(bytes_read) => {
-										if bytes_read != fmt.block_size as uint {
-											panic!(format!(
-											"Error reading frame {} from file. Potentially malformed.", i
-											))
-										}
-									},
+								// {	// Bit shift broken, 
+								// 	match file.read(&mut frame) {
+								// 		Ok(bytes_read) => {
+								// 			if bytes_read != fmt.block_size as uint {
+								// 				panic!(format!(
+								// 				"Error reading frame {} from file. Potentially malformed.", i
+								// 				))
+								// 			}
+								// 		},
+								// 		Err(e)	=> {
+								// 			panic!(format!(
+								// 				"Error reading frame {} from file: {}", i, e
+								// 			))
+								// 		}
+								// 	};
+
+								// 	// let left_sample: i16 = (frame[1] as i16 << 8) | frame[0] as i16;
+								// 	let left_sample	: i16 	= le_u8_array_to_i16(&[frame[0], frame[1]]);
+								// 	let right_sample: i16 	= le_u8_array_to_i16(&[frame[2], frame[3]]);
+								// }
+
+								let left_sample = match file.read_le_i16() {
+									Ok(sample) => {sample},
 									Err(e)	=> {
 										panic!(format!(
-											"Error reading frame {} from file: {}", i, e
+											"Error reading left sample {} from file: {}", i, e
 										))
 									}
 								};
 
-								// let left_sample: i16 = (frame[1] as i16 << 8) | frame[0] as i16;
-								let left_sample	: i16 	= le_u8_array_to_i16(&[frame[0], frame[1]]);
-								let right_sample: i16 	= le_u8_array_to_i16(&[frame[2], frame[3]]);
+								let right_sample = match file.read_le_i16() {
+									Ok(sample) => {sample},
+									Err(e)	=> {
+										panic!(format!(
+											"Error reading right sample {} from file: {}", i, e
+										))
+									}
+								};
 
 								let float_left	: f64 	= left_sample as f64 / 32768f64;
 								let float_right	: f64 	= right_sample as f64 / 32768f64;

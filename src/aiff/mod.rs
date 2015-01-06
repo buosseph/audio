@@ -12,10 +12,12 @@ const SSND: i32 = 0x53534E44;
 #[cfg(test)]
 mod tests {
 	#[test]
+	#[allow(unreachable_code)]
 	fn test_read_write_eq() {
 		use super::*;
-		use std::str;
 
+		panic!("Bit shift is broken, cannot read sample_rate from file. Wait for fix.");
+		
 		let folder: String = String::from_str("test/aiff/");
 		let files = vec![
 			"i16-pcm-mono.aiff",
@@ -27,7 +29,7 @@ mod tests {
 			let mut path: String = folder.clone();
 			path.push_str(*file);
 
-			let mut audio = decoder::read_file(path.as_slice()).unwrap();
+			let audio = decoder::read_file(path.as_slice()).unwrap();
 			let total_samples = audio.samples.len();
 			let channels = audio.channels;
 			let bit_rate = audio.bit_rate;

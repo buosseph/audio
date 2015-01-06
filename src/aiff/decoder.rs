@@ -21,8 +21,8 @@ pub fn read_file_data(file_path: &str) -> IoResult<()> {
 		panic!("File is not valid AIFF. Does not contain required common chunk.".to_string())
 	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
-	let sample_rate: f64 = convert_from_ieee_extended(comm.sampling_rate);
-
+	// let sample_rate: f64 = convert_from_ieee_extended(comm.sampling_rate);
+	let sample_rate:uint = 0;
 
 	let ssnd_chunk_marker = file.read_be_i32().unwrap();
 	if ssnd_chunk_marker != SSND {
@@ -79,7 +79,8 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 		panic!("File is not valid AIFF. Does not contain required common chunk.".to_string())
 	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
-	let sample_rate: uint = convert_from_ieee_extended(comm.sampling_rate) as uint;
+	// let sample_rate: uint = convert_from_ieee_extended(comm.sampling_rate) as uint;
+	let sample_rate:uint = 0;
 
 	let ssnd_chunk_marker = file.read_be_i32().unwrap();
 	if ssnd_chunk_marker != SSND {
@@ -208,41 +209,42 @@ fn ieee_u32_to_f64(num: u32) -> f64 {
 	((num - 2147483647u32 - 1) as i32) as f64 + 2147483648f64
 }
 
-fn convert_from_ieee_extended(bytes: Vec<u8>) -> f64 {
-	let mut num: f64;
-	let mut exponent: int;
-	let mut hi_mant: u32;
-	let mut low_mant: u32;
+// Bitshift broken. Wait for update
+// fn convert_from_ieee_extended(bytes: Vec<u8>) -> f64 {
+// 	let mut num: f64;
+// 	let mut exponent: int;
+// 	let mut hi_mant: u32;
+// 	let mut low_mant: u32;
 
-	exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as int;
-	hi_mant = 	(bytes[2] & 0xff) as u32 	<< 24
-			| 	(bytes[3] & 0xff) as u32 	<< 16
-			| 	(bytes[4] & 0xff) as u32 	<< 8
-			| 	(bytes[5] & 0xff) as u32;
-	low_mant = 	(bytes[6] & 0xff) as u32 	<< 24
-			| 	(bytes[7] & 0xff) as u32 	<< 16
-			| 	(bytes[8] & 0xff) as u32 	<< 8
-			| 	(bytes[9] & 0xff) as u32;
+// 	exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as int;
+// 	hi_mant = 	(bytes[2] & 0xff) as u32 	<< 24
+// 			| 	(bytes[3] & 0xff) as u32 	<< 16
+// 			| 	(bytes[4] & 0xff) as u32 	<< 8
+// 			| 	(bytes[5] & 0xff) as u32;
+// 	low_mant = 	(bytes[6] & 0xff) as u32 	<< 24
+// 			| 	(bytes[7] & 0xff) as u32 	<< 16
+// 			| 	(bytes[8] & 0xff) as u32 	<< 8
+// 			| 	(bytes[9] & 0xff) as u32;
 
-	if exponent == 0 && hi_mant == 0 && low_mant == 0 {
-		return 0f64;
-	}
+// 	if exponent == 0 && hi_mant == 0 && low_mant == 0 {
+// 		return 0f64;
+// 	}
 
-	if exponent == 0x7fff {
-		panic!("Sampling rate is not a number!");
-	}
-	else {
-		exponent -= 16383;
-		exponent -= 31;
-		num	= ::std::num::FloatMath::ldexp(ieee_u32_to_f64(hi_mant), exponent);		
-		exponent -= 32;
-		num  += ::std::num::FloatMath::ldexp(ieee_u32_to_f64(low_mant), exponent);
-	}
+// 	if exponent == 0x7fff {
+// 		panic!("Sampling rate is not a number!");
+// 	}
+// 	else {
+// 		exponent -= 16383;
+// 		exponent -= 31;
+// 		num	= ::std::num::FloatMath::ldexp(ieee_u32_to_f64(hi_mant), exponent);		
+// 		exponent -= 32;
+// 		num  += ::std::num::FloatMath::ldexp(ieee_u32_to_f64(low_mant), exponent);
+// 	}
 
-	if bytes[0] & 0x80 > 0 {
-		return -num;
-	}
-	else {
-		return num;
-	}
-}
+// 	if bytes[0] & 0x80 > 0 {
+// 		return -num;
+// 	}
+// 	else {
+// 		return num;
+// 	}
+// }

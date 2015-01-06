@@ -12,7 +12,7 @@
 
 use std::fmt;
 
-#[deriving(Show, Clone, Copy)]
+#[derive(Show, Clone, Copy)]
 pub enum SampleOrder {
 	MONO,
 	INTERLEAVED,
@@ -20,7 +20,7 @@ pub enum SampleOrder {
 	PLANAR,
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct RawAudio {
 	pub bit_rate: uint,
 	pub sample_rate: uint,

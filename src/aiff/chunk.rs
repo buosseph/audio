@@ -1,7 +1,7 @@
 use std::io::{File, IoResult};
 use super::AIFF;
 
-#[deriving(Copy)]
+#[derive(Copy)]
 pub struct IFFHeader {
 	pub size: i32, // size + 8 = total size including this and id
 	pub form_type: i32, // 0x41494646 => "AIFF"
@@ -60,7 +60,7 @@ impl CommonChunk {
 
 // Multi-channel samples are always interleaved
 // Required Chunk
-#[deriving(Copy)]
+#[derive(Copy)]
 pub struct SoundDataChunk {
 	pub size: i32, // Includes offset and block_size => (data_size + 8)
 	pub offset: u32,
