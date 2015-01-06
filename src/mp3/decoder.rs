@@ -14,8 +14,7 @@ use std::path::posix::Path;
 use super::{
 	BIT_RATE_HUFF_INDEX,
 	SAMP_FREQ_INDEX,
-	MODE_INDEX,
-	Mode
+	MODE_INDEX
 };
 
 // Frame and dependant structs
