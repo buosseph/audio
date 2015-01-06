@@ -10,7 +10,6 @@ pub use audio::SampleOrder::{
 	PLANAR,
 };
 
-
 pub use audio::Dynamics;
 pub use audio::Utilities;
 pub use audio::Filter;
@@ -25,3 +24,5 @@ pub mod aiff;
 // pub mod utilities;
 pub mod dynamics;
 pub mod filter;
+
+pub mod db;
