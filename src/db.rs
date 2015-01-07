@@ -13,9 +13,6 @@ pub fn db_to_f64(dbgain: f64) -> f64 {
 }
 
 mod tests {
-	use super::*;
-	use std::f64::EPSILON;
-
 	#[test]
 	fn test_f64_to_db() {
 		let x1 = f64_to_db(0.5f64).expect("Failed conversion");

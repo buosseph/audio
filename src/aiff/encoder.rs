@@ -98,7 +98,7 @@ fn convert_to_ieee_extended(sample_rate: uint) -> Vec<u8>{
 		false => { 0x0000 }
 	};
 
-	let tuple = ::std::num::FloatMath::frexp(num);
+	let tuple = ::std::num::Float::frexp(num);
 	f_mant = tuple.0;
 	exponent = tuple.1;
 
@@ -110,15 +110,15 @@ fn convert_to_ieee_extended(sample_rate: uint) -> Vec<u8>{
 	else {
 		exponent += 16382;
 		if exponent < 0 {
-			f_mant 		= ::std::num::FloatMath::ldexp(f_mant, exponent);
+			f_mant 		= ::std::num::Float::ldexp(f_mant, exponent);
 			exponent 	= 0;
 		}
 
 		exponent 	|= sign as int;
-		f_mant 		= ::std::num::FloatMath::ldexp(f_mant, 32);
+		f_mant 		= ::std::num::Float::ldexp(f_mant, 32);
 		fs_mant 	= ::std::num::Float::floor(f_mant);
 		hi_mant 	= ieee_f64_to_u32(fs_mant);
-		f_mant 		= ::std::num::FloatMath::ldexp(f_mant - fs_mant, 32);
+		f_mant 		= ::std::num::Float::ldexp(f_mant - fs_mant, 32);
 		fs_mant 	= ::std::num::Float::floor(f_mant);
 		low_mant 	= ieee_f64_to_u32(fs_mant);
 	}

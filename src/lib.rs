@@ -1,7 +1,5 @@
 // For reference, https://github.com/PistonDevelopers/image
 
-#![feature(globs)]
-
 pub use audio::RawAudio;
 pub use audio::SampleOrder::{
 	MONO,

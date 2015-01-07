@@ -12,8 +12,8 @@ impl Filter for RawAudio {
 
 		// Intermidiates
 		let w0: f64 = ::std::f64::consts::PI_2 * cutoff / sampling_frequency;
-		let cos_w0 = ::std::num::FloatMath::cos(w0);
-		let sin_w0 = ::std::num::FloatMath::sin(w0);
+		let cos_w0 = ::std::num::Float::cos(w0);
+		let sin_w0 = ::std::num::Float::sin(w0);
 		let alpha = sin_w0 / (2f64 * q);
 
 		let b0 = (1f64 - cos_w0) / 2f64;
@@ -65,8 +65,8 @@ impl Filter for RawAudio {
 
 		// Intermidiates
 		let w0: f64 = ::std::f64::consts::PI_2 * cutoff / sampling_frequency;
-		let cos_w0 = ::std::num::FloatMath::cos(w0);
-		let sin_w0 = ::std::num::FloatMath::sin(w0);
+		let cos_w0 = ::std::num::Float::cos(w0);
+		let sin_w0 = ::std::num::Float::sin(w0);
 		let alpha = sin_w0 / (2f64 * q);
 
 		// let b0 = (1f64 - cos_w0) / 2f64;		// creates fun hard distortion!
@@ -121,8 +121,8 @@ impl Filter for RawAudio {
 
 		// Intermidiates
 		let w0: f64 = ::std::f64::consts::PI_2 * cutoff / sampling_frequency;
-		let cos_w0 = ::std::num::FloatMath::cos(w0);
-		let sin_w0 = ::std::num::FloatMath::sin(w0);
+		let cos_w0 = ::std::num::Float::cos(w0);
+		let sin_w0 = ::std::num::Float::sin(w0);
 		let alpha = sin_w0 / (2f64 * q);
 
 		let b0 = q * alpha;
@@ -175,10 +175,10 @@ impl Filter for RawAudio {
 
 		// Intermidiates
 		let w0: f64 = ::std::f64::consts::PI_2 * cutoff / sampling_frequency;
-		let cos_w0 = ::std::num::FloatMath::cos(w0);
-		let sin_w0 = ::std::num::FloatMath::sin(w0);
+		let cos_w0 = ::std::num::Float::cos(w0);
+		let sin_w0 = ::std::num::Float::sin(w0);
 		let alpha: f64 = sin_w0 /
-			::std::num::FloatMath::sinh(
+			::std::num::Float::sinh(
 				::std::num::Float::ln(2f64)
 				/ 2f64 * bw * w0 / sin_w0
 			);
@@ -233,8 +233,8 @@ impl Filter for RawAudio {
 
 		// Intermidiates
 		let w0: f64 = ::std::f64::consts::PI_2 * cutoff / sampling_frequency;
-		let cos_w0 = ::std::num::FloatMath::cos(w0);
-		let sin_w0 = ::std::num::FloatMath::sin(w0);
+		let cos_w0 = ::std::num::Float::cos(w0);
+		let sin_w0 = ::std::num::Float::sin(w0);
 		let alpha = sin_w0 / (2f64 * q);
 
 		let b0 = 1f64;
