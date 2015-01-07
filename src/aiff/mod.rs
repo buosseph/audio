@@ -12,11 +12,8 @@ const SSND: i32 = 0x53534E44;
 #[cfg(test)]
 mod tests {
 	#[test]
-	#[allow(unreachable_code)]
 	fn test_read_write_eq() {
 		use super::*;
-
-		panic!("Bit shift is broken, cannot read sample_rate from file. Wait for fix.");
 		
 		let folder: String = String::from_str("test/aiff/");
 		let files = vec![
