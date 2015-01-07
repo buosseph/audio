@@ -1,10 +1,25 @@
 use audio::RawAudio;
 use audio::SampleOrder;
+// use audio::{AudioDecoder};
 use std::io::{File, IoResult};
 use std::path::posix::Path;
 use super::chunk;
 use super::chunk::CompressionCode;
 use super::{RIFF, FMT, DATA};
+
+// Needs to be in a trait since it's going to be used by AIFF
+fn le_u8_array_to_i16(array: &[u8; 2]) -> i16{
+	(array[1] as i16) << 8 | array[0] as i16
+}
+#[test]
+fn test_le_u8_array_to_i16() {
+	let array: [u8; 4] = [0x24, 0x17, 0x1e, 0xf3];
+	let case1: &[u8; 2] = &[array[0], array[1]];
+	let case2: &[u8; 2] = &[array[2], array[3]];
+	assert_eq!(5924i16, le_u8_array_to_i16(case1));
+	assert_eq!(-3298i16, le_u8_array_to_i16(case2));
+}
+
 
 pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 	let path = Path::new(file_path);
@@ -82,7 +97,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	if data_chunk_marker != DATA {
 		panic!("Files is not valid WAVE. Does not contain required data chunk.".to_string())
 	}
-	let data_size = file.read_le_u32().unwrap();
+	let data = chunk::DataChunk::read_chunk(&mut file).unwrap();
 
 	// 	println!(
 	// "master_riff_chunk:
@@ -119,7 +134,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	// - Check bitrate
 	// - Check channels and block size
 
-	let num_of_frames: uint = data_size as uint / fmt.block_size as uint ;
+	let num_of_frames: uint = data.size as uint / fmt.block_size as uint ;
 	let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * fmt.num_of_channels as uint);
 
 	match fmt.compression_code {
@@ -129,47 +144,13 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 				16 => {
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 4) => {
-							// let mut frame: [u8; 4] = [0, ..4];
+							let mut frame: &[u8];
 							for i in range(0, num_of_frames) {
-								// {	// Bit shift broken, 
-								// 	match file.read(&mut frame) {
-								// 		Ok(bytes_read) => {
-								// 			if bytes_read != fmt.block_size as uint {
-								// 				panic!(format!(
-								// 				"Error reading frame {} from file. Potentially malformed.", i
-								// 				))
-								// 			}
-								// 		},
-								// 		Err(e)	=> {
-								// 			panic!(format!(
-								// 				"Error reading frame {} from file: {}", i, e
-								// 			))
-								// 		}
-								// 	};
+								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
 
-								// 	// let left_sample: i16 = (frame[1] as i16 << 8) | frame[0] as i16;
-								// 	let left_sample	: i16 	= le_u8_array_to_i16(&[frame[0], frame[1]]);
-								// 	let right_sample: i16 	= le_u8_array_to_i16(&[frame[2], frame[3]]);
-								// }
-
-								let left_sample = match file.read_le_i16() {
-									Ok(sample) => {sample},
-									Err(e)	=> {
-										panic!(format!(
-											"Error reading left sample {} from file: {}", i, e
-										))
-									}
-								};
-
-								let right_sample = match file.read_le_i16() {
-									Ok(sample) => {sample},
-									Err(e)	=> {
-										panic!(format!(
-											"Error reading right sample {} from file: {}", i, e
-										))
-									}
-								};
-
+								let left_sample	: i16 	= le_u8_array_to_i16(&[frame[0], frame[1]]);
+								let right_sample: i16 	= le_u8_array_to_i16(&[frame[2], frame[3]]);
+							
 								let float_left	: f64 	= left_sample as f64 / 32768f64;
 								let float_right	: f64 	= right_sample as f64 / 32768f64;
 
@@ -179,18 +160,12 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 						},
 
 						(1, 2) => {
+							let mut frame: &[u8];
 							for i in range(0, num_of_frames) {
-								match file.read_le_i16() {
-									Ok(sample) => {
-										let float_sample = sample as f64 / 32768f64;
-										samples.push(float_sample);
-									},
-									Err(e)	=> {
-										panic!(format!(
-											"Error reading sample {} from file: {}", i, e
-										))
-									}
-								}
+								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								let sample : i16 = le_u8_array_to_i16(&[frame[0], frame[1]]);
+								let float_sample : f64 = sample as f64 / 32768f64;
+								samples.push(float_sample);
 							}
 						},
 

@@ -8,19 +8,6 @@ const WAVE: u32 = 0x45564157;
 const FMT:	u32 = 0x20746D66;
 const DATA: u32 = 0x61746164;
 
-fn le_u8_array_to_i16(array: &[u8; 2]) -> i16{
-	(array[1] as i16) << 8 | array[0] as i16
-}
-#[test]
-fn test_le_u8_array_to_i16() {
-	let array: [u8; 4] = [0x24, 0x17, 0x1e, 0xf3];
-	let case1: &[u8; 2] = &[array[0], array[1]];
-	let case2: &[u8; 2] = &[array[2], array[3]];
-	assert_eq!(5924i16, le_u8_array_to_i16(case1));
-	assert_eq!(-3298i16, le_u8_array_to_i16(case2));
-}
-
-
 #[cfg(test)]
 mod tests {
 	#[test]

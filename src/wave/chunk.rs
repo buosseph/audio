@@ -25,7 +25,6 @@ impl RIFFHeader {
 	}
 }
 
-#[allow(dead_code)]
 #[derive(Show, Copy)]
 pub enum CompressionCode {
 	Unknown	= 0,
@@ -84,17 +83,16 @@ impl FormatChunk {
 	}
 }
 
-// Not used, bad implementation
 // Multi-channel samples are always interleaved
 pub struct DataChunk {
 	pub size: u32,
-	pub data: Vec<u8>,	// Uninterpreted data -> needs to be able to be read as i16
+	pub data: Vec<u8>,	// Uninterpreted data
 }
 
 impl DataChunk {
 	pub fn read_chunk(file: &mut File) -> IoResult<DataChunk> {
 		let size = try!(file.read_le_u32());
-		let data = try!(file.read_exact(size as uint));	// Data still not interprete based on bit_rate
+		let data = try!(file.read_exact(size as uint));
 
 		Ok(
 			DataChunk {

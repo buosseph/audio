@@ -50,6 +50,26 @@ impl fmt::Show for RawAudio {
 	}
 }
 
+
+
+// pub trait AudioDecoder {
+// 	fn read_file(&mut self, file_path: &str) -> IoResult<RawAudio>;
+
+// 	fn le_u8_array_to_i16(array: &[u8; 2]) -> i16{
+// 		(array[1] as i16) << 8 | array[0] as i16
+// 	}
+// }
+
+// #[test]
+// fn test_le_u8_array_to_i16() {
+// 	let array: [u8; 4] = [0x24, 0x17, 0x1e, 0xf3];
+// 	let case1: &[u8; 2] = &[array[0], array[1]];
+// 	let case2: &[u8; 2] = &[array[2], array[3]];
+// 	assert_eq!(5924i16, le_u8_array_to_i16(case1));
+// 	assert_eq!(-3298i16, le_u8_array_to_i16(case2));
+// }
+
+
 pub trait Utilities {
 	fn stereo_to_mono(&mut self) -> bool;
 	fn invert(&mut self) -> bool;
