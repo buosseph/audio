@@ -4,6 +4,7 @@ use audio::{
 	RawAudio,
 	SampleOrder
 };
+use audio::SampleOrder::{MONO, INTERLEAVED};
 use std::io::{File};
 use super::chunk;
 use super::chunk::CompressionCode::{PCM};
@@ -81,7 +82,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 			"File is not valid WAVE".to_string()
 		))
 	}
-	let header = chunk::RIFFHeader::read_chunk(&mut file).unwrap();
+	try!(chunk::RIFFHeader::read_chunk(&mut file));
 
 	let format_chunk_marker = try!(file.read_le_u32());
 	if format_chunk_marker != FMT {
@@ -102,6 +103,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 
 	let num_of_frames: uint = data.size as uint / fmt.block_size as uint ;
 	let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * fmt.num_of_channels as uint);
+	let mut sample_order: SampleOrder;
 
 	let mut frame: &[u8];
 	match fmt.compression_code {
@@ -111,6 +113,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 				16 => {
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 4) => {
+							sample_order = INTERLEAVED;
 							for i in range(0, num_of_frames) {
 								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
 
@@ -126,6 +129,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						},
 
 						(1, 2) => {
+							sample_order = MONO;
 							for i in range(0, num_of_frames) {
 								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
 								let sample : i16 = (frame[1] as i16) << 8 | frame[0] as i16;
@@ -165,7 +169,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 			bit_rate: 		fmt.bit_rate as uint,
 			sample_rate: 	fmt.sampling_rate as uint,
 			channels: 		fmt.num_of_channels as uint,
-			order: 			SampleOrder::INTERLEAVED,
+			order: 			sample_order,
 			samples: 		samples,
 		}
 	)

@@ -28,7 +28,7 @@ impl RIFFHeader {
 	}
 }
 
-#[derive(Show, Copy)]
+#[derive(Show, Copy, PartialEq, Eq)]
 pub enum CompressionCode {
 	Unknown	= 0,
 	PCM		= 1,
@@ -47,8 +47,8 @@ pub struct FormatChunk {
 
 impl FormatChunk {
 	pub fn read_chunk(file: &mut File) -> IoResult<FormatChunk> {
-		let chunk_size = try!(file.read_le_u32());
-		let mut buffer: Vec<u8> = try!(file.read_exact(chunk_size as uint));
+		let chunk_size	: u32 		= try!(file.read_le_u32());
+		let buffer		: Vec<u8> 	= try!(file.read_exact(chunk_size as uint));
 
 		let compression_u16: u16 = (buffer[1] as u16) << 8 | buffer[0] as u16;
 		let compression_code: CompressionCode =
@@ -56,11 +56,11 @@ impl FormatChunk {
 				1 => CompressionCode::PCM,
 				_ => CompressionCode::Unknown,	// Not supporting any other type than PCM
 			};
-		let num_of_channels	: u16 = (buffer[3] as u16) << 8 | buffer[2] as u16;
-		let sampling_rate	: u32 = (buffer[7] as u32) << 24 | (buffer[6] as u32) << 16 | (buffer[5] as u32) << 8 | buffer[4] as u32;
-		let data_rate		: u32 = (buffer[11] as u32) << 24 | (buffer[10] as u32) << 16 | (buffer[9] as u32) << 8 | buffer[8] as u32;
-		let block_size		: u16 = (buffer[13] as u16) << 8 | buffer[12] as u16;
-		let bit_rate		: u16 = (buffer[15] as u16) << 8 | buffer[14] as u16;
+		let num_of_channels	: u16 	= (buffer[3] as u16) << 8 | buffer[2] as u16;
+		let sampling_rate	: u32 	= (buffer[7] as u32) << 24 | (buffer[6] as u32) << 16 | (buffer[5] as u32) << 8 | buffer[4] as u32;
+		let data_rate		: u32 	= (buffer[11] as u32) << 24 | (buffer[10] as u32) << 16 | (buffer[9] as u32) << 8 | buffer[8] as u32;
+		let block_size		: u16 	= (buffer[13] as u16) << 8 | buffer[12] as u16;
+		let bit_rate		: u16 	= (buffer[15] as u16) << 8 | buffer[14] as u16;
 
 		// Don't care for other bytes if PCM
 

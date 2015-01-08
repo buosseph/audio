@@ -4,6 +4,7 @@ use audio::{
 	RawAudio,
 	SampleOrder
 };
+use audio::SampleOrder::{MONO, INTERLEAVED};
 use std::io::{File};
 use super::chunk;
 use super::{FORM, COMM, SSND};
@@ -82,7 +83,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 			"File is not valid AIFF".to_string()
 		))
 	}
-	let header = chunk::IFFHeader::read_chunk(&mut file).unwrap();
+	try!(chunk::IFFHeader::read_chunk(&mut file));
 
 	let comm_chunk_marker = file.read_be_i32().unwrap();
 	if comm_chunk_marker != COMM {
@@ -103,12 +104,14 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 
 	let num_of_frames: uint = comm.num_of_frames as uint;
 	let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * comm.num_of_channels as uint);
+	let mut sample_order: SampleOrder;
 
 	let mut frame: &[u8];
 	match comm.bit_rate {
 		16 	=> {
 			match comm.num_of_channels {
 				2 	=> {
+					sample_order = INTERLEAVED;
 					for i in range(0, num_of_frames) {
 						frame = ssnd.data.slice(i * 4 as uint, i * 4 as uint + 4 as uint);
 
@@ -124,6 +127,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 				},
 
 				1 	=> {
+					sample_order = MONO;
 					for i in range(0, num_of_frames) {
 						frame = ssnd.data.slice(i * 2 as uint, i * 2 as uint + 2 as uint);
 						let sample : i16 = (frame[0] as i16) << 8 | frame[1] as i16;
@@ -156,7 +160,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 			bit_rate: 		comm.bit_rate as uint,
 			sample_rate: 	comm.sample_rate as uint,
 			channels: 		comm.num_of_channels as uint,
-			order: 			SampleOrder::INTERLEAVED,
+			order: 			sample_order,
 			samples: 		samples,
 		}
 	)

@@ -31,6 +31,7 @@ mod tests {
 			let channels = audio.channels;
 			let bit_rate = audio.bit_rate;
 			let sample_rate = audio.sample_rate;
+			let sample_order = audio.order;
 
 			let written = encoder::write_file(&audio, &Path::new("tmp.aiff")).unwrap();
 			assert!(written);
@@ -42,6 +43,7 @@ mod tests {
 			assert_eq!(channels, verify.channels);
 			assert_eq!(bit_rate, verify.bit_rate);
 			assert_eq!(sample_rate, verify.sample_rate);
+			assert_eq!(sample_order, verify.order);
 		}
 	}
 }

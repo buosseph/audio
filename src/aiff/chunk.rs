@@ -41,7 +41,7 @@ pub struct CommonChunk {
 impl CommonChunk {
 	pub fn read_chunk(file: &mut File) -> IoResult<CommonChunk> {
 		let chunk_size 	: i32 		= try!(file.read_be_i32());
-		let mut buffer	: Vec<u8> 	= try!(file.read_exact(chunk_size as uint));
+		let buffer		: Vec<u8> 	= try!(file.read_exact(chunk_size as uint));
 
 		let num_of_channels	: i16 	= (buffer[0] as i16) << 8 | buffer[1] as i16;
 		let num_of_frames	: u32 	= (buffer[2] as u32) << 24 | (buffer[3] as u32) << 16 | (buffer[4] as u32) << 8 | buffer[5] as u32;

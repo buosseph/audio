@@ -3,10 +3,17 @@ use audio::{
 	AudioError,
 	RawAudio
 };
+use audio::SampleOrder::{MONO, INTERLEAVED};
 use std::io::{File};
 use super::{RIFF, WAVE, FMT, DATA};
 
 pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
+	match raw_audio.order {
+		MONO		=> {},
+		INTERLEAVED => {},
+		_			=> return Err(AudioError::UnsupportedError("Multi-channel audio must be interleaved for encoding".to_string()))
+	}
+
 	let mut file 	= File::create(path);
 
 	let num_of_channels	: u16 		= raw_audio.channels as u16;

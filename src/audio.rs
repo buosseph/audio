@@ -17,9 +17,9 @@ use std::io::{IoError};
 use std::error::{FromError};
 use std::ascii::OwnedAsciiExt;
 
-#[derive(Show, Clone, Copy)]
+#[derive(Show, Clone, Copy, PartialEq, Eq)]
 pub enum SampleOrder {
-	MONO,			// Probably take this out
+	MONO,
 	INTERLEAVED,
 	REVERSED,		// Have yet to see anything using these...
 	PLANAR,
@@ -56,7 +56,6 @@ impl fmt::Show for RawAudio {
 	}
 }
 
-
 pub type AudioResult<T> = Result<T, AudioError>;
 
 #[derive(Show)]
@@ -65,12 +64,12 @@ pub enum AudioError {
 	IoError(IoError),
 	UnsupportedError(String)
 }
+
 impl FromError<IoError> for AudioError {
 	fn from_error(err: IoError) -> AudioError {
 		AudioError::IoError(err)
 	}
 }
-
 
 pub fn load(path: &Path) -> AudioResult<RawAudio> {
 	let extension = path.extension_str().map_or("".to_string(), |ext| ext.to_string().into_ascii_lowercase());

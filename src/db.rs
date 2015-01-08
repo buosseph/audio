@@ -7,11 +7,14 @@ pub fn f64_to_db(gain: f64) -> Option<f64> {
 		None
 	}
 }
+
 pub fn db_to_f64(dbgain: f64) -> f64 {
 	// gain = 10^(decibels / 20)
 	::std::num::Float::powf(10f64, dbgain / 20f64)
 }
 
+// No... I actually need these imports...
+#[allow(unused_imports)]
 mod tests {
 	use super::*;
 	use std::f64::EPSILON;
