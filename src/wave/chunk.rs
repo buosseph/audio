@@ -9,8 +9,11 @@ pub struct RIFFHeader {
 
 impl RIFFHeader {
 	pub fn read_chunk(file: &mut File) -> IoResult<RIFFHeader> {
-		let file_size			= try!(file.read_le_u32());
-		let file_type_header	= try!(file.read_le_u32());
+		let mut buffer: [u8; 8] = [0; 8];
+		try!(file.read(&mut buffer));
+
+		let file_size		: u32 = (buffer[3] as u32) << 24 | (buffer[2] as u32) << 16 | (buffer[1] as u32) << 8 | buffer[0] as u32;
+		let file_type_header: u32 = (buffer[7] as u32) << 24 | (buffer[6] as u32) << 16 | (buffer[5] as u32) << 8 | buffer[4] as u32;
 
 		if file_type_header != WAVE {
 			panic!("File is not valid WAVE.");
@@ -44,30 +47,22 @@ pub struct FormatChunk {
 
 impl FormatChunk {
 	pub fn read_chunk(file: &mut File) -> IoResult<FormatChunk> {
-		let chunk_size							= try!(file.read_le_u32());
-		let compression_code: CompressionCode	= 
-			match file.read_le_u16() {
-				Ok(code)	=> {
-					match code {
-						1 => CompressionCode::PCM,
-						_ => CompressionCode::Unknown,
-					}
-				},
-				Err(e)		=> {panic!("Error: {}", e)},
-			};
-		let num_of_channels						= try!(file.read_le_u16());
-		let sampling_rate						= try!(file.read_le_u32());
-		let data_rate							= try!(file.read_le_u32());
-		let block_size							= try!(file.read_le_u16());
-		let bit_rate							= try!(file.read_le_u16());
+		let chunk_size = try!(file.read_le_u32());
+		let mut buffer: Vec<u8> = try!(file.read_exact(chunk_size as uint));
 
-		// Extra bytes (unused in PCM)
-		if chunk_size > 16 {
-			let extra_length = chunk_size - 16;
-			for _ in range(0, extra_length) {
-				try!(file.read_u8());
-			}
-		}
+		let compression_u16: u16 = (buffer[1] as u16) << 8 | buffer[0] as u16;
+		let compression_code: CompressionCode =
+			match compression_u16 {
+				1 => CompressionCode::PCM,
+				_ => CompressionCode::Unknown,	// Not supporting any other type than PCM
+			};
+		let num_of_channels	: u16 = (buffer[3] as u16) << 8 | buffer[2] as u16;
+		let sampling_rate	: u32 = (buffer[7] as u32) << 24 | (buffer[6] as u32) << 16 | (buffer[5] as u32) << 8 | buffer[4] as u32;
+		let data_rate		: u32 = (buffer[11] as u32) << 24 | (buffer[10] as u32) << 16 | (buffer[9] as u32) << 8 | buffer[8] as u32;
+		let block_size		: u16 = (buffer[13] as u16) << 8 | buffer[12] as u16;
+		let bit_rate		: u16 = (buffer[15] as u16) << 8 | buffer[14] as u16;
+
+		// Don't care for other bytes if PCM
 
 		Ok(
 			FormatChunk {

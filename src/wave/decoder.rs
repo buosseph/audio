@@ -4,22 +4,8 @@ use audio::SampleOrder;
 use std::io::{File, IoResult};
 use std::path::posix::Path;
 use super::chunk;
-use super::chunk::CompressionCode;
+use super::chunk::CompressionCode::{PCM};
 use super::{RIFF, FMT, DATA};
-
-// Needs to be in a trait since it's going to be used by AIFF
-fn le_u8_array_to_i16(array: &[u8; 2]) -> i16{
-	(array[1] as i16) << 8 | array[0] as i16
-}
-#[test]
-fn test_le_u8_array_to_i16() {
-	let array: [u8; 4] = [0x24, 0x17, 0x1e, 0xf3];
-	let case1: &[u8; 2] = &[array[0], array[1]];
-	let case2: &[u8; 2] = &[array[2], array[3]];
-	assert_eq!(5924i16, le_u8_array_to_i16(case1));
-	assert_eq!(-3298i16, le_u8_array_to_i16(case2));
-}
-
 
 pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 	let path = Path::new(file_path);
@@ -75,9 +61,12 @@ pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 	Ok(())
 }
 
+/* Benchmarks using full song (test/wav/Warrior Concerto - no meta.wav):
+ * - 169813308 ns/iter (+/- 85369957)
+ * - 185122912 ns/iter (+/- 206154876)
+ * - 156273482 ns/iter (+/- 37670745)
+ */
 pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
-	// Assume 44 byte header for now (if fmt chunk is longer than )
-
 	let path = Path::new(file_path);
 	let mut file = try!(File::open(&path));
 
@@ -99,36 +88,6 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	}
 	let data = chunk::DataChunk::read_chunk(&mut file).unwrap();
 
-	// 	println!(
-	// "master_riff_chunk:
-	// 	(RIFF) {}
-	// 	File size: {}
-	// 	File type: (WAVE) {}
-	// fmt_chunk:
-	// 	Chunk size: {},
-	// 	Format: {} (1 = PCM, 3 = IEEE float, ...),
-	// 	Channels: {},
-	// 	Sample rate: {},
-	// 	Data rate: {},
-	// 	Block size: {},
-	// 	Bit rate: {}
-	// data_chunk:
-	// 	Data size: {} bytes
-	// ",
-	// 	riff_header,
-	// 	header.size,
-	// 	header.format,
-	// 	fmt.size,
-	// 	fmt.compression_code,
-	// 	fmt.num_of_channels,
-	// 	fmt.sampling_rate,
-	// 	fmt.data_rate,
-	// 	fmt.block_size,
-	// 	fmt.bit_rate,
-	// 	data_size,
-	// 	);
-
-
 	// Reading:
 	// - Check if PCM
 	// - Check bitrate
@@ -137,19 +96,19 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	let num_of_frames: uint = data.size as uint / fmt.block_size as uint ;
 	let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * fmt.num_of_channels as uint);
 
+	let mut frame: &[u8];
 	match fmt.compression_code {
-		CompressionCode::PCM => {
+		PCM => {
 			match fmt.bit_rate {
 				// Uses signed ints (8-bit uses uints)
 				16 => {
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 4) => {
-							let mut frame: &[u8];
 							for i in range(0, num_of_frames) {
 								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
 
-								let left_sample	: i16 	= le_u8_array_to_i16(&[frame[0], frame[1]]);
-								let right_sample: i16 	= le_u8_array_to_i16(&[frame[2], frame[3]]);
+								let left_sample	: i16 	= (frame[1] as i16) << 8 | frame[0] as i16;
+								let right_sample: i16 	= (frame[3] as i16) << 8 | frame[2] as i16;
 							
 								let float_left	: f64 	= left_sample as f64 / 32768f64;
 								let float_right	: f64 	= right_sample as f64 / 32768f64;
@@ -160,10 +119,9 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 						},
 
 						(1, 2) => {
-							let mut frame: &[u8];
 							for i in range(0, num_of_frames) {
 								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
-								let sample : i16 = le_u8_array_to_i16(&[frame[0], frame[1]]);
+								let sample : i16 = (frame[1] as i16) << 8 | frame[0] as i16;
 								let float_sample : f64 = sample as f64 / 32768f64;
 								samples.push(float_sample);
 							}
@@ -211,7 +169,7 @@ mod tests {
 	#[bench]
 	fn bench_read_file(b: &mut test::Bencher) {
 		b.iter(|| {
-			let _ = read_file("BrassAttack4.wav");
+			let _ = read_file("test/wav/Warrior Concerto - no meta.wav");
 		});
 	}
 }
