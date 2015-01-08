@@ -17,6 +17,9 @@ use std::io::{IoError};
 use std::error::{FromError};
 use std::ascii::OwnedAsciiExt;
 
+/// An enumeration for keeping track of how samples are organized in the loaded audio.
+/// Multichannel samples are usually interleaved, but other orderings are included if they
+/// are needed in the furutre.
 #[derive(Show, Clone, Copy, PartialEq, Eq)]
 pub enum SampleOrder {
 	MONO,
@@ -26,6 +29,7 @@ pub enum SampleOrder {
 }
 
 // Rename to AudioBuffer? Struct name is kinda confusing
+/// Holds all samples and necessary audio data for processing and encoding.
 #[derive(Clone)]
 pub struct RawAudio {
 	pub bit_rate: uint,
@@ -56,12 +60,19 @@ impl fmt::Show for RawAudio {
 	}
 }
 
+/// Result type of an audio encoding or decoding process
 pub type AudioResult<T> = Result<T, AudioError>;
 
+/// An enumeration for reporting audio errors
 #[derive(Show)]
 pub enum AudioError {
+	/// The audio file does not match the supported format specification
 	FormatError(String),
+
+	/// An IoError occurred during an audio process
 	IoError(IoError),
+
+	/// The audio file requires an unsupported feature from the decoder
 	UnsupportedError(String)
 }
 
@@ -70,6 +81,11 @@ impl FromError<IoError> for AudioError {
 		AudioError::IoError(err)
 	}
 }
+
+/// Loads the audio file into memory from a path. The necessary decoder
+/// is determined by the path file extension. An 'AudioError' is 
+/// returned if the file type is not supported or if an error occurred
+/// in the decoding process.
 
 pub fn load(path: &Path) -> AudioResult<RawAudio> {
 	let extension = path.extension_str().map_or("".to_string(), |ext| ext.to_string().into_ascii_lowercase());
@@ -80,6 +96,10 @@ pub fn load(path: &Path) -> AudioResult<RawAudio> {
 	}
 }
 
+/// Writes the audio file to the provided path. The necessary encoder
+/// is determined by the path file extension. An `AudioError` is 
+/// returned if the file type is not supported or if an error occurred
+/// in the encoding process. 
 pub fn save(audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	let extension = path.extension_str().map_or("".to_string(), |ext| ext.to_string().into_ascii_lowercase());
 	match extension.as_slice() {
