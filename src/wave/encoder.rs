@@ -1,6 +1,9 @@
-use audio::AudioResult;
-use audio::RawAudio;
-use std::io::{File, IoResult};
+use audio::{
+	AudioResult,
+	AudioError,
+	RawAudio
+};
+use std::io::{File};
 use super::{RIFF, WAVE, FMT, DATA};
 
 pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
@@ -29,7 +32,7 @@ pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 
 	buffer.push_all(&u32_to_le_slice(FMT));
 	buffer.push_all(&u32_to_le_slice(fmt_chunk_size));
-	buffer.push_all(&u16_to_le_slice(1 as u16));
+	buffer.push_all(&u16_to_le_slice(1 as u16));		// Always encode as PCM
 	buffer.push_all(&u16_to_le_slice(num_of_channels));
 	buffer.push_all(&u32_to_le_slice(sampling_rate));
 	buffer.push_all(&u32_to_le_slice(data_rate));
