@@ -40,26 +40,24 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 
 	let total_bytes 					= 12 + (comm_chunk_size + 8) + (ssnd_chunk_size + 8);	// = [FORM: 12] + [COMM: 26] + [SSND: 8 + chunk_size]
 	let file_size			: u32 		= total_bytes - 8;
+	let mut buffer 			: Vec<u8> 	= Vec::with_capacity(total_bytes as uint);
 
 
-	// FORM
-	try!(file.write_be_i32(FORM));
-	try!(file.write_be_u32(file_size));		// = total bytes - 8
-	try!(file.write_be_i32(AIFF));
+	buffer.push_all(&i32_to_be_slice(FORM));
+	buffer.push_all(&u32_to_be_slice(file_size));
+	buffer.push_all(&i32_to_be_slice(AIFF));
 
-	// COMM
-	try!(file.write_be_i32(COMM));
-	try!(file.write_be_u32(comm_chunk_size));
-	try!(file.write_be_u16(num_of_channels));
-	try!(file.write_be_u32(num_of_frames));
-	try!(file.write_be_u16(bit_rate));
-	try!(file.write(sample_rate_buffer.as_slice()));
+	buffer.push_all(&i32_to_be_slice(COMM));
+	buffer.push_all(&u32_to_be_slice(comm_chunk_size));
+	buffer.push_all(&u16_to_be_slice(num_of_channels));
+	buffer.push_all(&u32_to_be_slice(num_of_frames));
+	buffer.push_all(&u16_to_be_slice(bit_rate));
+	buffer.push_all(sample_rate_buffer.as_slice());
 
-	// SSND
-	try!(file.write_be_i32(SSND));
-	try!(file.write_be_u32(ssnd_chunk_size));
-	try!(file.write_be_u32(offset));
-	try!(file.write_be_u32(aiff_block_size));
+	buffer.push_all(&i32_to_be_slice(SSND));
+	buffer.push_all(&u32_to_be_slice(ssnd_chunk_size));
+	buffer.push_all(&u32_to_be_slice(offset));
+	buffer.push_all(&u32_to_be_slice(aiff_block_size));
 
 	for sample in raw_audio.samples.iter() {
 		let mut pcm_sample = *sample * 32768f64;
@@ -71,8 +69,10 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 			pcm_sample = -32768f64;
 		}
 
-		try!(file.write_be_i16(pcm_sample as i16));
+		buffer.push_all(&i16_to_be_slice(pcm_sample as i16));
 	}
+
+	try!(file.write(buffer.as_slice()));
 
 	Ok(true)
 }
@@ -139,4 +139,21 @@ fn convert_to_ieee_extended(sample_rate: uint) -> Vec<u8>{
 	];
 
 	return vec;
+}
+
+
+fn u32_to_be_slice(num: u32) -> [u8; 4] {
+	[ (num >> 24) as u8, (num >> 16) as u8, (num >> 8) as u8, num as u8 ]
+}
+
+fn u16_to_be_slice(num: u16) -> [u8; 2] {
+	[ (num >> 8) as u8, num as u8 ]
+}
+
+fn i32_to_be_slice(num: i32) -> [u8; 4] {
+	[ (num >> 24) as u8, (num >> 16) as u8, (num >> 8) as u8, num as u8 ]
+}
+
+fn i16_to_be_slice(num: i16) -> [u8; 2] {
+	[ (num >> 8) as u8, num as u8 ]
 }
