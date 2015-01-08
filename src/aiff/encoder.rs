@@ -16,7 +16,6 @@ fn valid_file_path(filename: &str) -> bool{
 }
 
 pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
-
 	if !valid_file_path(file_path) {
 		return Ok(false);
 	}
@@ -24,20 +23,24 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 	let path = Path::new(file_path);
 	let mut file = File::create(&path);
 
-	let num_of_channels	: u16 	= raw_audio.channels as u16;
-	let sampling_rate	: uint 	= raw_audio.sample_rate;
-	let bit_rate		: u16 	= raw_audio.bit_rate as u16;
+	let block_size		: uint 		= raw_audio.channels * raw_audio.bit_rate / 8;
+		// This is not the block_size written to file, needed to determine correct data_size
 
-
-	let offset			: u32 	= 0;
-	let data_size		: u32 	= (raw_audio.samples.len() * raw_audio.channels) as u32;
-	let ssnd_chunk_size	: u32 	= 8 + data_size;
-
-
-	let total_bytes 					= 12 + 26 + 8 + ssnd_chunk_size;	// = [FORM: 12] + [COMM: 26] + [SSND: 8 + chunk_size]
-	let file_size			: u32 		= total_bytes - 8;
+	let num_of_channels		: u16 		= raw_audio.channels as u16;
+	let sampling_rate		: uint 		= raw_audio.sample_rate;
+	let bit_rate			: u16 		= raw_audio.bit_rate as u16;
 	let num_of_frames		: u32 		= (raw_audio.samples.len() / raw_audio.channels) as u32;
 	let sample_rate_buffer	: Vec<u8> 	= convert_to_ieee_extended(sampling_rate);
+	let comm_chunk_size 	: u32 		= 18;	// COMM chunk always 18 since we're not adding padding
+
+	let offset			: u32 	= 0;
+	let aiff_block_size	: u32 	= 0;
+	let data_size		: u32 	= num_of_frames * block_size as u32;
+	let ssnd_chunk_size	: u32 	= 8 + data_size;
+
+	let total_bytes 					= 12 + (comm_chunk_size + 8) + (ssnd_chunk_size + 8);	// = [FORM: 12] + [COMM: 26] + [SSND: 8 + chunk_size]
+	let file_size			: u32 		= total_bytes - 8;
+
 
 	// FORM
 	try!(file.write_be_i32(FORM));
@@ -46,7 +49,7 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 
 	// COMM
 	try!(file.write_be_i32(COMM));
-	try!(file.write_be_u32(18 as u32));		// COMM chunk always 18;
+	try!(file.write_be_u32(comm_chunk_size));
 	try!(file.write_be_u16(num_of_channels));
 	try!(file.write_be_u32(num_of_frames));
 	try!(file.write_be_u16(bit_rate));
@@ -56,7 +59,7 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 	try!(file.write_be_i32(SSND));
 	try!(file.write_be_u32(ssnd_chunk_size));
 	try!(file.write_be_u32(offset));
-	try!(file.write_be_u32(0));		// always 0 according to http://www.onicos.com/staff/iz/formats/aiff.html
+	try!(file.write_be_u32(aiff_block_size));
 
 	for sample in raw_audio.samples.iter() {
 		let mut pcm_sample = *sample * 32768f64;
@@ -72,7 +75,6 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 	}
 
 	Ok(true)
-
 }
 
 fn ieee_f64_to_u32(num: f64) -> u32 {

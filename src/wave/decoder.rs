@@ -61,10 +61,8 @@ pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 	Ok(())
 }
 
-/* Benchmarks using full song (test/wav/Warrior Concerto - no meta.wav):
- * - 169813308 ns/iter (+/- 85369957)
- * - 185122912 ns/iter (+/- 206154876)
- * - 156273482 ns/iter (+/- 37670745)
+/* Most recent benchmark:
+ * - 152745932 ns/iter (+/- 53383069)
  */
 pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	let path = Path::new(file_path);
@@ -88,10 +86,6 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 	}
 	let data = chunk::DataChunk::read_chunk(&mut file).unwrap();
 
-	// Reading:
-	// - Check if PCM
-	// - Check bitrate
-	// - Check channels and block size
 
 	let num_of_frames: uint = data.size as uint / fmt.block_size as uint ;
 	let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * fmt.num_of_channels as uint);
