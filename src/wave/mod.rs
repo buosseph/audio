@@ -25,16 +25,16 @@ mod tests {
 			let mut path: String = folder.clone();
 			path.push_str(*file);
 
-			let audio = decoder::read_file(path.as_slice()).unwrap();
+			let audio = decoder::read_file(&Path::new(path.as_slice())).unwrap();
 			let total_samples = audio.samples.len();
 			let channels = audio.channels;
 			let bit_rate = audio.bit_rate;
 			let sample_rate = audio.sample_rate;
 
-			let written = encoder::write_file(audio, "tmp.wav").unwrap();
+			let written = encoder::write_file(&audio, &Path::new("tmp.wav")).unwrap();
 			assert!(written);
 
-			let verify = decoder::read_file("tmp.wav").unwrap();
+			let verify = decoder::read_file(&Path::new("tmp.wav")).unwrap();
 
 			// Assert written file is same length as read file!
 			assert_eq!(total_samples, verify.samples.len());

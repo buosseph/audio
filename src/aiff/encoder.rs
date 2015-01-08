@@ -3,25 +3,8 @@ use std::io::{File, IoResult};
 use std::path::posix::{Path};
 use super::{FORM, AIFF, COMM, SSND};
 
-fn valid_file_path(filename: &str) -> bool{
-	if filename.is_empty() {
-		println!("Cannot write file with empty filename.");
-		return false;
-	}
-	else if filename.char_at(0) == '/' {
-		println!("You do not need / if you're trying to save to a directory.");
-		return false;
-	}
-	true
-}
-
-pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
-	if !valid_file_path(file_path) {
-		return Ok(false);
-	}
-
-	let path = Path::new(file_path);
-	let mut file = File::create(&path);
+pub fn write_file(raw_audio: &RawAudio, path: &Path) -> IoResult<bool> {
+	let mut file = File::create(path);
 
 	let block_size		: uint 		= raw_audio.channels * raw_audio.bit_rate / 8;
 		// This is not the block_size written to file, needed to determine correct data_size

@@ -1,5 +1,6 @@
 // For reference, https://github.com/PistonDevelopers/image
 
+// Structs
 pub use audio::RawAudio;
 pub use audio::SampleOrder::{
 	MONO,
@@ -8,11 +9,19 @@ pub use audio::SampleOrder::{
 	PLANAR,
 };
 
+// Traits
 pub use audio::Dynamics;
 pub use audio::Utilities;
 pub use audio::Filter;
 
+// Functions
+pub use audio::{
+	load,
+	save
+};
+
 pub mod audio;
+
 
 // Formats
 pub mod wave;

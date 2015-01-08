@@ -1,7 +1,6 @@
 use audio::RawAudio;
 use audio::SampleOrder;
 use std::io::{File, IoResult};
-use std::path::posix::{Path};
 use super::chunk;
 use super::{FORM, COMM, SSND};
 
@@ -64,9 +63,8 @@ pub fn read_file_meta(file_path: &str) -> IoResult<()> {
 /* Most recent benchmark:
  * - 152916993 ns/iter (+/- 60141351)
  */
-pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
-	let path = Path::new(file_path);
-	let mut file = try!(File::open(&path));
+pub fn read_file(path: &Path) -> IoResult<RawAudio> {
+	let mut file = try!(File::open(path));
 
 	let iff_header =  file.read_be_i32().unwrap();
 	if iff_header != FORM {
@@ -140,7 +138,7 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 			bit_rate: 		comm.bit_rate as uint,
 			sample_rate: 	comm.sample_rate as uint,
 			channels: 		comm.num_of_channels as uint,
-			order: 			SampleOrder::MONO,
+			order: 			SampleOrder::INTERLEAVED,
 			samples: 		samples,
 		}
 	)
@@ -155,7 +153,7 @@ mod tests {
 	#[bench]
 	fn bench_read_file(b: &mut test::Bencher) {
 		b.iter(|| {
-			let _ = read_file("test/aiff/Warrior Concerto - no meta.aiff");
+			let _ = read_file(&Path::new("test/aiff/Warrior Concerto - no meta.aiff"));
 		});
 	}
 }

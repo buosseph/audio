@@ -1,27 +1,9 @@
 use audio::RawAudio;
 use std::io::{File, IoResult};
-use std::path::posix::{Path};
 use super::{RIFF, WAVE, FMT, DATA};
 
-fn valid_file_path(filename: &str) -> bool{
-	if filename.is_empty() {
-		println!("Cannot write file with empty filename.");
-		return false;
-	}
-	else if filename.char_at(0) == '/' {
-		println!("You do not need / if you're trying to save to a directory.");
-		return false;
-	}
-	true
-}
-
-pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
-	if !valid_file_path(file_path) {
-		return Ok(false);
-	}
-
-	let path 		= Path::new(file_path);
-	let mut file 	= File::create(&path);
+pub fn write_file(raw_audio: &RawAudio, path: &Path) -> IoResult<bool> {
+	let mut file 	= File::create(path);
 
 	let num_of_channels	: u16 		= raw_audio.channels as u16;
 	let sampling_rate	: u32 		= raw_audio.sample_rate as u32;
@@ -42,7 +24,6 @@ pub fn write_file(raw_audio: RawAudio, file_path: &str) -> IoResult<bool> {
 
 	buffer.push_all(&u32_to_le_slice(RIFF));
 	buffer.push_all(&u32_to_le_slice(file_size));
-	println!("{} -> {}: {}", total_bytes, file_size, buffer);
 	buffer.push_all(&u32_to_le_slice(WAVE));
 
 	buffer.push_all(&u32_to_le_slice(FMT));

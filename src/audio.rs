@@ -1,7 +1,9 @@
 // TODOs:
-//	- Add raw data reader, may not need own module
-//	- Unit tests!
-//	- Look into other file types.
+//	- Implement Decoder structs so users can still have access to meta data?
+//	- Implement more chunks, specifically for meta data and comments used by Audacity
+//	- IDX?
+//	- Add raw data reader? (may not need own module)
+//	- Look into other file types (it only gets worse from here!)
 
 
 /** Terminology (To avoid future confusion)
@@ -11,12 +13,14 @@
  */
 
 use std::fmt;
+use std::io::{IoResult};
+use std::ascii::OwnedAsciiExt;
 
 #[derive(Show, Clone, Copy)]
 pub enum SampleOrder {
-	MONO,
+	MONO,			// Probably take this out
 	INTERLEAVED,
-	REVERSED,
+	REVERSED,		// Have yet to see anything using these...
 	PLANAR,
 }
 
@@ -52,14 +56,35 @@ impl fmt::Show for RawAudio {
 
 
 
+pub fn load(path: &Path) -> IoResult<RawAudio> {
+	let extension = path.extension_str().map_or("".to_string(), |ext| ext.to_string().into_ascii_lowercase());
+	match extension.as_slice() {
+		"wav" 	=> super::wave::decoder::read_file(path),
+		"aiff" 	=> super::aiff::decoder::read_file(path),
+		_ 		=> panic!("No clue what this is..."),
+	}
+}
+
+pub fn save(audio: &RawAudio, path: &Path) -> IoResult<bool> {
+	let extension = path.extension_str().map_or("".to_string(), |ext| ext.to_string().into_ascii_lowercase());
+	match extension.as_slice() {
+		"wav" 	=> super::wave::encoder::write_file(audio, path),
+		"aiff" 	=> super::aiff::encoder::write_file(audio, path),
+		_ 		=> panic!("No clue what this is..."),
+	}
+}
+
+
+
 // pub trait AudioDecoder {
 // 	fn read_file(&mut self, file_path: &str) -> IoResult<RawAudio>;
-
 // 	fn le_u8_array_to_i16(array: &[u8; 2]) -> i16{
 // 		(array[1] as i16) << 8 | array[0] as i16
 // 	}
+// 	fn be_u8_array_to_i16(array: &[u8; 2]) -> i16{
+// 		(array[0] as i16) << 8 | array[1] as i16
+// 	}
 // }
-
 // #[test]
 // fn test_le_u8_array_to_i16() {
 // 	let array: [u8; 4] = [0x24, 0x17, 0x1e, 0xf3];

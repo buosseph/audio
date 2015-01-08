@@ -1,8 +1,6 @@
 use audio::RawAudio;
 use audio::SampleOrder;
-// use audio::{AudioDecoder};
 use std::io::{File, IoResult};
-use std::path::posix::Path;
 use super::chunk;
 use super::chunk::CompressionCode::{PCM};
 use super::{RIFF, FMT, DATA};
@@ -64,9 +62,8 @@ pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 /* Most recent benchmark:
  * - 152745932 ns/iter (+/- 53383069)
  */
-pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
-	let path = Path::new(file_path);
-	let mut file = try!(File::open(&path));
+pub fn read_file(path: &Path) -> IoResult<RawAudio> {
+	let mut file = try!(File::open(path));
 
 	let riff_header = try!(file.read_le_u32());
 	if riff_header != RIFF {
@@ -145,11 +142,11 @@ pub fn read_file(file_path: &str) -> IoResult<RawAudio> {
 
 	Ok(
 		RawAudio {
-			bit_rate: fmt.bit_rate as uint,
-			sample_rate: fmt.sampling_rate as uint,
-			channels: fmt.num_of_channels as uint,
-			order: SampleOrder::MONO,
-			samples: samples,
+			bit_rate: 		fmt.bit_rate as uint,
+			sample_rate: 	fmt.sampling_rate as uint,
+			channels: 		fmt.num_of_channels as uint,
+			order: 			SampleOrder::INTERLEAVED,
+			samples: 		samples,
 		}
 	)
 }
@@ -163,7 +160,7 @@ mod tests {
 	#[bench]
 	fn bench_read_file(b: &mut test::Bencher) {
 		b.iter(|| {
-			let _ = read_file("test/wav/Warrior Concerto - no meta.wav");
+			let _ = read_file(&Path::new("test/wav/Warrior Concerto - no meta.wav"));
 		});
 	}
 }
