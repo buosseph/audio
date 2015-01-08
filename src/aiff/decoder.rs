@@ -1,30 +1,39 @@
-use audio::AudioResult;
-use audio::RawAudio;
-use audio::SampleOrder;
-use std::io::{File, IoResult};
+use audio::{
+	AudioResult,
+	AudioError,
+	RawAudio,
+	SampleOrder
+};
+use std::io::{File};
 use super::chunk;
 use super::{FORM, COMM, SSND};
 
-pub fn read_file_meta(file_path: &str) -> IoResult<()> {
+pub fn read_file_meta(file_path: &str) -> AudioResult<()> {
 	let path = Path::new(file_path);
 	let mut file = try!(File::open(&path));
 
 	let iff_header =  file.read_be_i32().unwrap();
 	if iff_header != FORM {
-		panic!("File is not valid AIFF.".to_string())
+		return Err(AudioError::FormatError(
+			"File is not valid AIFF".to_string()
+		))
 	}
 	let header = chunk::IFFHeader::read_chunk(&mut file).unwrap();
 
 
 	let comm_chunk_marker = file.read_be_i32().unwrap();
 	if comm_chunk_marker != COMM {
-		panic!("File is not valid AIFF. Does not contain required common chunk.".to_string())
+		return Err(AudioError::FormatError(
+			"File is not valid AIFF. Does not contain required common chunk.".to_string()
+		))
 	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
 
 	let ssnd_chunk_marker = file.read_be_i32().unwrap();
 	if ssnd_chunk_marker != SSND {
-		panic!("File is not valid AIFF. Does not contain required sound data chunk.".to_string())
+		return Err(AudioError::FormatError(
+			"File is not valid AIFF. Does not contain required sound data chunk.".to_string()
+		))
 	}
 	let ssnd = chunk::SoundDataChunk::read_chunk(&mut file).unwrap();
 
@@ -69,19 +78,25 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 
 	let iff_header =  file.read_be_i32().unwrap();
 	if iff_header != FORM {
-		panic!("File is not valid AIFF.".to_string())
+		return Err(AudioError::FormatError(
+			"File is not valid AIFF".to_string()
+		))
 	}
 	let header = chunk::IFFHeader::read_chunk(&mut file).unwrap();
 
 	let comm_chunk_marker = file.read_be_i32().unwrap();
 	if comm_chunk_marker != COMM {
-		panic!("File is not valid AIFF. Does not contain required common chunk.".to_string())
+		return Err(AudioError::FormatError(
+			"File is not valid AIFF. Does not contain required common chunk.".to_string()
+		))
 	}
 	let comm = chunk::CommonChunk::read_chunk(&mut file).unwrap();
 
 	let ssnd_chunk_marker = file.read_be_i32().unwrap();
 	if ssnd_chunk_marker != SSND {
-		panic!("File is not valid AIFF. Does not contain required sound data chunk.".to_string())
+		return Err(AudioError::FormatError(
+			"File is not valid AIFF. Does not contain required sound data chunk.".to_string()
+		))
 	}
 	let ssnd = chunk::SoundDataChunk::read_chunk(&mut file).unwrap();
 
@@ -118,18 +133,20 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 				},
 
 				_	=> {
-					panic!(format!(
-						"This file is encoded using an unsupported number of channels. Cannot read {}-channel files.",
-						comm.num_of_channels
+					return Err(AudioError::UnsupportedError(
+						format!(
+						"Cannot read {}-channel .aiff files.",
+						comm.num_of_channels)
 					))
 				}
 			}
 		},
 
 		_	=> {
-			panic!(format!(
-				"This file is encoded using an unsupported bitrate. Cannot read {}-bit files.",
-				comm.bit_rate
+			return Err(AudioError::UnsupportedError(
+				format!(
+				"Cannot read {}-bit .aiff files.",
+				comm.bit_rate)
 			))
 		}
 	}

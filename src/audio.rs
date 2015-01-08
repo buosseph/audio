@@ -13,7 +13,7 @@
  */
 
 use std::fmt;
-use std::io::{IoResult, IoError};
+use std::io::{IoError};
 use std::error::{FromError};
 use std::ascii::OwnedAsciiExt;
 
@@ -61,6 +61,7 @@ pub type AudioResult<T> = Result<T, AudioError>;
 
 #[derive(Show)]
 pub enum AudioError {
+	FormatError(String),
 	IoError(IoError),
 	UnsupportedError(String)
 }
