@@ -1,3 +1,4 @@
+use audio::AudioResult;
 use audio::RawAudio;
 use audio::SampleOrder;
 use std::io::{File, IoResult};
@@ -62,7 +63,7 @@ pub fn read_file_meta(file_path: &str) -> IoResult<()>{
 /* Most recent benchmark:
  * - 152745932 ns/iter (+/- 53383069)
  */
-pub fn read_file(path: &Path) -> IoResult<RawAudio> {
+pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 	let mut file = try!(File::open(path));
 
 	let riff_header = try!(file.read_le_u32());

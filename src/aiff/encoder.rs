@@ -1,9 +1,10 @@
+use audio::AudioResult;
 use audio::RawAudio;
 use std::io::{File, IoResult};
 use std::path::posix::{Path};
 use super::{FORM, AIFF, COMM, SSND};
 
-pub fn write_file(raw_audio: &RawAudio, path: &Path) -> IoResult<bool> {
+pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	let mut file = File::create(path);
 
 	let block_size		: uint 		= raw_audio.channels * raw_audio.bit_rate / 8;

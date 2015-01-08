@@ -13,7 +13,8 @@
  */
 
 use std::fmt;
-use std::io::{IoResult};
+use std::io::{IoResult, IoError};
+use std::error::{FromError};
 use std::ascii::OwnedAsciiExt;
 
 #[derive(Show, Clone, Copy)]
@@ -24,6 +25,7 @@ pub enum SampleOrder {
 	PLANAR,
 }
 
+// Rename to AudioBuffer? Struct name is kinda confusing
 #[derive(Clone)]
 pub struct RawAudio {
 	pub bit_rate: uint,
@@ -55,22 +57,35 @@ impl fmt::Show for RawAudio {
 }
 
 
+pub type AudioResult<T> = Result<T, AudioError>;
 
-pub fn load(path: &Path) -> IoResult<RawAudio> {
+#[derive(Show)]
+pub enum AudioError {
+	IoError(IoError),
+	UnsupportedError(String)
+}
+impl FromError<IoError> for AudioError {
+	fn from_error(err: IoError) -> AudioError {
+		AudioError::IoError(err)
+	}
+}
+
+
+pub fn load(path: &Path) -> AudioResult<RawAudio> {
 	let extension = path.extension_str().map_or("".to_string(), |ext| ext.to_string().into_ascii_lowercase());
 	match extension.as_slice() {
 		"wav" 	=> super::wave::decoder::read_file(path),
 		"aiff" 	=> super::aiff::decoder::read_file(path),
-		_ 		=> panic!("No clue what this is..."),
+		_ 		=> return Err(AudioError::UnsupportedError("Did not recognize file extension as valid".to_string()))
 	}
 }
 
-pub fn save(audio: &RawAudio, path: &Path) -> IoResult<bool> {
+pub fn save(audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	let extension = path.extension_str().map_or("".to_string(), |ext| ext.to_string().into_ascii_lowercase());
 	match extension.as_slice() {
 		"wav" 	=> super::wave::encoder::write_file(audio, path),
 		"aiff" 	=> super::aiff::encoder::write_file(audio, path),
-		_ 		=> panic!("No clue what this is..."),
+		_ 		=> return Err(AudioError::UnsupportedError("Did not recognize file extension as valid".to_string()))
 	}
 }
 

@@ -1,3 +1,4 @@
+use audio::AudioResult;
 use audio::RawAudio;
 use audio::SampleOrder;
 use std::io::{File, IoResult};
@@ -63,7 +64,7 @@ pub fn read_file_meta(file_path: &str) -> IoResult<()> {
 /* Most recent benchmark:
  * - 152916993 ns/iter (+/- 60141351)
  */
-pub fn read_file(path: &Path) -> IoResult<RawAudio> {
+pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 	let mut file = try!(File::open(path));
 
 	let iff_header =  file.read_be_i32().unwrap();

@@ -1,8 +1,9 @@
+use audio::AudioResult;
 use audio::RawAudio;
 use std::io::{File, IoResult};
 use super::{RIFF, WAVE, FMT, DATA};
 
-pub fn write_file(raw_audio: &RawAudio, path: &Path) -> IoResult<bool> {
+pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	let mut file 	= File::create(path);
 
 	let num_of_channels	: u16 		= raw_audio.channels as u16;
