@@ -13,7 +13,8 @@
 
 // Approach:
 // Start with MPEG-1 Layer III then MPEG-2 Layer III
-// Lower layers can come later, as those to are the most common (I think)
+// Lower layers are considered .mp2 and .mp2, which
+// could be implmented in the same module if I figure out the decoding
 
 use audio::{
 	AudioResult,
