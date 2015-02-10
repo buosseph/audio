@@ -4,7 +4,7 @@ use audio::{
 	RawAudio
 };
 use audio::SampleOrder::{MONO, INTERLEAVED};
-use std::io::{File};
+use std::old_io::{File};
 use super::{RIFF, WAVE, FMT, DATA};
 
 pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
@@ -62,7 +62,7 @@ pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 		buffer.push_all(&i16_to_le_slice(pcm_sample as i16));
 	}
 
-	try!(file.write(buffer.as_slice()));
+	try!(file.write_all(buffer.as_slice()));
 
 	Ok(true)
 }

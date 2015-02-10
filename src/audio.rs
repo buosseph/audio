@@ -13,19 +13,29 @@
  */
 
 use std::fmt;
-use std::io::{IoError};
+use std::old_io::{IoError};
 use std::error::{FromError};
 use std::ascii::OwnedAsciiExt;
 
 /// An enumeration for keeping track of how samples are organized in the loaded audio.
 /// Multichannel samples are usually interleaved, but other orderings are included if they
 /// are needed in the furutre.
-#[derive(Show, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SampleOrder {
 	MONO,
 	INTERLEAVED,
 	REVERSED,		// Have yet to see anything using these...
 	PLANAR,
+}
+
+impl fmt::Display for SampleOrder {
+	fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+		write!(
+			formatter,
+			"{}",
+			self
+		)
+	}
 }
 
 // Rename to AudioBuffer? Struct name is kinda confusing
@@ -39,14 +49,7 @@ pub struct RawAudio {
 	pub samples: Vec<f64>,
 }
 
-impl RawAudio {
-	pub fn print_samples(&self) {
-		println!("Samples: {}", self.samples);
-	}
-}
-
-#[experimental = "waiting on Show stability"]
-impl fmt::Show for RawAudio {
+impl fmt::Debug for RawAudio {
 	fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
 		write!(
 			formatter,
@@ -64,7 +67,7 @@ impl fmt::Show for RawAudio {
 pub type AudioResult<T> = Result<T, AudioError>;
 
 /// An enumeration for reporting audio errors
-#[derive(Show)]
+#[derive(Debug)]
 pub enum AudioError {
 	/// The audio file does not match the supported format specification
 	FormatError(String),

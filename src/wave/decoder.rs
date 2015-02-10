@@ -5,7 +5,7 @@ use audio::{
 	SampleOrder
 };
 use audio::SampleOrder::{MONO, INTERLEAVED};
-use std::io::{File};
+use std::old_io::{File};
 use super::chunk;
 use super::chunk::CompressionCode::{PCM};
 use super::{RIFF, FMT, DATA};
@@ -116,7 +116,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(2, 2) => {
 							sample_order = INTERLEAVED;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 
 								let left_sample	: u8 	= frame[0];
 								let right_sample: u8 	= frame[1];
@@ -132,7 +132,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(1, 1) => {
 							sample_order = MONO;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 								let sample : u8 		= frame[0];
 								let float_sample : f64 	= (sample as f64 - 128f64) / 128f64;
 								samples.push(float_sample);
@@ -154,7 +154,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(2, 4) => {
 							sample_order = INTERLEAVED;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 
 								let left_sample	: i16 	= (frame[1] as i16) << 8 | frame[0] as i16;
 								let right_sample: i16 	= (frame[3] as i16) << 8 | frame[2] as i16;
@@ -170,7 +170,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(1, 2) => {
 							sample_order = MONO;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 								let sample : i16 		= (frame[1] as i16) << 8 | frame[0] as i16;
 								let float_sample : f64 	= sample as f64 / 32768f64;
 								samples.push(float_sample);
@@ -194,7 +194,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(2, 6) => {
 							sample_order = INTERLEAVED;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 
 								let left_sample	: i32 	= (frame[2] as i32) << 16 | (frame[1] as i32) << 8 | frame[0] as i32;
 								let right_sample: i32 	= (frame[5] as i32) << 16 | (frame[4] as i32) << 8 | frame[3] as i32;
@@ -210,7 +210,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(1, 3) => {
 							sample_order = MONO;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 								let sample : i32 		= (frame[2] as i32) << 16 | (frame[1] as i32) << 8 | frame[0] as i32;
 								let float_sample : f64 	= sample as f64 / 8388608f64;
 								samples.push(float_sample);
@@ -234,7 +234,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(2, 8) => {
 							sample_order = INTERLEAVED;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 
 								let left_sample	: i32 	= (frame[3] as i32) << 24 | (frame[2] as i32) << 16 | (frame[1] as i32) << 8 | frame[0] as i32;
 								let right_sample: i32 	= (frame[7] as i32) << 24 | (frame[6] as i32) << 16 | (frame[5] as i32) << 8 | frame[4] as i32;
@@ -250,7 +250,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 						(1, 4) => {
 							sample_order = MONO;
 							for i in range(0, num_of_frames) {
-								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								frame = &data.data[i * fmt.block_size as uint .. i * fmt.block_size as uint + fmt.block_size as uint];
 								let sample : i32 		= (frame[3] as i32) << 24 | (frame[2] as i32) << 16 | (frame[1] as i32) << 8 | frame[0] as i32;
 								let float_sample : f64 	= sample as f64 / 2147483648f64;
 								samples.push(float_sample);

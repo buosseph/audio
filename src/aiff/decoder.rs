@@ -5,7 +5,7 @@ use audio::{
 	SampleOrder
 };
 use audio::SampleOrder::{MONO, INTERLEAVED};
-use std::io::{File};
+use std::old_io::{File};
 use super::chunk;
 use super::{FORM, COMM, SSND};
 
@@ -113,7 +113,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 				2 	=> {
 					sample_order = INTERLEAVED;
 					for i in range(0, num_of_frames) {
-						frame = ssnd.data.slice(i * 4 as uint, i * 4 as uint + 4 as uint);
+						frame = &ssnd.data[i * 4 as uint .. i * 4 as uint + 4 as uint];
 
 						let left_sample	: i16 	= (frame[0] as i16) << 8 | frame[1] as i16;
 						let right_sample: i16 	= (frame[2] as i16) << 8 | frame[3] as i16;
@@ -129,7 +129,7 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 				1 	=> {
 					sample_order = MONO;
 					for i in range(0, num_of_frames) {
-						frame = ssnd.data.slice(i * 2 as uint, i * 2 as uint + 2 as uint);
+						frame = &ssnd.data[i * 2 as uint .. i * 2 as uint + 2 as uint];
 						let sample : i16 = (frame[0] as i16) << 8 | frame[1] as i16;
 						let float_sample : f64 = sample as f64 / 32768f64;
 						samples.push(float_sample);

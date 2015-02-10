@@ -1,5 +1,13 @@
 // For reference, https://github.com/PistonDevelopers/image
 
+#![feature(core)]
+#![feature(collections)]
+#![feature(int_uint)]
+#![feature(io)]
+#![feature(path)]
+#![feature(std_misc)]
+#![feature(test)]
+
 // Structs
 pub use audio::RawAudio;
 pub use audio::SampleOrder::{

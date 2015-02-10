@@ -1,4 +1,5 @@
-use std::io::{File, IoResult};
+use std::fmt;
+use std::old_io::{File, IoResult};
 use super::WAVE;
 
 #[derive(Copy)]
@@ -28,10 +29,20 @@ impl RIFFHeader {
 	}
 }
 
-#[derive(Show, Copy, PartialEq, Eq)]
+#[derive(Debug, Copy, PartialEq, Eq)]
 pub enum CompressionCode {
 	Unknown	= 0,
 	PCM		= 1,
+}
+
+impl fmt::Display for CompressionCode {
+	fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+		write!(
+			formatter,
+			"{}",
+			self
+		)
+	}
 }
 
 #[derive(Copy)]

@@ -1,4 +1,4 @@
-use std::io::{File, IoResult};
+use std::old_io::{File, IoResult};
 use super::AIFF;
 
 #[derive(Copy)]
@@ -46,7 +46,7 @@ impl CommonChunk {
 		let num_of_channels	: i16 	= (buffer[0] as i16) << 8 | buffer[1] as i16;
 		let num_of_frames	: u32 	= (buffer[2] as u32) << 24 | (buffer[3] as u32) << 16 | (buffer[4] as u32) << 8 | buffer[5] as u32;
 		let bit_rate		: i16 	= (buffer[6] as i16) << 8 | buffer[7] as i16;
-		let extended		: &[u8] = buffer.slice(8, 18);
+		let extended		: &[u8] = &buffer[8..18];
 		let sample_rate		: f64 	= convert_from_ieee_extended(extended);
 
 		Ok(
