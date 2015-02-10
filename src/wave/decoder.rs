@@ -73,6 +73,8 @@ pub fn read_file_meta(file_path: &str) -> AudioResult<()>{
 /* Most recent benchmark:
  * - 152745932 ns/iter (+/- 53383069)
  */
+
+/// Reads audio file into memory. Supports 8-32 bit PCM encoded WAVE files.
 pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 	let mut file = try!(File::open(path));
 
@@ -110,8 +112,6 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 		PCM => {
 			match fmt.bit_rate {
 				8 => {
-					unimplemented!();	// Not fully tested
-
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 2) => {
 							sample_order = INTERLEAVED;
@@ -188,8 +188,6 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 				},
 
 				24 => {
-					unimplemented!();	// Not fully tested
-
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 6) => {
 							sample_order = INTERLEAVED;

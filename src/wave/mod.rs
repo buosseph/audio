@@ -47,6 +47,53 @@ mod tests {
 	}
 
 	#[test]
+	fn test_read_lengths() {
+		use super::*;
+
+		let folder: String = String::from_str("tests/wav/");
+		let stereo_files = vec![
+			"stereo440-i32-44100.wav",
+			"stereo440-i24-44100.wav",
+			"stereo440-i16-44100.wav",
+			"stereo440-u8-44100.wav",
+		];
+		let mono_files = vec![
+			"mono440-i32-44100.wav",
+			"mono440-i24-44100.wav",
+			"mono440-i16-44100.wav",
+			"mono440-u8-44100.wav",
+		];
+
+		for file in stereo_files.iter() {
+			let mut path: String = folder.clone();
+			path.push_str(*file);
+
+			let audio = decoder::read_file(&Path::new(path.as_slice())).unwrap();
+			let total_samples = audio.samples.len();
+			let channels = audio.channels;
+			let sample_rate = audio.sample_rate;
+
+			assert_eq!(total_samples, 88200);
+			assert_eq!(channels, 2);
+			assert_eq!(sample_rate, 44100);
+		}
+
+		for file in mono_files.iter() {
+			let mut path: String = folder.clone();
+			path.push_str(*file); 
+
+			let audio = decoder::read_file(&Path::new(path.as_slice())).unwrap();
+			let total_samples = audio.samples.len();
+			let channels = audio.channels;
+			let sample_rate = audio.sample_rate;
+
+			assert_eq!(total_samples, 44100);
+			assert_eq!(channels, 1);
+			assert_eq!(sample_rate, 44100);
+		}
+	}
+
+	#[test]
 	fn test_read_i32() {
 		use super::*;
 
