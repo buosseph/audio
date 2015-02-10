@@ -175,7 +175,7 @@ mod tests {
 	#[bench]
 	fn bench_read_file(b: &mut test::Bencher) {
 		b.iter(|| {
-			let _ = read_file(&Path::new("test/aiff/Warrior Concerto - no meta.aiff"));
+			let _ = read_file(&Path::new("tests/aiff/Warrior Concerto - no meta.aiff"));
 		});
 	}
 }

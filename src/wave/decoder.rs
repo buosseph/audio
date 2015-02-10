@@ -184,7 +184,7 @@ mod tests {
 	#[bench]
 	fn bench_read_file(b: &mut test::Bencher) {
 		b.iter(|| {
-			let _ = read_file(&Path::new("test/wav/Warrior Concerto - no meta.wav"));
+			let _ = read_file(&Path::new("tests/wav/Warrior Concerto - no meta.wav"));
 		});
 	}
 }

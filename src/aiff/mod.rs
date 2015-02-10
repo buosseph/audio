@@ -15,7 +15,7 @@ mod tests {
 	fn test_read_write_eq() {
 		use super::*;
 		
-		let folder: String = String::from_str("test/aiff/");
+		let folder: String = String::from_str("tests/aiff/");
 		let files = vec![
 			"i16-pcm-mono.aiff",
 			"i16-pcm-stereo.aiff",
