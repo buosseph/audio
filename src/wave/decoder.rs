@@ -228,8 +228,6 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 				},
 
 				32 => {
-					unimplemented!();	// Not fully tested
-
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 8) => {
 							sample_order = INTERLEAVED;

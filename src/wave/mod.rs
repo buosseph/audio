@@ -61,9 +61,16 @@ mod tests {
 			path.push_str(*file);
 
 			let audio = decoder::read_file(&Path::new(path.as_slice())).unwrap();
+			let channels = audio.channels;
 			let bit_rate = audio.bit_rate;
 			let sample_rate = audio.sample_rate;
 
+			if file.eq(&"stereo440-i32-44100.wav".to_string()) {
+				assert_eq!(channels, 2);
+			}
+			else {
+				assert_eq!(channels, 1);
+			}
 			assert_eq!(bit_rate, 32);
 			assert_eq!(sample_rate, 44100);
 		}
