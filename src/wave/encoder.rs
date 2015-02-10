@@ -19,7 +19,7 @@ pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	let num_of_channels	: u16 		= raw_audio.channels as u16;
 	let sampling_rate	: u32 		= raw_audio.sample_rate as u32;
 	let data_rate		: u32 		= (raw_audio.sample_rate * raw_audio.channels * raw_audio.bit_rate / 8) as u32;
-	let bit_rate		: u16 		= raw_audio.bit_rate as u16;
+	let bit_rate		: u16 		= 16; //= raw_audio.bit_rate as u16;
 	let block_size		: uint 		= raw_audio.channels * raw_audio.bit_rate / 8;
 	let fmt_chunk_size	: u32 		= 16;
 
