@@ -110,6 +110,46 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 		PCM => {
 			match fmt.bit_rate {
 				// Uses signed ints (8-bit uses uints)
+				8 => {
+					unimplemented!();	// Not fully tested
+
+					match (fmt.num_of_channels, fmt.block_size) {
+						(2, 2) => {
+							sample_order = INTERLEAVED;
+							for i in range(0, num_of_frames) {
+								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+
+								let left_sample	: u8 	= frame[0];
+								let right_sample: u8 	= frame[1];
+							
+								let float_left	: f64 	= (left_sample as f64 - 128f64) / 128f64;
+								let float_right	: f64 	= (right_sample as f64 - 128f64) / 128f64;
+
+								samples.push(float_left);
+								samples.push(float_right);
+							}
+						},
+
+						(1, 1) => {
+							sample_order = MONO;
+							for i in range(0, num_of_frames) {
+								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								let sample : u8 		= frame[0];
+								let float_sample : f64 	= (sample as f64 - 128f64) / 128f64;
+								samples.push(float_sample);
+							}
+						},
+
+						(_, _) => {
+							return Err(AudioError::UnsupportedError(
+								format!(
+								"Cannot read {}-channel .wav files.",
+								fmt.num_of_channels)
+							))
+						}
+					}
+				},
+
 				16 => {
 					match (fmt.num_of_channels, fmt.block_size) {
 						(2, 4) => {
@@ -132,8 +172,48 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 							sample_order = MONO;
 							for i in range(0, num_of_frames) {
 								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
-								let sample : i16 = (frame[1] as i16) << 8 | frame[0] as i16;
-								let float_sample : f64 = sample as f64 / 32768f64;
+								let sample : i16 		= (frame[1] as i16) << 8 | frame[0] as i16;
+								let float_sample : f64 	= sample as f64 / 32768f64;
+								samples.push(float_sample);
+							}
+						},
+
+						(_, _) => {
+							return Err(AudioError::UnsupportedError(
+								format!(
+								"Cannot read {}-channel .wav files.",
+								fmt.num_of_channels)
+							))
+						}
+					}
+				},
+
+				32 => {
+					unimplemented!();	// Not fully tested
+
+					match (fmt.num_of_channels, fmt.block_size) {
+						(2, 8) => {
+							sample_order = INTERLEAVED;
+							for i in range(0, num_of_frames) {
+								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+
+								let left_sample	: i32 	= (frame[3] as i32) << 24 | (frame[2] as i32) << 16 | (frame[1] as i32) << 8 | frame[0] as i32;
+								let right_sample: i32 	= (frame[7] as i32) << 24 | (frame[6] as i32) << 16 | (frame[5] as i32) << 8 | frame[4] as i32;
+							
+								let float_left	: f64 	= left_sample as f64 / 2147483648f64;
+								let float_right	: f64 	= right_sample as f64 / 2147483648f64;
+
+								samples.push(float_left);
+								samples.push(float_right);
+							}
+						},
+
+						(1, 4) => {
+							sample_order = MONO;
+							for i in range(0, num_of_frames) {
+								frame = data.data.slice(i * fmt.block_size as uint, i * fmt.block_size as uint + fmt.block_size as uint);
+								let sample : i32 		= (frame[3] as i32) << 24 | (frame[2] as i32) << 16 | (frame[1] as i32) << 8 | frame[0] as i32;
+								let float_sample : f64 	= sample as f64 / 2147483648f64;
 								samples.push(float_sample);
 							}
 						},
