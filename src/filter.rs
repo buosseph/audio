@@ -6,7 +6,7 @@ impl Filter for RawAudio {
 	// y[n] = (b0/a0)*x[n] + (b1/a0)*x[n-1] + (b2/a0)*x[n-2] 
 						// - (a1/a0)*y[n-1] - (a2/a0)*y[n-2]
 
-	fn one_pole_lowpass(&mut self, cutoff: f64) {
+	fn biquad_lowpass(&mut self, cutoff: f64) {
 		let sampling_frequency = self.sample_rate as f64;
 		let q = 0.71f64;	// like Bitwig
 
@@ -59,7 +59,7 @@ impl Filter for RawAudio {
 		}
 	}
 
-	fn one_pole_highpass(&mut self, cutoff: f64) {
+	fn biquad_highpass(&mut self, cutoff: f64) {
 		let sampling_frequency = self.sample_rate as f64;
 		let q = 0.71f64;	// like Bitwig
 
@@ -115,7 +115,7 @@ impl Filter for RawAudio {
 
 	// No bandwidth control (bw)
 	// Most similar to AUBandpass
-	fn one_pole_bandpass(&mut self, cutoff: f64) {
+	fn biquad_bandpass(&mut self, cutoff: f64) {
 		let sampling_frequency = self.sample_rate as f64;
 		let q = 0.71f64;
 
@@ -168,7 +168,7 @@ impl Filter for RawAudio {
 		}
 	}
 
-	fn one_pole_bandpass_bw(&mut self, cutoff: f64) {
+	fn biquad_bandpass_bw(&mut self, cutoff: f64) {
 		let sampling_frequency = self.sample_rate as f64;
 		let q = 0.71f64;
 		let bw = 1f64;	// in octaves
@@ -227,7 +227,7 @@ impl Filter for RawAudio {
 	}
 
 	// Need verification
-	fn one_pole_notch(&mut self, cutoff: f64) {
+	fn biquad_notch(&mut self, cutoff: f64) {
 		let sampling_frequency = self.sample_rate as f64;
 		let q = 0.71f64;
 
