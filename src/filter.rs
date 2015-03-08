@@ -2,6 +2,81 @@ use audio::RawAudio;
 use audio::SampleOrder;
 use audio::OldFilter;
 
+/// A trait for filters
+pub trait Filter {
+	/// Constructs new filter
+	fn new() -> Self;
+	
+	/// Returns filtered sample value and stores input and output to memory
+	fn tick(&mut self, sample: f64) -> f64;
+	// fn tick(&mut self, buffer: &Vec<f64>);
+
+	// For abstract filter struct (later)
+	// /// Sets the coefficients, the feedforwards and feedbacks, for the filter.
+	// set_coefficients(&mut self, b: &Vec<f64>, a: &Vec<f64>);
+
+	/// Resets memory of all previous input and output to zero
+	fn flush_memory(&mut self);
+}
+
+/// Second-order filter
+///
+/// A `Biquad` is a type of second-order `Filter` that uses the following equation:
+/// > y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
+pub struct Biquad {
+	x_z1: f64,
+	x_z2: f64,
+	y_z1: f64,
+	y_z2: f64,
+	b0: f64,
+	b1: f64,
+	b2: f64,
+	a1: f64,
+	a2: f64
+}
+impl Biquad {
+	fn set_coefficients(&mut self, b0: f64, b1: f64, b2: f64, a1: f64, a2: f64) {
+		self.b0 = b0;
+		self.b1 = b1;
+		self.b2 = b2;
+		self.a1 = a1;
+		self.a2 = a2;
+	}
+}
+impl Filter for Biquad {
+	fn new() -> Self {
+		Biquad {
+			x_z1: 0f64,
+			x_z2: 0f64,
+			y_z1: 0f64,
+			y_z2: 0f64,
+			b0: 1f64,
+			b1: 0f64,
+			b2: 0f64,
+			a1: 0f64,
+			a2: 0f64
+		}
+	}
+	fn tick(&mut self, sample: f64) -> f64 {
+		let output = self.b0 * sample
+			+ self.b1 * self.x_z1 + self.b2 * self.x_z2
+			- self.a1 * self.y_z1 - self.a2 * self.y_z2;
+
+		self.x_z2 = self.x_z1;
+		self.x_z1 = sample;
+		self.y_z2 = self.y_z1;
+		self.y_z1 = output;
+
+		output
+	}
+	fn flush_memory(&mut self) {
+		self.x_z1 = 0f64;
+		self.x_z2 = 0f64;
+		self.y_z1 = 0f64;
+		self.y_z2 = 0f64;
+	}
+}
+
 #[deprecated]
 impl OldFilter for RawAudio {
 
