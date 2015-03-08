@@ -36,6 +36,8 @@ pub mod wave;
 pub mod aiff;
 
 // Processing
+pub mod filter;
+
 // pub mod utilities;
 pub mod dynamics;
 pub mod old_filter;
