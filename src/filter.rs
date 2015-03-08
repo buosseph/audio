@@ -16,10 +16,10 @@ pub trait Filter {
 	// set_coefficients(&mut self, b: &Vec<f64>, a: &Vec<f64>);
 
 	/// Resets memory of all previous input and output to zero
-	fn flush_memory(&mut self);
+	fn clear(&mut self);
 }
 
-/// Second-order filter
+/// A single channel, second-order filter
 ///
 /// A `Biquad` is a type of second-order `Filter` that uses the following equation:
 /// > y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
@@ -69,7 +69,7 @@ impl Filter for Biquad {
 
 		output
 	}
-	fn flush_memory(&mut self) {
+	fn clear(&mut self) {
 		self.x_z1 = 0f64;
 		self.x_z2 = 0f64;
 		self.y_z1 = 0f64;
