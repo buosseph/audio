@@ -68,6 +68,7 @@ impl Filter for Biquad {
 mod tests {
 	use filter::Filter;
 	use std::f64::EPSILON;
+	use std::num::Float;
 	use super::*;
 
 	#[test]
@@ -75,13 +76,13 @@ mod tests {
 		let input_sample = 0.55f64;
 
 		let mut biquad = Biquad::new();
-		assert!(::std::num::Float::abs(0.55f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(Float::abs(0.55f64 - biquad.tick(input_sample)) < EPSILON);
 		biquad.clear();
 
 		biquad.set_coefficients(0.5f64, 0.4f64, 0.3f64, 0.2f64, 0.1f64);
-		assert!(::std::num::Float::abs(0.275f64 - biquad.tick(input_sample)) < EPSILON);
-		assert!(::std::num::Float::abs(0.44f64 - biquad.tick(input_sample)) < EPSILON);
-		assert!(::std::num::Float::abs(0.5445f64 - biquad.tick(input_sample)) < EPSILON);
-		assert!(::std::num::Float::abs(0.3571f64 - biquad.tick(0.25f64)) < EPSILON);
+		assert!(Float::abs(0.275f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(Float::abs(0.44f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(Float::abs(0.5445f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(Float::abs(0.3571f64 - biquad.tick(0.25f64)) < EPSILON);
 	}
 }
