@@ -145,7 +145,8 @@ pub trait Dynamics {
 	fn amplify(&mut self, gain: f64) -> bool;
 }
 
-pub trait Filter {
+#[deprecated]
+pub trait OldFilter {
 	// Reference: http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
 	fn biquad_lowpass(&mut self, cutoff: f64);
 	fn biquad_highpass(&mut self, cutoff: f64);

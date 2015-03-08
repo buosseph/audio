@@ -1,10 +1,9 @@
 use audio::RawAudio;
 use audio::SampleOrder;
-use audio::Filter;
+use audio::OldFilter;
 
-impl Filter for RawAudio {
-	// y[n] = (b0/a0)*x[n] + (b1/a0)*x[n-1] + (b2/a0)*x[n-2] 
-						// - (a1/a0)*y[n-1] - (a2/a0)*y[n-2]
+#[deprecated]
+impl OldFilter for RawAudio {
 
 	fn biquad_lowpass(&mut self, cutoff: f64) {
 		let sampling_frequency = self.sample_rate as f64;

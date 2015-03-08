@@ -20,7 +20,7 @@ pub use audio::SampleOrder::{
 // Traits
 pub use audio::Dynamics;
 pub use audio::Utilities;
-pub use audio::Filter;
+pub use audio::OldFilter;
 
 // Functions
 pub use audio::{
