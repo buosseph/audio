@@ -1,7 +1,7 @@
 pub mod biquad;
 
 /// A trait for filters
-pub trait Filter {
+trait Filter {
 	/// Constructs new filter
 	fn new() -> Self;
 	

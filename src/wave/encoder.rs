@@ -7,6 +7,7 @@ use audio::SampleOrder::{MONO, INTERLEAVED};
 use std::old_io::{File};
 use super::{RIFF, WAVE, FMT, DATA};
 
+#[allow(deprecated)]
 pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	match raw_audio.order {
 		MONO		=> {},

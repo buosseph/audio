@@ -3,10 +3,10 @@
 #![feature(core)]
 #![feature(collections)]
 #![feature(int_uint)]
-#![feature(io)]
-#![feature(path)]
+#![feature(old_io)]
+#![feature(old_path)]
 #![feature(std_misc)]
-#![feature(test)]
+#![cfg_attr(test, feature(test))]
 
 // Structs
 pub use audio::RawAudio;

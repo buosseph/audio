@@ -8,6 +8,7 @@ pub struct IFFHeader {
 }
 
 impl IFFHeader {
+	#[allow(deprecated)]
 	pub fn read_chunk(file: &mut File) -> IoResult<IFFHeader> {
 		let mut buffer: [u8; 8] = [0; 8];
 		try!(file.read(&mut buffer));
@@ -39,6 +40,7 @@ pub struct CommonChunk {
 }
 
 impl CommonChunk {
+	#[allow(deprecated)]
 	pub fn read_chunk(file: &mut File) -> IoResult<CommonChunk> {
 		let chunk_size 	: i32 		= try!(file.read_be_i32());
 		let buffer		: Vec<u8> 	= try!(file.read_exact(chunk_size as uint));
@@ -71,6 +73,7 @@ pub struct SoundDataChunk {
 }
 
 impl SoundDataChunk {
+	#[allow(deprecated)]
 	pub fn read_chunk(file: &mut File) -> IoResult<SoundDataChunk> {
 		let chunk_size 	: i32 = try!(file.read_be_i32());
 		let offset 		: u32 = try!(file.read_be_u32());

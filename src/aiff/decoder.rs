@@ -9,6 +9,7 @@ use std::old_io::{File};
 use super::chunk;
 use super::{FORM, COMM, SSND};
 
+#[allow(deprecated)]
 pub fn read_file_meta(file_path: &str) -> AudioResult<()> {
 	let path = Path::new(file_path);
 	let mut file = try!(File::open(&path));
@@ -74,6 +75,7 @@ pub fn read_file_meta(file_path: &str) -> AudioResult<()> {
 /* Most recent benchmark:
  * - 152916993 ns/iter (+/- 60141351)
  */
+#[allow(deprecated)]
 pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 	let mut file = try!(File::open(path));
 

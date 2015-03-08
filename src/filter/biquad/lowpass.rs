@@ -1,6 +1,7 @@
 use super::Biquad;
 
 // Can't directly access fields, else can't update coefficents on parameter changes
+#[allow(dead_code)]
 struct Lowpass {
 	sample_rate: f64,
 	cutoff: f64,
@@ -20,6 +21,7 @@ impl Lowpass {
 	// 	x
 	// }
 
+	#[allow(dead_code)]
 	fn calculate_coefficients(&mut self) {
 		// Intermidiates
 		let w0 = ::std::f64::consts::PI_2 * self.cutoff / self.sample_rate;
@@ -29,7 +31,7 @@ impl Lowpass {
 		let mut b0 = (1f64 - cos_w0) / 2f64;
 		let mut b1 = 1f64 - cos_w0;
 		let mut b2 = b0;
-		let mut a0 = 1f64 + alpha;
+		let		a0 = 1f64 + alpha;
 		let mut a1 = -2f64 * cos_w0;
 		let mut a2 = 1f64 - alpha;
 

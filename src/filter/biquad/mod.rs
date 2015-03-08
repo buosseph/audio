@@ -1,4 +1,4 @@
-use super::Filter;
+use filter::Filter;
 
 mod lowpass;
 
@@ -18,6 +18,8 @@ pub struct Biquad {
 	a2: f64
 }
 impl Biquad {
+	/// Sets all coefficients of `Biquad` filter
+	#[allow(dead_code)]
 	fn set_coefficients(&mut self, b0: f64, b1: f64, b2: f64, a1: f64, a2: f64) {
 		self.b0 = b0;
 		self.b1 = b1;
@@ -40,6 +42,7 @@ impl Filter for Biquad {
 			a2: 0f64
 		}
 	}
+
 	fn tick(&mut self, sample: f64) -> f64 {
 		let output = self.b0 * sample
 			+ self.b1 * self.x_z1 + self.b2 * self.x_z2
@@ -52,6 +55,7 @@ impl Filter for Biquad {
 
 		output
 	}
+
 	fn clear(&mut self) {
 		self.x_z1 = 0f64;
 		self.x_z2 = 0f64;
@@ -62,6 +66,8 @@ impl Filter for Biquad {
 
 #[cfg(test)]
 mod tests {
+	use filter::Filter;
+	use std::f64::EPSILON;
 	use super::*;
 
 	#[test]
@@ -69,11 +75,13 @@ mod tests {
 		let input_sample = 0.55f64;
 
 		let mut biquad = Biquad::new();
-		assert_eq!(0.55f64, biquad.tick(input_sample));
+		assert!(::std::num::Float::abs(0.55f64 - biquad.tick(input_sample)) < EPSILON);
+		biquad.clear();
 
 		biquad.set_coefficients(0.5f64, 0.4f64, 0.3f64, 0.2f64, 0.1f64);
-		assert_eq!(0.275f64, biquad.tick(input_sample));
-		assert_eq!(0.44f64, biquad.tick(input_sample));
-		assert_eq!(0.5445f64, biquad.tick(input_sample));
+		assert!(::std::num::Float::abs(0.275f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(::std::num::Float::abs(0.44f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(::std::num::Float::abs(0.5445f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(::std::num::Float::abs(0.3571f64 - biquad.tick(0.25f64)) < EPSILON);
 	}
 }

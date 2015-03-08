@@ -10,6 +10,7 @@ use super::chunk;
 use super::chunk::CompressionCode::{PCM};
 use super::{RIFF, FMT, DATA};
 
+#[allow(deprecated)]
 pub fn read_file_meta(file_path: &str) -> AudioResult<()>{
 	let path = Path::new(file_path);
 	let mut file = try!(File::open(&path));
@@ -75,6 +76,7 @@ pub fn read_file_meta(file_path: &str) -> AudioResult<()>{
  */
 
 /// Reads audio file into memory. Supports 8-32 bit PCM encoded WAVE files.
+#[allow(deprecated)]
 pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 	let mut file = try!(File::open(path));
 

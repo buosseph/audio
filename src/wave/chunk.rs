@@ -9,6 +9,7 @@ pub struct RIFFHeader {
 }
 
 impl RIFFHeader {
+	#[allow(deprecated)]
 	pub fn read_chunk(file: &mut File) -> IoResult<RIFFHeader> {
 		let mut buffer: [u8; 8] = [0; 8];
 		try!(file.read(&mut buffer));
@@ -57,6 +58,7 @@ pub struct FormatChunk {
 }
 
 impl FormatChunk {
+	#[allow(deprecated)]
 	pub fn read_chunk(file: &mut File) -> IoResult<FormatChunk> {
 		let chunk_size	: u32 		= try!(file.read_le_u32());
 		let buffer		: Vec<u8> 	= try!(file.read_exact(chunk_size as uint));
@@ -96,6 +98,7 @@ pub struct DataChunk {
 }
 
 impl DataChunk {
+	#[allow(deprecated)]
 	pub fn read_chunk(file: &mut File) -> IoResult<DataChunk> {
 		let size = try!(file.read_le_u32());
 		let data = try!(file.read_exact(size as uint));
