@@ -38,6 +38,6 @@ pub mod aiff;
 // Processing
 // pub mod utilities;
 pub mod dynamics;
-pub mod filter;
+pub mod old_filter;
 
 pub mod db;

@@ -2,78 +2,48 @@ use audio::RawAudio;
 use audio::SampleOrder;
 use audio::OldFilter;
 
-/// A trait for filters
-pub trait Filter {
-	/// Constructs new filter
-	fn new() -> Self;
-	
-	/// Returns filtered sample value and stores input and output to memory
-	fn tick(&mut self, sample: f64) -> f64;
-	// fn tick(&mut self, buffer: &Vec<f64>);
 
-	// For abstract filter struct (later)
-	// /// Sets the coefficients, the feedforwards and feedbacks, for the filter.
-	// set_coefficients(&mut self, b: &Vec<f64>, a: &Vec<f64>);
 
-	/// Resets memory of all previous input and output to zero
-	fn clear(&mut self);
+// Can't directly access fields, else can't update coefficents on parameter changes
+struct Lowpass {
+	sample_rate: f64,
+	cutoff: f64,
+	q: f64,
+	biquad: cd Biquad
 }
-
-/// A single channel, second-order filter
-///
-/// A `Biquad` is a type of second-order `Filter` that uses the following equation:
-/// > y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
-pub struct Biquad {
-	x_z1: f64,
-	x_z2: f64,
-	y_z1: f64,
-	y_z2: f64,
-	b0: f64,
-	b1: f64,
-	b2: f64,
-	a1: f64,
-	a2: f64
-}
-impl Biquad {
-	fn set_coefficients(&mut self, b0: f64, b1: f64, b2: f64, a1: f64, a2: f64) {
-		self.b0 = b0;
-		self.b1 = b1;
-		self.b2 = b2;
-		self.a1 = a1;
-		self.a2 = a2;
+impl Lowpass {
+	fn new(sample_rate: f64, cutoff: f64, q: f64) -> Self {
+		let mut biquad = Biquad::new();
+		let mut x = Lowpass {
+			sample_rate: sample_rate,
+			cutoff: cutoff,
+			q: q,
+			biquad: biquad
+		};
+		x.calculate_coefficients();
+		x
 	}
-}
-impl Filter for Biquad {
-	fn new() -> Self {
-		Biquad {
-			x_z1: 0f64,
-			x_z2: 0f64,
-			y_z1: 0f64,
-			y_z2: 0f64,
-			b0: 1f64,
-			b1: 0f64,
-			b2: 0f64,
-			a1: 0f64,
-			a2: 0f64
-		}
-	}
-	fn tick(&mut self, sample: f64) -> f64 {
-		let output = self.b0 * sample
-			+ self.b1 * self.x_z1 + self.b2 * self.x_z2
-			- self.a1 * self.y_z1 - self.a2 * self.y_z2;
 
-		self.x_z2 = self.x_z1;
-		self.x_z1 = sample;
-		self.y_z2 = self.y_z1;
-		self.y_z1 = output;
+	fn calculate_coefficients(&mut self) {
+		// Intermidiates
+		let w0 = ::std::f64::consts::PI_2 * self.cutoff / self.sample_rate;
+		let cos_w0 = ::std::num::Float::cos(w0);
+		let alpha = ::std::num::Float::sin(w0) / (2f64 * self.q);
 
-		output
-	}
-	fn clear(&mut self) {
-		self.x_z1 = 0f64;
-		self.x_z2 = 0f64;
-		self.y_z1 = 0f64;
-		self.y_z2 = 0f64;
+		let mut b0 = (1f64 - cos_w0) / 2f64;
+		let mut b1 = 1f64 - cos_w0;
+		let mut b2 = b0;
+		let mut a0 = 1f64 + alpha;
+		let mut a1 = -2f64 * cos_w0;
+		let mut a2 = 1f64 - alpha;
+
+		b0 /= a0;
+		b1 /= a0;
+		b2 /= a0;
+		a1 /= a0;
+		a2 /= a0;
+
+		self.biquad.set_coefficients(b0, b1, b2, a1, a2);
 	}
 }
 
