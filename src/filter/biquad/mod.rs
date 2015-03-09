@@ -73,16 +73,16 @@ mod tests {
 
 	#[test]
 	fn test_tick() {
-		let input_sample = 0.55f64;
+		let input_samples = vec![0.55f64, 0.55f64, 0.55f64, 0.55f64, 0.25f64];
 
 		let mut biquad = Biquad::new();
-		assert!(Float::abs(0.55f64 - biquad.tick(input_sample)) < EPSILON);
+		assert!(Float::abs(0.55f64 - biquad.tick(input_samples[0])) < EPSILON);
 		biquad.clear();
 
 		biquad.set_coefficients(0.5f64, 0.4f64, 0.3f64, 0.2f64, 0.1f64);
-		assert!(Float::abs(0.275f64 - biquad.tick(input_sample)) < EPSILON);
-		assert!(Float::abs(0.44f64 - biquad.tick(input_sample)) < EPSILON);
-		assert!(Float::abs(0.5445f64 - biquad.tick(input_sample)) < EPSILON);
-		assert!(Float::abs(0.3571f64 - biquad.tick(0.25f64)) < EPSILON);
+		assert!(Float::abs(0.275f64 - biquad.tick(input_samples[1])) < EPSILON);
+		assert!(Float::abs(0.44f64 - biquad.tick(input_samples[2])) < EPSILON);
+		assert!(Float::abs(0.5445f64 - biquad.tick(input_samples[3])) < EPSILON);
+		assert!(Float::abs(0.3571f64 - biquad.tick(input_samples[4])) < EPSILON);
 	}
 }
