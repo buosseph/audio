@@ -5,6 +5,7 @@ use audio::{
 };
 use audio::SampleOrder::{MONO, INTERLEAVED};
 use std::old_io::{File};
+use std::num::Float;
 use super::{FORM, AIFF, COMM, SSND};
 
 #[allow(deprecated)]
@@ -70,10 +71,6 @@ pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	Ok(true)
 }
 
-fn ieee_f64_to_u32(num: f64) -> u32 {
-	((((num - 2147483648f64) as i32) + 2147483647i32) + 1) as u32
-}
-
 fn convert_to_ieee_extended(sample_rate: uint) -> Vec<u8>{
 	if sample_rate == 0 {
 		let vec: Vec<u8> = vec![0,0,0,0,0,0,0,0,0,0];
@@ -93,7 +90,7 @@ fn convert_to_ieee_extended(sample_rate: uint) -> Vec<u8>{
 		false => { 0x0000 }
 	};
 
-	let tuple = ::std::num::Float::frexp(num);
+	let tuple = Float::frexp(num);
 	f_mant = tuple.0;
 	exponent = tuple.1;
 
@@ -105,17 +102,17 @@ fn convert_to_ieee_extended(sample_rate: uint) -> Vec<u8>{
 	else {
 		exponent += 16382;
 		if exponent < 0 {
-			f_mant 		= ::std::num::Float::ldexp(f_mant, exponent);
+			f_mant 		= Float::ldexp(f_mant, exponent);
 			exponent 	= 0;
 		}
 
 		exponent 	|= sign as int;
-		f_mant 		= ::std::num::Float::ldexp(f_mant, 32);
-		fs_mant 	= ::std::num::Float::floor(f_mant);
-		hi_mant 	= ieee_f64_to_u32(fs_mant);
-		f_mant 		= ::std::num::Float::ldexp(f_mant - fs_mant, 32);
-		fs_mant 	= ::std::num::Float::floor(f_mant);
-		low_mant 	= ieee_f64_to_u32(fs_mant);
+		f_mant 		= Float::ldexp(f_mant, 32);
+		fs_mant 	= Float::floor(f_mant);
+		hi_mant 	= fs_mant as u32;
+		f_mant 		= Float::ldexp(f_mant - fs_mant, 32);
+		fs_mant 	= Float::floor(f_mant);
+		low_mant 	= fs_mant as u32;
 	}
 
 	let vec: Vec<u8> = vec![
@@ -149,4 +146,17 @@ fn i32_to_be_slice(num: i32) -> [u8; 4] {
 
 fn i16_to_be_slice(num: i16) -> [u8; 2] {
 	[ (num >> 8) as u8, num as u8 ]
+}
+
+#[cfg(test)]
+mod tests {
+	use super::convert_to_ieee_extended;
+
+	#[test]
+	fn test_convert_to_ieee_extended() {
+		let sample_rate_in_bytes = vec![0x40, 0x0E, 0xAC, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+		let sample_rate = 44100;
+		let result = convert_to_ieee_extended(sample_rate);
+		assert_eq!(sample_rate_in_bytes, result);
+	}
 }

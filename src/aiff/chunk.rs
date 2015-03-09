@@ -1,4 +1,5 @@
 use std::old_io::{File, IoResult};
+use std::num::Float;
 use super::AIFF;
 
 #[derive(Copy)]
@@ -96,10 +97,6 @@ impl SoundDataChunk {
 	}
 }
 
-fn ieee_u32_to_f64(num: u32) -> f64 {
-	((num - 2147483647u32 - 1) as i32) as f64 + 2147483648f64
-}
-
 fn convert_from_ieee_extended(bytes: &[u8]) -> f64 {
 	let mut num: f64;
 	let mut exponent: int;
@@ -126,9 +123,9 @@ fn convert_from_ieee_extended(bytes: &[u8]) -> f64 {
 	else {
 		exponent -= 16383;
 		exponent -= 31;
-		num	= ::std::num::Float::ldexp(ieee_u32_to_f64(hi_mant), exponent);		
+		num	= Float::ldexp(hi_mant as f64, exponent);		
 		exponent -= 32;
-		num  += ::std::num::Float::ldexp(ieee_u32_to_f64(low_mant), exponent);
+		num  += Float::ldexp(low_mant as f64, exponent);
 	}
 
 	if bytes[0] & 0x80 > 0 {
@@ -136,5 +133,17 @@ fn convert_from_ieee_extended(bytes: &[u8]) -> f64 {
 	}
 	else {
 		return num;
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::convert_from_ieee_extended;
+
+	#[test]
+	fn test_convert_from_ieee_extended() {
+		let sample_rate = &[0x40, 0x0E, 0xAC, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+		let result = convert_from_ieee_extended(sample_rate);
+		assert_eq!(44100u32, result as u32);
 	}
 }
