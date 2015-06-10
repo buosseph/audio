@@ -3,6 +3,7 @@ use std::io::Error as IoError;
 use std::error::Error;
 
 /// An enumeration for reporting audio errors
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum AudioError {
   /// The audio file does not match the supported format specification
