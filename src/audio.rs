@@ -12,78 +12,10 @@
  *	Clip	- A set of frames representing an interval of time within or containing the entire read sound
  */
 
-use std::fmt;
-use std::old_io::{IoError};
-use std::error::{FromError};
 use std::ascii::OwnedAsciiExt;
 
-/// An enumeration for keeping track of how samples are organized in the loaded audio.
-/// Multichannel samples are usually interleaved, but other orderings are included if they
-/// are needed in the furutre.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SampleOrder {
-	MONO,
-	INTERLEAVED,
-	REVERSED,		// Have yet to see anything using these...
-	PLANAR,
-}
 
-impl fmt::Display for SampleOrder {
-	fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-		write!(
-			formatter,
-			"{}",
-			self
-		)
-	}
-}
 
-// Rename to AudioBuffer? Struct name is kinda confusing
-/// Holds all samples and necessary audio data for processing and encoding.
-#[derive(Clone)]
-pub struct RawAudio {
-	pub bit_rate: uint,
-	pub sample_rate: uint,
-	pub channels: uint,
-	pub order: SampleOrder,
-	pub samples: Vec<f64>,
-}
-
-impl fmt::Debug for RawAudio {
-	fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-		write!(
-			formatter,
-			"RawAudio: \n\tbit_rate: {},\n\tsample_rate: {},\n\tchannels: {},\n\torder: {},\n\t{} samples\n",
-			self.bit_rate,
-			self.sample_rate,
-			self.channels,
-			self.order,
-			self.samples.len()
-		)
-	}
-}
-
-/// Result type of an audio encoding or decoding process
-pub type AudioResult<T> = Result<T, AudioError>;
-
-/// An enumeration for reporting audio errors
-#[derive(Debug)]
-pub enum AudioError {
-	/// The audio file does not match the supported format specification
-	FormatError(String),
-
-	/// An IoError occurred during an audio process
-	IoError(IoError),
-
-	/// The audio file requires an unsupported feature from the decoder
-	UnsupportedError(String)
-}
-
-impl FromError<IoError> for AudioError {
-	fn from_error(err: IoError) -> AudioError {
-		AudioError::IoError(err)
-	}
-}
 
 /// Loads the audio file into memory from a path. The necessary decoder
 /// is determined by the path file extension. An 'AudioError' is 
