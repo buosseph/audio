@@ -2,6 +2,8 @@ use std::path::Path;
 use std::fs::File;
 use buffer::*;
 use error::*;
+use std::io::{Read, Seek, BufReader};
+use wave::Decoder as WaveDecoder;
 
 /// An enumeration of all supported audio formats
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -45,7 +47,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 /// `Seek` traits. One example would be a `File`.
 pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
-    //AudioFormat::WAV  => wave::Decoder::new(BufReader::new(reader)),
+    AudioFormat::WAV  => WaveDecoder::new(BufReader::new(reader)).decode(),
     //AudioFormat::AIFF => unimplemented!(),
     _ => Err(AudioError::FormatError(format!("A decoder for {:?} is not available", format)))
   }
@@ -66,4 +68,9 @@ pub fn save(audio: &AudioBuffer, path: &Path) -> AudioResult<bool> {
   else {
     Err(AudioError::FormatError("Did not recognize file format".to_string()))
   }
+}
+
+/// Trait which all decoders must implement in order to return an `AudioBuffer` and metadata
+pub trait AudioDecoder {
+  fn decode(self) -> AudioResult<AudioBuffer>;
 }

@@ -8,7 +8,7 @@ mod audio;
 mod buffer;
 pub mod error;
 
-//pub mod wave;
+mod wave;
 //mod containers;
 
 pub use buffer::{
