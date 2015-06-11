@@ -1,72 +1,14 @@
-//pub mod chunk;
-//pub mod decoder;
-//pub mod encoder;
-
 // Hex constants are stored, read, and written as little endian
 const RIFF: u32 = 0x46464952;
 const WAVE: u32 = 0x45564157;
 const FMT:	u32 = 0x20746D66;
 const DATA: u32 = 0x61746164;
 
-use std::io::{Read, Seek};
-use audio::{AudioDecoder};
-use buffer::*;
-use error::{AudioResult, AudioError};
+//pub mod chunk;
+pub mod decoder;
+//pub mod encoder;
 
-pub struct Decoder<R> {
-  r: R,
-  bit_rate: u8,
-  sample_rate: u32,
-  channels: u32,
-  data: Vec<Sample>
-}
-
-impl<R: Read + Seek> Decoder<R> {
-  pub fn new(reader: R) -> Decoder<R> {
-    Decoder {
-      r: reader,
-      bit_rate: 0u8,
-      sample_rate: 0u32,
-      channels: 0u32,
-      data: Vec::new()
-    }
-  }
-}
-
-impl<R: Read + Seek> AudioDecoder for Decoder<R> {
-  fn bit_rate(&self) -> AudioResult<u8> {
-    Ok(self.bit_rate)
-  }
-  fn sample_rate(&self) -> AudioResult<u32> {
-    Ok(self.sample_rate)
-  }
-  fn channels(&self) -> AudioResult<u32> {
-    Ok(self.channels)
-  }
-  fn sample_order(&self) -> AudioResult<SampleOrder> {
-    Ok(SampleOrder::INTERLEAVED)
-  }
-  /*
-  fn read_format(&self) -> AudioResult<Vec<u8>> {
-    //container::riff::read(self.r);
-  }
-  */
-  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
-
-  fn decode(self) -> AudioResult<AudioBuffer> {
-    //let bytes: AudioResult<Vec<u8>> = try!(self.read_format());
-    //let data: Vec<Sample> = try!(read_codec(LPCM, bytes));
-    Ok(
-      AudioBuffer {
-        bit_rate:     try!(self.bit_rate()),
-        sample_rate:  try!(self.sample_rate()),
-        channels:     try!(self.channels()),
-        order:        try!(self.sample_order()),
-        samples:      Vec::with_capacity(1)
-      }
-    )
-  }
-}
+pub use wave::decoder::Decoder as Decoder;
 
 /*
 #[cfg(test)]

@@ -76,7 +76,7 @@ pub trait AudioDecoder {
   fn sample_rate(&self) -> AudioResult<u32>;
   fn channels(&self) -> AudioResult<u32>;
   fn sample_order(&self) -> AudioResult<SampleOrder>;
-  //fn read_format(&self) -> AudioResult<Vec<u8>>;
+  fn open_container(&mut self) -> AudioResult<Vec<u8>>;
   //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>>;
 
   fn decode(self) -> AudioResult<AudioBuffer>;

@@ -1,3 +1,69 @@
+use std::io::{Read, Seek};
+use audio::{AudioDecoder};
+use buffer::*;
+//use containers::riff::*;
+use error::{AudioResult, AudioError};
+
+pub struct Decoder<R> {
+  r: R,
+  bit_rate: u8,
+  sample_rate: u32,
+  channels: u32,
+  data: Vec<Sample>
+}
+
+impl<R: Read + Seek> Decoder<R> {
+  pub fn new(reader: R) -> Decoder<R> {
+    Decoder {
+      r: reader,
+      bit_rate: 0u8,
+      sample_rate: 0u32,
+      channels: 0u32,
+      data: Vec::new()
+    }
+  }
+}
+
+impl<R: Read + Seek> AudioDecoder for Decoder<R> {
+  fn bit_rate(&self) -> AudioResult<u8> {
+    Ok(self.bit_rate)
+  }
+  fn sample_rate(&self) -> AudioResult<u32> {
+    Ok(self.sample_rate)
+  }
+  fn channels(&self) -> AudioResult<u32> {
+    Ok(self.channels)
+  }
+  fn sample_order(&self) -> AudioResult<SampleOrder> {
+    Ok(SampleOrder::INTERLEAVED)
+  }
+  fn open_container(&mut self) -> AudioResult<Vec<u8>> {
+    //container::riff::open(self.r);
+    Ok(Vec::new())
+  }
+  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
+
+  fn decode(self) -> AudioResult<AudioBuffer> {
+    //let bytes: AudioResult<Vec<u8>> = try!(self.open_container());
+    //let data: Vec<Sample> = try!(read_codec(LPCM, bytes));
+    Ok(
+      AudioBuffer {
+        bit_rate:     try!(self.bit_rate()),
+        sample_rate:  try!(self.sample_rate()),
+        channels:     try!(self.channels()),
+        order:        try!(self.sample_order()),
+        samples:      Vec::with_capacity(1)
+      }
+    )
+  }
+}
+
+
+
+
+
+
+/*
 use audio::{
 	AudioResult,
 	AudioError,
@@ -11,9 +77,8 @@ use super::chunk::CompressionCode::{PCM};
 use super::{RIFF, FMT, DATA};
 
 #[allow(deprecated)]
-pub fn read_file_meta(file_path: &str) -> AudioResult<()>{
-	let path = Path::new(file_path);
-	let mut file = try!(File::open(&path));
+pub fn read_file_meta(path: &Path) -> AudioResult<()>{
+	let mut file = try!(File::open(path));
 
 	let riff_header = try!(file.read_le_u32());
 	if riff_header != RIFF {
@@ -70,11 +135,12 @@ pub fn read_file_meta(file_path: &str) -> AudioResult<()>{
 
 	Ok(())
 }
-
+*/
 /* Most recent benchmark:
  * - 152745932 ns/iter (+/- 53383069)
  */
 
+/*
 /// Reads audio file into memory. Supports 8-32 bit PCM encoded WAVE files.
 #[allow(deprecated)]
 pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
@@ -291,7 +357,9 @@ pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 		}
 	)
 }
+*/
 
+/*
 #[cfg(test)]
 mod tests {
 	extern crate test;
@@ -305,3 +373,4 @@ mod tests {
 		});
 	}
 }
+*/
