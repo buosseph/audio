@@ -38,7 +38,7 @@ impl<R: Read + Seek> AudioDecoder for Decoder<R> {
     Ok(SampleOrder::INTERLEAVED)
   }
   fn open_container(&mut self) -> AudioResult<Vec<u8>> {
-    //container::riff::open(self.r);
+    //container::riff::RiffContainer::open(self.r);
     Ok(Vec::new())
   }
   //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}

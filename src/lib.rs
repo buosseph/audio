@@ -9,7 +9,7 @@ mod buffer;
 pub mod error;
 
 mod wave;
-//mod containers;
+mod containers;
 
 pub use buffer::{
   Sample,
