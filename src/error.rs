@@ -43,5 +43,11 @@ impl Error for AudioError {
   }
 }
 
+impl From<IoError> for AudioError {
+  fn from(err: IoError) -> AudioError {
+    AudioError::IoError(err)
+  }
+}
+
 /// Result type of an audio encoding or decoding process
 pub type AudioResult<T> = Result<T, AudioError>;

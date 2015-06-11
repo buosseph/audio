@@ -9,6 +9,7 @@ mod buffer;
 pub mod error;
 
 //pub mod wave;
+//mod containers;
 
 pub use buffer::{
   Sample,
@@ -17,6 +18,7 @@ pub use buffer::{
 };
 
 pub use audio::{
+  open,
   load,
   save
 };

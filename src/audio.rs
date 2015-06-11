@@ -1,21 +1,50 @@
 use std::path::Path;
+use std::fs::File;
 use buffer::*;
 use error::*;
 
-/// Loads the audio file into memory from a path. The necessary decoder
+/// An enumeration of all supported audio formats
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AudioFormat {
+  /// Audio in WAVE format
+  WAV,
+  /// Audio in AIFF format
+  AIFF
+}
+
+/// Opens and loads the audio file into memory from a path. The necessary decoder
 /// is determined by the path file extension. An 'AudioError' is 
 /// returned if the file type is not supported or if an error occurred
 /// in the decoding process.
-pub fn load(path: &Path) -> AudioResult<AudioBuffer> {
-  if let Some(format) = path.extension() {
-    match format {
-      //"wav"   =>
-      //"aiff"  => 
-      _       => Err(AudioError::FormatError(format!("A decoder for {:?} is not available.", format)))
+pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
+  if let Some(ext) = path.extension() {
+    if let Some(file_format) = ext.to_str() {
+      let format = match file_format {
+        "wav"|"wave"  => AudioFormat::WAV,
+        "aif"|"aiff"  => AudioFormat::AIFF,
+        _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
+      };
+      let file = try!(File::open(path));
+      load(file, AudioFormat::WAV)
+    }
+    else {
+      Err(AudioError::FormatError("Did not recognize file format".to_string()))
     }
   }
   else {
     Err(AudioError::FormatError("Did not recognize file format".to_string()))
+  }
+}
+
+/// Loads the audio file into memory. The necessary decoder
+/// is determined by the provided 'AudioFormat'. An 'AudioError' is 
+/// returned if the format is not supported or if an error occurred
+/// in the decoding process.
+pub fn load(file: File, format: AudioFormat) -> AudioResult<AudioBuffer> {
+  match format {
+    //AudioFormat::WAV  => unimplemented!(),
+    //AudioFormat::AIFF => unimplemented!(),
+    _ => Err(AudioError::FormatError(format!("A decoder for {:?} is not available", format)))
   }
 }
 
@@ -29,7 +58,7 @@ pub fn save(audio: &AudioBuffer, path: &Path) -> AudioResult<bool> {
     match format {
       //"wav"   => { ...; true}
       //"aiff"  => { ...; true}
-      _       => Err(AudioError::FormatError(format!("A decoder for {:?} is not available.", format)))
+      _       => Err(AudioError::FormatError(format!("A decoder for {:?} is not available", format)))
     }
   }
   else {

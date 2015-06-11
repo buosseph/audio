@@ -7,10 +7,10 @@ fn test_load() {
   use audio::error::AudioResult;
 
   let mut path = Path::new(".gitignore");
-  let mut result: AudioResult<AudioBuffer> = audio::load(path);
+  let mut result: AudioResult<AudioBuffer> = audio::open(path);
   assert!(result.is_err());
 
   path = Path::new("Cargo.toml");
-  result = audio::load(path);
+  result = audio::open(path);
   assert!(result.is_err());
 }
