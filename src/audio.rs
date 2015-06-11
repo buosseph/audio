@@ -13,7 +13,7 @@ pub enum AudioFormat {
 }
 
 /// Opens and loads the audio file into memory from a path. The necessary decoder
-/// is determined by the path file extension. An 'AudioError' is 
+/// is determined by the path file extension. An `AudioError` is 
 /// returned if the file type is not supported or if an error occurred
 /// in the decoding process.
 pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
@@ -36,18 +36,20 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
   }
 }
 
-/// Loads the audio file into memory. The necessary decoder
-/// is determined by the provided 'AudioFormat'. An 'AudioError' is 
+/// Loads the audio from a reader into memory. The necessary decoder
+/// is determined by the provided `AudioFormat`. An `AudioError` is 
 /// returned if the format is not supported or if an error occurred
 /// in the decoding process.
-pub fn load(file: File, format: AudioFormat) -> AudioResult<AudioBuffer> {
+///
+/// A reader, in this case, is any struct that implements the `Read` and
+/// `Seek` traits. One example would be a `File`.
+pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
-    //AudioFormat::WAV  => unimplemented!(),
+    //AudioFormat::WAV  => wave::Decoder::new(BufReader::new(reader)),
     //AudioFormat::AIFF => unimplemented!(),
     _ => Err(AudioError::FormatError(format!("A decoder for {:?} is not available", format)))
   }
 }
-
 
 /// Writes the audio file to the provided path. The necessary encoder
 /// is determined by the path file extension. An `AudioError` is 
@@ -65,9 +67,3 @@ pub fn save(audio: &AudioBuffer, path: &Path) -> AudioResult<bool> {
     Err(AudioError::FormatError("Did not recognize file format".to_string()))
   }
 }
-
-/*
-pub trail AudioDecoder {
-
-}
-*/
