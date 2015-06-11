@@ -14,20 +14,57 @@ use buffer::*;
 use error::{AudioResult, AudioError};
 
 pub struct Decoder<R> {
-  r: R
+  r: R,
+  bit_rate: u8,
+  sample_rate: u32,
+  channels: u32,
+  data: Vec<Sample>
 }
 
 impl<R: Read + Seek> Decoder<R> {
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
-      r: reader
+      r: reader,
+      bit_rate: 0u8,
+      sample_rate: 0u32,
+      channels: 0u32,
+      data: Vec::new()
     }
   }
 }
 
 impl<R: Read + Seek> AudioDecoder for Decoder<R> {
+  fn bit_rate(&self) -> AudioResult<u8> {
+    Ok(self.bit_rate)
+  }
+  fn sample_rate(&self) -> AudioResult<u32> {
+    Ok(self.sample_rate)
+  }
+  fn channels(&self) -> AudioResult<u32> {
+    Ok(self.channels)
+  }
+  fn sample_order(&self) -> AudioResult<SampleOrder> {
+    Ok(SampleOrder::INTERLEAVED)
+  }
+  /*
+  fn read_format(&self) -> AudioResult<Vec<u8>> {
+    //container::riff::read(self.r);
+  }
+  */
+  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
+
   fn decode(self) -> AudioResult<AudioBuffer> {
-    Err(AudioError::UnsupportedError("wave::Decoder is not yet complete".to_string()))
+    //let bytes: AudioResult<Vec<u8>> = try!(self.read_format());
+    //let data: Vec<Sample> = try!(read_codec(LPCM, bytes));
+    Ok(
+      AudioBuffer {
+        bit_rate:     try!(self.bit_rate()),
+        sample_rate:  try!(self.sample_rate()),
+        channels:     try!(self.channels()),
+        order:        try!(self.sample_order()),
+        samples:      Vec::with_capacity(1)
+      }
+    )
   }
 }
 

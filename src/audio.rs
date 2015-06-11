@@ -72,5 +72,12 @@ pub fn save(audio: &AudioBuffer, path: &Path) -> AudioResult<bool> {
 
 /// Trait which all decoders must implement in order to return an `AudioBuffer` and metadata
 pub trait AudioDecoder {
+  fn bit_rate(&self) -> AudioResult<u8>;
+  fn sample_rate(&self) -> AudioResult<u32>;
+  fn channels(&self) -> AudioResult<u32>;
+  fn sample_order(&self) -> AudioResult<SampleOrder>;
+  //fn read_format(&self) -> AudioResult<Vec<u8>>;
+  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>>;
+
   fn decode(self) -> AudioResult<AudioBuffer>;
 }
