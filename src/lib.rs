@@ -4,9 +4,9 @@
  *  Clip  - A set of frames representing an interval of time within or containing the entire read sound
  */
 
-pub mod audio;
+mod audio;
 mod buffer;
-mod error;
+pub mod error;
 
 //pub mod wave;
 
@@ -14,4 +14,9 @@ pub use buffer::{
   Sample,
   SampleOrder,
   AudioBuffer
+};
+
+pub use audio::{
+  load,
+  save
 };
