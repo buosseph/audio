@@ -1,6 +1,7 @@
 use std::fmt;
 use std::io::Error as IoError;
 use std::error::Error;
+use byteorder::Error as ByteError;
 
 /// An enumeration for reporting audio errors
 #[allow(dead_code)]
@@ -11,7 +12,9 @@ pub enum AudioError {
   /// An IoError occurred during an audio process
   IoError(IoError),
   /// The audio file requires an unsupported feature from the decoder
-  UnsupportedError(String)
+  UnsupportedError(String),
+  /// The end of the audio file has been reached
+  AudioEnd
 }
 
 impl fmt::Display for AudioError {
@@ -20,7 +23,8 @@ impl fmt::Display for AudioError {
     match self {
       &FormatError(ref e)       => write!(fmt, "Format error: {}", e),
       &UnsupportedError(ref f)  => write!(fmt, "The decoder does not support the audio format `{}`", f),
-      &IoError(ref e)           => e.fmt(fmt)
+      &IoError(ref e)           => e.fmt(fmt),
+      &AudioEnd                 => write!(fmt, "The end of the audio file has been reached")
     }
   }
 }
@@ -31,7 +35,8 @@ impl Error for AudioError {
     match *self {
       FormatError(..)       => &"Format error",
       UnsupportedError(..)  => &"Unsupported error",
-      IoError(..)           => &"IO error"
+      IoError(..)           => &"IO error",
+      AudioEnd              => &"Audio end"
     }
   }
 
@@ -46,6 +51,15 @@ impl Error for AudioError {
 impl From<IoError> for AudioError {
   fn from(err: IoError) -> AudioError {
     AudioError::IoError(err)
+  }
+}
+
+impl From<ByteError> for AudioError {
+  fn from(err: ByteError) -> AudioError {
+    match err {
+      ByteError::UnexpectedEOF  => AudioError::AudioEnd,
+      ByteError::Io(err)        => AudioError::IoError(err),
+    }
   }
 }
 

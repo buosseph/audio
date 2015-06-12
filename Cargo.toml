@@ -3,3 +3,6 @@
 name = "audio"
 version = "0.0.1"
 authors = ["Brian Uosseph <brian.uosseph@gmail.com>"]
+
+[dependencies]
+byteorder = "*"

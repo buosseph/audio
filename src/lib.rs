@@ -4,6 +4,8 @@
  *  Clip  - A set of frames representing an interval of time within or containing the entire read sound
  */
 
+extern crate byteorder;
+
 mod audio;
 mod buffer;
 pub mod error;
