@@ -5,6 +5,7 @@ const DATA: u32 = 0x64617461;
 
 use std::fmt;
 use std::io::{Read, Seek};
+use buffer::{SampleOrder};
 use containers::{Container, Chunk};
 use error::*;
 
@@ -18,30 +19,37 @@ enum ChunkType {
 /// The Resource Interchange File Format (RIFF) is a generic
 /// file container format that uses chunks to store data.
 /// All bytes are stored in little-endian format.
-pub struct RiffContainer<R> {
-  r: R
+pub struct RiffContainer<'r, R: 'r> {
+  reader: &'r R,
+  bit_rate: u32,
+  sample_rate: u32,
+  channels: u32,
+  order: SampleOrder,
+  bytes: Vec<u8>
 }
 
-impl<R: Read + Seek> Container<R> for RiffContainer<R> {
-  fn open(r: &mut R) -> AudioResult<Vec<u8>> {
-    /*
-    let chunk_type = try!(identify(r));
-    let chunk = match chunk_type {
-      ChunkType::RiffHeader => RiffHeader::read(r),
-      //ChunkType::Format
-      //ChunkType::Data
-      _ => Err(AudioError::FormatError("Do not recognize RIFF chunk".to_string()))
-    };
-    */
-
+impl<'r, R: Read + Seek> Container<'r, R> for RiffContainer<'r, R> {
+  fn open(r: &'r mut R) -> AudioResult<RiffContainer<'r, R>> {
     let header_chunk_type = try!(identify(r));
-    let header = RiffHeader::read(r);
-    let fmt_chunk_type = try!(identify(r));
-    let fmt_chunk = FormatChunk::read(r);
-    let data_chunk_type = try!(identify(r));
-    let dat_chunk = DataChunk::read(r);
-
-    Ok(Vec::new())
+    let header            = try!(RiffHeader::read(r));
+    let fmt_chunk_type    = try!(identify(r));
+    let fmt_chunk         = try!(FormatChunk::read(r));
+    let data_chunk_type   = try!(identify(r));
+    let data_chunk        = try!(DataChunk::read(r));
+    let sample_order
+      = if (fmt_chunk.num_of_channels == 1u16) {
+        SampleOrder::MONO
+      } else {
+        SampleOrder::INTERLEAVED
+      };
+    Ok(RiffContainer {
+      reader:       r,
+      bit_rate:     fmt_chunk.bit_rate as u32,
+      sample_rate:  fmt_chunk.sample_rate,
+      channels:     fmt_chunk.num_of_channels as u32,
+      order:        sample_order,
+      bytes:        data_chunk.bytes
+    })
   }
 }
 
@@ -100,7 +108,7 @@ impl Chunk for RiffHeader {
       | (buffer[5] as u32) << 8
       |  buffer[4] as u32;
     if form_type != WAVE {
-      panic!("File is not valid WAVE");
+      return Err(AudioError::FormatError("This is not a valid WAV file".to_string()))
     }
     Ok(
       RiffHeader {
@@ -130,7 +138,7 @@ pub struct FormatChunk {
   pub size: u32,
   pub compression_code: CompressionType,
   pub num_of_channels: u16,
-  pub sampling_rate: u32,
+  pub sample_rate: u32,
   pub data_rate: u32,
   pub block_size: u16,
   pub bit_rate: u16,
@@ -158,7 +166,7 @@ impl Chunk for FormatChunk {
     let num_of_channels : u16
       = (buffer[3] as u16) << 8
       |  buffer[2] as u16;
-    let sampling_rate   : u32
+    let sample_rate     : u32
       = (buffer[7] as u32) << 24
       | (buffer[6] as u32) << 16
       | (buffer[5] as u32) << 8
@@ -182,7 +190,7 @@ impl Chunk for FormatChunk {
         size: size,
         compression_code: compression_type,
         num_of_channels: num_of_channels,
-        sampling_rate: sampling_rate,
+        sample_rate: sample_rate,
         data_rate: data_rate,
         block_size: block_size,
         bit_rate: bit_rate,
@@ -195,7 +203,7 @@ impl Chunk for FormatChunk {
 /// always interleaved in `WAV` files.
 pub struct DataChunk {
   pub size: u32,
-  pub data: Vec<u8>,
+  pub bytes: Vec<u8>,
 }
 
 impl Chunk for DataChunk {
@@ -209,17 +217,11 @@ impl Chunk for DataChunk {
       |  size_buffer[0] as u32;
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
     try!(r.read(&mut buffer));
-
     Ok(
       DataChunk {
         size: size,
-        data: buffer,
+        bytes: buffer,
       }
     )
   }
-}
-
-#[test]
-fn it_works() {
-  assert!(true);
 }

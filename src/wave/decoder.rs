@@ -1,12 +1,12 @@
 use std::io::{Read, Seek};
 use audio::{AudioDecoder};
 use buffer::*;
-//use containers::riff::*;
+//use containers::*;
 use error::{AudioResult, AudioError};
 
 pub struct Decoder<R> {
   r: R,
-  bit_rate: u8,
+  bit_rate: u32,
   sample_rate: u32,
   channels: u32,
   data: Vec<Sample>
@@ -16,7 +16,7 @@ impl<R: Read + Seek> Decoder<R> {
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
       r: reader,
-      bit_rate: 0u8,
+      bit_rate: 0u32,
       sample_rate: 0u32,
       channels: 0u32,
       data: Vec::new()
@@ -25,7 +25,7 @@ impl<R: Read + Seek> Decoder<R> {
 }
 
 impl<R: Read + Seek> AudioDecoder for Decoder<R> {
-  fn bit_rate(&self) -> AudioResult<u8> {
+  fn bit_rate(&self) -> AudioResult<u32> {
     Ok(self.bit_rate)
   }
   fn sample_rate(&self) -> AudioResult<u32> {
@@ -38,7 +38,7 @@ impl<R: Read + Seek> AudioDecoder for Decoder<R> {
     Ok(SampleOrder::INTERLEAVED)
   }
   fn open_container(&mut self) -> AudioResult<Vec<u8>> {
-    //container::riff::RiffContainer::open(self.r);
+    //let container = RiffContainer::open(self.r);
     Ok(Vec::new())
   }
   //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
