@@ -19,16 +19,16 @@ enum ChunkType {
 /// The Resource Interchange File Format (RIFF) is a generic
 /// file container format that uses chunks to store data.
 /// All bytes are stored in little-endian format.
-pub struct RiffContainer<'r, R: 'r> {
-  reader: &'r R,
-  bit_rate: u32,
-  sample_rate: u32,
-  channels: u32,
-  order: SampleOrder,
-  bytes: Vec<u8>
+pub struct RiffContainer<'r, R: 'r> where R: Read + Seek {
+  reader: &'r mut R,
+  pub bit_rate: u32,
+  pub sample_rate: u32,
+  pub channels: u32,
+  pub order: SampleOrder,
+  pub bytes: Vec<u8>
 }
 
-impl<'r, R: Read + Seek> Container<'r, R> for RiffContainer<'r, R> {
+impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
   fn open(r: &'r mut R) -> AudioResult<RiffContainer<'r, R>> {
     let header_chunk_type = try!(identify(r));
     let header            = try!(RiffHeader::read(r));
@@ -52,15 +52,6 @@ impl<'r, R: Read + Seek> Container<'r, R> for RiffContainer<'r, R> {
     })
   }
 }
-
-/*
-fn read_chunk<R, C>(r: &mut R, chunk_type: ChunkType) -> AudioResult<C> where R: Read + Seek, C: Chunk {
-  match chunk_type {
-    ChunkType::RiffHeader => RiffHeader::read(r),
-    _ => Err(AudioError::FormatError("Do not recognize RIFF chunk".to_string()))
-  }
-}
-*/
 
 /// This function reads the four byte identifier for each RIFF chunk
 ///

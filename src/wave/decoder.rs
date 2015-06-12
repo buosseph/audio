@@ -1,30 +1,30 @@
 use std::io::{Read, Seek};
 use audio::{AudioDecoder};
 use buffer::*;
-//use containers::*;
+use containers::*;
 use error::{AudioResult, AudioError};
 
-pub struct Decoder<R> {
-  r: R,
+pub struct Decoder<R> where R: Read + Seek {
+  reader: R,
   bit_rate: u32,
   sample_rate: u32,
   channels: u32,
   data: Vec<Sample>
 }
 
-impl<R: Read + Seek> Decoder<R> {
+impl<R> Decoder<R> where R: Read + Seek {
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
-      r: reader,
+      reader: reader,
       bit_rate: 0u32,
       sample_rate: 0u32,
       channels: 0u32,
       data: Vec::new()
-    }
+    }//.read_audio?
   }
 }
 
-impl<R: Read + Seek> AudioDecoder for Decoder<R> {
+impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
   fn bit_rate(&self) -> AudioResult<u32> {
     Ok(self.bit_rate)
   }
@@ -37,29 +37,28 @@ impl<R: Read + Seek> AudioDecoder for Decoder<R> {
   fn sample_order(&self) -> AudioResult<SampleOrder> {
     Ok(SampleOrder::INTERLEAVED)
   }
+  /*
   fn open_container(&mut self) -> AudioResult<Vec<u8>> {
-    //let container = RiffContainer::open(self.r);
+    let container = RiffContainer::open(self.r);
     Ok(Vec::new())
-  }
+  }*/
   //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
 
-  fn decode(self) -> AudioResult<AudioBuffer> {
-    //let bytes: AudioResult<Vec<u8>> = try!(self.open_container());
+  fn decode(mut self) -> AudioResult<AudioBuffer> {
+    let container = try!(RiffContainer::open(&mut self.reader));
+    let bytes: Vec<u8> = container.bytes;
     //let data: Vec<Sample> = try!(read_codec(LPCM, bytes));
     Ok(
       AudioBuffer {
-        bit_rate:     try!(self.bit_rate()),
-        sample_rate:  try!(self.sample_rate()),
-        channels:     try!(self.channels()),
-        order:        try!(self.sample_order()),
+        bit_rate:     container.bit_rate,
+        sample_rate:  container.sample_rate,
+        channels:     container.channels,
+        order:        container.order,
         samples:      Vec::with_capacity(1)
       }
     )
   }
 }
-
-
-
 
 
 
