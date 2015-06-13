@@ -11,6 +11,7 @@ mod buffer;
 pub mod error;
 
 mod wave;
+mod codecs;
 mod containers;
 
 pub use buffer::{

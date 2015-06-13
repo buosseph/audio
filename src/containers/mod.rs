@@ -1,4 +1,5 @@
 use std::io::{Read, Seek};
+use buffer::Sample;
 use error::*;
 
 pub mod riff;
@@ -14,6 +15,7 @@ pub use containers::riff::RiffContainer as RiffContainer;
 pub trait Container<'r, R> where R: Read + Seek {
   fn open(r: &'r mut R) -> AudioResult<Self>;
   //fn read_chunk<C>(r: &mut R) -> AudioResult<C> where C: Chunk;
+  fn read_codec(&mut self) -> AudioResult<Vec<Sample>>;
 }
 
 /// The trait used to read 

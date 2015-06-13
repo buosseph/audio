@@ -5,9 +5,17 @@ const DATA: u32 = 0x64617461;
 
 use std::fmt;
 use std::io::{Read, Seek};
-use buffer::{SampleOrder};
+use buffer::*;
+use byteorder::{ReadBytesExt, LittleEndian};
+use codecs::{Codec, AudioCodec, LPCM};
 use containers::{Container, Chunk};
 use error::*;
+
+#[test]
+fn test_le_to_be() {
+  let x: u32 = 0x44AC0000;
+  assert_eq!(44100, x.swap_bytes());
+}
 
 /// Enumeration of supported RIFF chunks
 enum ChunkType {
@@ -21,9 +29,11 @@ enum ChunkType {
 /// All bytes are stored in little-endian format.
 pub struct RiffContainer<'r, R: 'r> where R: Read + Seek {
   reader: &'r mut R,
+  compression: CompressionType,
   pub bit_rate: u32,
   pub sample_rate: u32,
   pub channels: u32,
+  pub block_size: u32,
   pub order: SampleOrder,
   pub bytes: Vec<u8>
 }
@@ -44,12 +54,24 @@ impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
       };
     Ok(RiffContainer {
       reader:       r,
+      compression:  fmt_chunk.compression_type,
       bit_rate:     fmt_chunk.bit_rate as u32,
       sample_rate:  fmt_chunk.sample_rate,
       channels:     fmt_chunk.num_of_channels as u32,
+      block_size:   fmt_chunk.block_size as u32,
       order:        sample_order,
       bytes:        data_chunk.bytes
     })
+  }
+
+  fn read_codec(&mut self) -> AudioResult<Vec<Sample>> {
+    let codec = match self.compression {
+      CompressionType::PCM => Codec::LPCM,
+      _ => return Err(AudioError::UnsupportedError("This file uses an unsupported codec".to_string()))
+    };
+    match codec {
+      Codec::LPCM => LPCM::read(&mut self.bytes)
+    }
   }
 }
 
@@ -60,14 +82,7 @@ impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
 /// skipping the length of the chunk indicated by the next four bytes available
 /// in the reader.
 fn identify<R>(r: &mut R) -> AudioResult<ChunkType> where R: Read + Seek {
-  let buffer: &mut[u8] = &mut[0u8; 4];
-  try!(r.read(buffer));
-  let identifier  :u32
-    = (buffer[0] as u32) << 24
-    | (buffer[1] as u32) << 16
-    | (buffer[2] as u32) << 8
-    |  buffer[3] as u32;
-  match identifier {
+  match try!(r.read_u32::<LittleEndian>()) {
     RIFF => Ok(ChunkType::RiffHeader),
     FMT  => Ok(ChunkType::Format),
     DATA => Ok(ChunkType::Data),
@@ -88,12 +103,12 @@ impl Chunk for RiffHeader {
     let buffer: &mut[u8] = &mut[0u8; 8];
     try!(r.read(buffer));
     // Converting to little endian
-    let file_size       : u32
+    let file_size   : u32
       = (buffer[3] as u32) << 24
       | (buffer[2] as u32) << 16
       | (buffer[1] as u32) << 8
       |  buffer[0] as u32;
-    let form_type: u32
+    let form_type   : u32
       = (buffer[7] as u32) << 24
       | (buffer[6] as u32) << 16
       | (buffer[5] as u32) << 8
@@ -127,7 +142,7 @@ impl fmt::Display for CompressionType {
 #[derive(Debug, Clone, Copy)]
 pub struct FormatChunk {
   pub size: u32,
-  pub compression_code: CompressionType,
+  pub compression_type: CompressionType,
   pub num_of_channels: u16,
   pub sample_rate: u32,
   pub data_rate: u32,
@@ -137,13 +152,7 @@ pub struct FormatChunk {
 
 impl Chunk for FormatChunk {
   fn read<R>(r: &mut R) -> AudioResult<FormatChunk> where R: Read + Seek {
-    let size_buffer: &mut[u8] = &mut[0u8; 4];
-    try!(r.read(size_buffer));
-    let size              :u32
-      = (size_buffer[3] as u32) << 24
-      | (size_buffer[2] as u32) << 16
-      | (size_buffer[1] as u32) << 8
-      |  size_buffer[0] as u32;
+    let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
     try!(r.read(&mut buffer));
     let compression_code : u16
@@ -179,7 +188,7 @@ impl Chunk for FormatChunk {
     Ok(
       FormatChunk {
         size: size,
-        compression_code: compression_type,
+        compression_type: compression_type,
         num_of_channels: num_of_channels,
         sample_rate: sample_rate,
         data_rate: data_rate,
@@ -199,15 +208,10 @@ pub struct DataChunk {
 
 impl Chunk for DataChunk {
   fn read<R>(r: &mut R) -> AudioResult<DataChunk> where R: Read + Seek {
-    let size_buffer: &mut[u8] = &mut[0u8; 4];
-    try!(r.read(size_buffer));
-    let size              :u32
-      = (size_buffer[3] as u32) << 24
-      | (size_buffer[2] as u32) << 16
-      | (size_buffer[1] as u32) << 8
-      |  size_buffer[0] as u32;
+    let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
     try!(r.read(&mut buffer));
+    // Rearrange all samples so that it's in big endian? Or just pass endiness to codec?
     Ok(
       DataChunk {
         size: size,

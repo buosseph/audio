@@ -1,14 +1,17 @@
 use std::io::{Read, Seek};
 use audio::{AudioDecoder};
 use buffer::*;
+use codecs::*;
 use containers::*;
 use error::{AudioResult, AudioError};
 
 pub struct Decoder<R> where R: Read + Seek {
   reader: R,
+  // container: Container,
   bit_rate: u32,
   sample_rate: u32,
   channels: u32,
+  block_size: u32,
   data: Vec<Sample>
 }
 
@@ -16,11 +19,13 @@ impl<R> Decoder<R> where R: Read + Seek {
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
       reader: reader,
+      // container: Container
       bit_rate: 0u32,
       sample_rate: 0u32,
       channels: 0u32,
+      block_size: 0u32,
       data: Vec::new()
-    }//.read_audio?
+    }//.open_container
   }
 }
 
@@ -45,103 +50,26 @@ impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
   //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
 
   fn decode(mut self) -> AudioResult<AudioBuffer> {
-    let container = try!(RiffContainer::open(&mut self.reader));
-    let bytes: Vec<u8> = container.bytes;
-    //let data: Vec<Sample> = try!(read_codec(LPCM, bytes));
+    let mut container = try!(RiffContainer::open(&mut self.reader));
+    let bit_rate = container.bit_rate;
+    let sample_rate = container.sample_rate;
+    let channels = container.channels;
+    let order = container.order;
+    let data: Vec<Sample> = try!(container.read_codec());
     Ok(
       AudioBuffer {
-        bit_rate:     container.bit_rate,
-        sample_rate:  container.sample_rate,
-        channels:     container.channels,
-        order:        container.order,
-        samples:      Vec::with_capacity(1)
+        bit_rate:     bit_rate,
+        sample_rate:  sample_rate,
+        channels:     channels,
+        order:        order,
+        samples:      data
       }
     )
   }
 }
 
-
-
 /*
-use audio::{
-	AudioResult,
-	AudioError,
-	RawAudio,
-	SampleOrder
-};
-use audio::SampleOrder::{MONO, INTERLEAVED};
-use std::old_io::{File};
-use super::chunk;
-use super::chunk::CompressionCode::{PCM};
-use super::{RIFF, FMT, DATA};
 
-#[allow(deprecated)]
-pub fn read_file_meta(path: &Path) -> AudioResult<()>{
-	let mut file = try!(File::open(path));
-
-	let riff_header = try!(file.read_le_u32());
-	if riff_header != RIFF {
-		return Err(AudioError::FormatError(
-			"File is not valid WAVE".to_string()
-		))
-	}
-	let header = chunk::RIFFHeader::read_chunk(&mut file).unwrap();
-
-	let format_chunk_marker = try!(file.read_le_u32());
-	if format_chunk_marker != FMT {
-		return Err(AudioError::FormatError(
-			"File is not valid WAVE. Does not contain required format chunk.".to_string()
-		))
-	}
-	let fmt = chunk::FormatChunk::read_chunk(&mut file).unwrap();
-
-	let data_chunk_marker = try!(file.read_le_u32());
-	if data_chunk_marker != DATA {
-		return Err(AudioError::FormatError(
-			"File is not valid WAVE. Does not contain required data chunk.".to_string()
-		))
-	}
-	let data_size = file.read_le_u32().unwrap();
-
-	println!(
-	"master_riff_chunk:
-		(RIFF) {}
-		File size: {}
-		File type: (WAVE) {}
-	fmt_chunk:
-		Chunk size: {},
-		Format: {} (1 = PCM, 3 = IEEE float, ...),
-		Channels: {},
-		Sample rate: {},
-		Data rate: {},
-		Block size: {},
-		Bit rate: {}
-	data_chunk:
-		Data size: {} bytes
-	",
-		riff_header,
-		header.size,
-		header.format,
-		fmt.size,
-		fmt.compression_code,
-		fmt.num_of_channels,
-		fmt.sampling_rate,
-		fmt.data_rate,
-		fmt.block_size,
-		fmt.bit_rate,
-		data_size,
-		);
-
-	Ok(())
-}
-*/
-/* Most recent benchmark:
- * - 152745932 ns/iter (+/- 53383069)
- */
-
-/*
-/// Reads audio file into memory. Supports 8-32 bit PCM encoded WAVE files.
-#[allow(deprecated)]
 pub fn read_file(path: &Path) -> AudioResult<RawAudio> {
 	let mut file = try!(File::open(path));
 
