@@ -70,7 +70,7 @@ impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
       _ => return Err(AudioError::UnsupportedError("This file uses an unsupported codec".to_string()))
     };
     match codec {
-      Codec::LPCM => LPCM::read(&mut self.bytes)
+      Codec::LPCM => LPCM::read(&mut self.bytes, &self.bit_rate, &self.channels)
     }
   }
 }

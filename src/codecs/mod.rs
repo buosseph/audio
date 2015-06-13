@@ -11,7 +11,7 @@ pub enum Codec {
 
 /// A trait for all functions required by all codecs
 pub trait AudioCodec {
-  fn read(bytes: &mut Vec<u8>) -> AudioResult<Vec<Sample>>;
+  fn read(bytes: &mut Vec<u8>, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>>;
 }
 
 /*
