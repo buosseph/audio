@@ -15,7 +15,6 @@ pub use containers::riff::RiffContainer as RiffContainer;
 /// or ULaw to name a few.
 pub trait Container {
   fn open<R: Read + Seek>(r: &mut R) -> AudioResult<Self>;
-  //fn read_chunk<C>(r: &mut R) -> AudioResult<C> where C: Chunk;
   fn read_codec(&mut self) -> AudioResult<Vec<Sample>>;
   fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>>;
 }

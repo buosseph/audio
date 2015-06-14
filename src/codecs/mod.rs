@@ -20,12 +20,3 @@ impl fmt::Display for Codec {
 pub trait AudioCodec {
   fn read(bytes: &mut Vec<u8>, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>>;
 }
-
-/*
-/// Decodes bytes with the provided codec
-pub fn read_codec(codec: Codec, bytes: Vec<u8>) -> AudioResult<Vec<Sample>> {
-  match codec {
-    Codec::LPCM => LPCM::read(bytes)
-  }
-}
-*/

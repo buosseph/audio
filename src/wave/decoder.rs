@@ -11,7 +11,7 @@ pub struct Decoder<R> {
 impl<R> Decoder<R> where R: Read + Seek {
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
-      reader: reader,
+      reader: reader
     }
   }
 }
@@ -34,12 +34,6 @@ impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
       }
     )
   }
-  /*
-  fn open_container(&mut self) -> AudioResult<Vec<u8>> {
-    let container = RiffContainer::open(self.r);
-    Ok(Vec::new())
-  }*/
-  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
 }
 
 /*
