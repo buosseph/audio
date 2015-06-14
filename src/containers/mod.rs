@@ -1,5 +1,6 @@
 use std::io::{Read, Seek};
-use buffer::Sample;
+use buffer::{AudioBuffer, Sample};
+use codecs::{Codec};
 use error::*;
 
 pub mod riff;
@@ -12,13 +13,14 @@ pub use containers::riff::RiffContainer as RiffContainer;
 /// read the information stored in the container, but it will not 
 /// decode the audio, as it may be in any codec such as LPCM, ALaw,
 /// or ULaw to name a few.
-pub trait Container<'r, R> where R: Read + Seek {
-  fn open(r: &'r mut R) -> AudioResult<Self>;
+pub trait Container {
+  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<Self>;
   //fn read_chunk<C>(r: &mut R) -> AudioResult<C> where C: Chunk;
   fn read_codec(&mut self) -> AudioResult<Vec<Sample>>;
+  fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>>;
 }
 
 /// The trait used to read 
 pub trait Chunk {
-  fn read<R>(r: &mut R) -> AudioResult<Self> where R: Read + Seek;
+  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<Self>;
 }

@@ -20,7 +20,7 @@ impl AudioCodec for LPCM{
     let block_size = (bit_rate / 8u32 * channels) as usize;
     let num_of_frames: usize = bytes.len() / block_size;
     let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * *channels as usize);
-    let mut i = 0;
+    let mut i;
     match *bit_rate as usize {
       8   => {
         for sample in bytes.iter() {
@@ -75,7 +75,7 @@ impl AudioCodec for LPCM{
 #[test]
 fn test_bytes_to_sample() {
   let bytes1: &[u8] = &[0x51, 0xB0];
-  let mut sample1: i16 = 0i16;
+  let mut sample1: i16;
   sample1 = (bytes1[1] as i16) << 8 |  bytes1[0] as i16;
   assert_eq!(-20399i16, sample1);
   assert_eq!(20912i16, sample1.swap_bytes());

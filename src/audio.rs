@@ -59,7 +59,7 @@ pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBu
 /// returned if the file type is not supported or if an error occurred
 /// in the encoding process. 
 #[allow(unused_variables)]
-pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<bool> {
+pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   if let Some(ext) = path.extension() {
     if let Some(file_format) = ext.to_str() {
       let format = match file_format {
@@ -79,9 +79,9 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<bool> {
   }
 }
 
-pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<bool> {
+pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<()> {
   match format {
-    AudioFormat::WAV => WaveEncoder::new(writer, audio).encode(),
+    AudioFormat::WAV => WaveEncoder::new(writer).encode(audio),
     _ => Err(AudioError::FormatError(format!("An encoder for {:?} is not available", format)))
   }
 }
@@ -95,5 +95,5 @@ pub trait AudioDecoder {
 
 /// Trait which all encoders must implement
 pub trait AudioEncoder {
-  fn encode(self) -> AudioResult<bool>;
+  fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()>;
 }

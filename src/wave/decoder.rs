@@ -4,16 +4,14 @@ use buffer::*;
 use containers::*;
 use error::AudioResult;
 
-pub struct Decoder<R> where R: Read + Seek {
+pub struct Decoder<R> {
   reader: R,
-  data: Vec<Sample>
 }
 
 impl<R> Decoder<R> where R: Read + Seek {
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
       reader: reader,
-      data: Vec::new()
     }
   }
 }

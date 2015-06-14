@@ -1,6 +1,7 @@
-use std::io::{Write};
-use audio::{AudioEncoder};
+use std::io::Write;
+use audio::AudioEncoder;
 use buffer::*;
+use codecs::Codec;
 use containers::*;
 use error::AudioResult;
 
@@ -9,7 +10,7 @@ pub struct Encoder<'w, W: 'w> {
 }
 
 impl<'w, W> Encoder<'w, W> where W: Write {
-  pub fn new(w: &'w mut W, audio: &AudioBuffer) -> Encoder<'w, W> {
+  pub fn new(w: &'w mut W) -> Encoder<'w, W> {
     Encoder {
       writer: w,
     }
@@ -17,8 +18,11 @@ impl<'w, W> Encoder<'w, W> where W: Write {
 }
 
 impl<'w, W> AudioEncoder for Encoder<'w, W> where W: Write {
-  fn encode(self) -> AudioResult<bool> {
-    Ok(false)
+  fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()> {
+    // Codec must be passed to container to determine if it's supported
+    let buffer: Vec<u8> = try!(RiffContainer::create(Codec::LPCM, audio));
+    try!(self.writer.write_all(&buffer));
+    Ok(())
   }
 }
 

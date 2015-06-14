@@ -27,8 +27,7 @@ enum ChunkType {
 /// The Resource Interchange File Format (RIFF) is a generic
 /// file container format that uses chunks to store data.
 /// All bytes are stored in little-endian format.
-pub struct RiffContainer<'r, R: 'r> where R: Read + Seek {
-  reader: &'r mut R,
+pub struct RiffContainer {
   compression: CompressionType,
   pub bit_rate: u32,
   pub sample_rate: u32,
@@ -39,8 +38,8 @@ pub struct RiffContainer<'r, R: 'r> where R: Read + Seek {
 }
 
 #[allow(unused_variables)]
-impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
-  fn open(r: &'r mut R) -> AudioResult<RiffContainer<'r, R>> {
+impl Container for RiffContainer {
+  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<RiffContainer> {
     let header_chunk_type = try!(identify(r));
     let header            = try!(RiffHeader::read(r));
     let fmt_chunk_type    = try!(identify(r));
@@ -61,7 +60,6 @@ impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
         SampleOrder::INTERLEAVED
       };
     Ok(RiffContainer {
-      reader:       r,
       compression:  fmt_chunk.compression_type,
       bit_rate:     fmt_chunk.bit_rate as u32,
       sample_rate:  fmt_chunk.sample_rate,
@@ -79,6 +77,12 @@ impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
     };
     match codec {
       Codec::LPCM => LPCM::read(&mut self.bytes, &self.bit_rate, &self.channels)
+    }
+  }
+
+  fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
+    match codec {
+      Codec::LPCM => Ok(vec![]),
     }
   }
 }
@@ -107,7 +111,7 @@ struct RiffHeader {
 }
 
 impl Chunk for RiffHeader {
-  fn read<R>(r: &mut R) -> AudioResult<RiffHeader> where R: Read + Seek {
+  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<RiffHeader> {
     let buffer: &mut[u8] = &mut[0u8; 8];
     try!(r.read(buffer));
     // Converting to little endian
@@ -159,7 +163,7 @@ struct FormatChunk {
 }
 
 impl Chunk for FormatChunk {
-  fn read<R>(r: &mut R) -> AudioResult<FormatChunk> where R: Read + Seek {
+  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<FormatChunk> {
     let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
     try!(r.read(&mut buffer));
@@ -209,13 +213,14 @@ impl Chunk for FormatChunk {
 
 /// The data chunk contains the coded audio data. Multi-channel data are
 /// always interleaved in `WAV` files.
+#[allow(dead_code)]
 struct DataChunk {
   size: u32,
   bytes: Vec<u8>,
 }
 
 impl Chunk for DataChunk {
-  fn read<R>(r: &mut R) -> AudioResult<DataChunk> where R: Read + Seek {
+  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<DataChunk> {
     let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
     try!(r.read(&mut buffer));
