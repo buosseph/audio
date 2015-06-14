@@ -6,11 +6,6 @@ use error::AudioResult;
 
 pub struct Decoder<R> where R: Read + Seek {
   reader: R,
-  // container: Container,
-  bit_rate: u32,
-  sample_rate: u32,
-  channels: u32,
-  block_size: u32,
   data: Vec<Sample>
 }
 
@@ -18,41 +13,12 @@ impl<R> Decoder<R> where R: Read + Seek {
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
       reader: reader,
-      // container: Container
-      bit_rate: 0u32,
-      sample_rate: 0u32,
-      channels: 0u32,
-      block_size: 0u32,
       data: Vec::new()
-    }//.open_container
+    }
   }
 }
 
 impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
-  fn bit_rate(&self) -> AudioResult<u32> {
-    Ok(self.bit_rate)
-  }
-  fn sample_rate(&self) -> AudioResult<u32> {
-    Ok(self.sample_rate)
-  }
-  fn channels(&self) -> AudioResult<u32> {
-    Ok(self.channels)
-  }
-  fn sample_order(&self) -> AudioResult<SampleOrder> {
-    if self.channels == 1 {
-      Ok(SampleOrder::MONO)
-    }
-    else {
-      Ok(SampleOrder::INTERLEAVED)
-    }
-  }
-  /*
-  fn open_container(&mut self) -> AudioResult<Vec<u8>> {
-    let container = RiffContainer::open(self.r);
-    Ok(Vec::new())
-  }*/
-  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
-
   fn decode(mut self) -> AudioResult<AudioBuffer> {
     let mut container = try!(RiffContainer::open(&mut self.reader));
     let bit_rate = container.bit_rate;
@@ -70,6 +36,12 @@ impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
       }
     )
   }
+  /*
+  fn open_container(&mut self) -> AudioResult<Vec<u8>> {
+    let container = RiffContainer::open(self.r);
+    Ok(Vec::new())
+  }*/
+  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>> {}
 }
 
 /*

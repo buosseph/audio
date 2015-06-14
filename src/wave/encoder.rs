@@ -1,3 +1,28 @@
+use std::io::{Write};
+use audio::{AudioEncoder};
+use buffer::*;
+use containers::*;
+use error::AudioResult;
+
+pub struct Encoder<'w, W: 'w> {
+  writer: &'w mut W,
+}
+
+impl<'w, W> Encoder<'w, W> where W: Write {
+  pub fn new(w: &'w mut W, audio: &AudioBuffer) -> Encoder<'w, W> {
+    Encoder {
+      writer: w,
+    }
+  }
+}
+
+impl<'w, W> AudioEncoder for Encoder<'w, W> where W: Write {
+  fn encode(self) -> AudioResult<bool> {
+    Ok(false)
+  }
+}
+
+/*
 use audio::{
 	AudioResult,
 	AudioError,
@@ -79,3 +104,4 @@ fn u16_to_le_slice(num: u16) -> [u8; 2] {
 fn i16_to_le_slice(num: i16) -> [u8; 2] {
 	[ num as u8, (num >> 8) as u8 ]
 }
+*/

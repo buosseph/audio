@@ -2,8 +2,9 @@ use std::path::Path;
 use std::fs::File;
 use buffer::*;
 use error::*;
-use std::io::{Read, Seek, BufReader};
+use std::io::{Read, Seek, Write, BufReader};
 use wave::Decoder as WaveDecoder;
+use wave::Encoder as WaveEncoder;
 
 /// An enumeration of all supported audio formats
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -58,12 +59,19 @@ pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBu
 /// returned if the file type is not supported or if an error occurred
 /// in the encoding process. 
 #[allow(unused_variables)]
-pub fn save(audio: &AudioBuffer, path: &Path) -> AudioResult<bool> {
-  if let Some(format) = path.extension() {
-    match format {
-      //"wav"   => { ...; true}
-      //"aiff"  => { ...; true}
-      _       => Err(AudioError::FormatError(format!("A decoder for {:?} is not available", format)))
+pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<bool> {
+  if let Some(ext) = path.extension() {
+    if let Some(file_format) = ext.to_str() {
+      let format = match file_format {
+        "wav"|"wave"  => AudioFormat::WAV,
+        "aif"|"aiff"  => AudioFormat::AIFF,
+        _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
+      };
+      let mut file = try!(File::create(path));
+      write(&mut file, audio, format)
+    }
+    else {
+      Err(AudioError::FormatError("Did not recognize file format".to_string()))
     }
   }
   else {
@@ -71,14 +79,21 @@ pub fn save(audio: &AudioBuffer, path: &Path) -> AudioResult<bool> {
   }
 }
 
-/// Trait which all decoders must implement in order to return an `AudioBuffer` and metadata
+pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<bool> {
+  match format {
+    AudioFormat::WAV => WaveEncoder::new(writer, audio).encode(),
+    _ => Err(AudioError::FormatError(format!("An encoder for {:?} is not available", format)))
+  }
+}
+
+/// Trait which all decoders must implement
 pub trait AudioDecoder {
-  fn bit_rate(&self) -> AudioResult<u32>;
-  fn sample_rate(&self) -> AudioResult<u32>;
-  fn channels(&self) -> AudioResult<u32>;
-  fn sample_order(&self) -> AudioResult<SampleOrder>;
+  fn decode(self) -> AudioResult<AudioBuffer>;
   //fn open_container(&mut self) -> AudioResult<Vec<u8>>;
   //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>>;
+}
 
-  fn decode(self) -> AudioResult<AudioBuffer>;
+/// Trait which all encoders must implement
+pub trait AudioEncoder {
+  fn encode(self) -> AudioResult<bool>;
 }

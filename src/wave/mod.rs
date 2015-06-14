@@ -1,8 +1,8 @@
-//pub mod chunk;
 pub mod decoder;
-//pub mod encoder;
+pub mod encoder;
 
 pub use wave::decoder::Decoder as Decoder;
+pub use wave::encoder::Encoder as Encoder;
 
 /*
 #[cfg(test)]
