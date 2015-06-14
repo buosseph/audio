@@ -38,6 +38,7 @@ pub struct RiffContainer<'r, R: 'r> where R: Read + Seek {
   pub bytes: Vec<u8>
 }
 
+#[allow(unused_variables)]
 impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
   fn open(r: &'r mut R) -> AudioResult<RiffContainer<'r, R>> {
     let header_chunk_type = try!(identify(r));
@@ -45,9 +46,16 @@ impl<'r, R> Container<'r, R> for RiffContainer<'r, R> where R: Read + Seek {
     let fmt_chunk_type    = try!(identify(r));
     let fmt_chunk         = try!(FormatChunk::read(r));
     let data_chunk_type   = try!(identify(r));
-    let data_chunk        = try!(DataChunk::read(r));
+    // Rearrange all samples so that it's in big endian
+    let mut data_chunk    = try!(DataChunk::read(r));
+    let sample_size = fmt_chunk.bit_rate as usize / 8;
+    if sample_size != 1 {
+      for sample_bytes in data_chunk.bytes.chunks_mut(sample_size) {
+        sample_bytes.reverse();
+      }
+    }
     let sample_order
-      = if (fmt_chunk.num_of_channels == 1u16) {
+      = if fmt_chunk.num_of_channels == 1u16 {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED
@@ -93,9 +101,9 @@ fn identify<R>(r: &mut R) -> AudioResult<ChunkType> where R: Read + Seek {
 /// All RIFF containers start with a RIFF chunk, which contains
 /// subchunks. The file format and size are specified here.
 #[derive(Debug, Clone, Copy)]
-pub struct RiffHeader {
-  pub size: u32,
-  pub format: u32,
+struct RiffHeader {
+  size: u32,
+  format: u32,
 }
 
 impl Chunk for RiffHeader {
@@ -127,7 +135,7 @@ impl Chunk for RiffHeader {
 
 /// Enumeration of supported compression codes in the RIFF format chunk
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CompressionType {
+enum CompressionType {
   Unknown = 0,
   PCM     = 1
 }
@@ -140,14 +148,14 @@ impl fmt::Display for CompressionType {
 
 /// The format chunck contains most of the audio realted meta data in `WAV` files
 #[derive(Debug, Clone, Copy)]
-pub struct FormatChunk {
-  pub size: u32,
-  pub compression_type: CompressionType,
-  pub num_of_channels: u16,
-  pub sample_rate: u32,
-  pub data_rate: u32,
-  pub block_size: u16,
-  pub bit_rate: u16,
+struct FormatChunk {
+  size: u32,
+  compression_type: CompressionType,
+  num_of_channels: u16,
+  sample_rate: u32,
+  data_rate: u32,
+  block_size: u16,
+  bit_rate: u16,
 }
 
 impl Chunk for FormatChunk {
@@ -201,9 +209,9 @@ impl Chunk for FormatChunk {
 
 /// The data chunk contains the coded audio data. Multi-channel data are
 /// always interleaved in `WAV` files.
-pub struct DataChunk {
-  pub size: u32,
-  pub bytes: Vec<u8>,
+struct DataChunk {
+  size: u32,
+  bytes: Vec<u8>,
 }
 
 impl Chunk for DataChunk {
@@ -211,7 +219,6 @@ impl Chunk for DataChunk {
     let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
     try!(r.read(&mut buffer));
-    // Rearrange all samples so that it's in big endian? Or just pass endiness to codec?
     Ok(
       DataChunk {
         size: size,

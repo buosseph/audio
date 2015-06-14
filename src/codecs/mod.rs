@@ -1,5 +1,5 @@
 use buffer::*;
-use error::{AudioResult, AudioError};
+use error::AudioResult;
 
 pub mod lpcm;
 pub use codecs::lpcm::LPCM as LPCM;

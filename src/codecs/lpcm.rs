@@ -1,8 +1,8 @@
-use std::fmt;
 use buffer::*;
-use codecs::{Codec, AudioCodec};
+use codecs::AudioCodec;
 use error::{AudioResult, AudioError};
 
+#[allow(dead_code)]
 pub struct LPCM;
 
 /*
@@ -16,7 +16,7 @@ enum PcmSample {
 
 impl AudioCodec for LPCM{
   fn read(bytes: &mut Vec<u8>, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>> {
-    // Assuming bytes is in little-endian format from WAV
+    // All bytes passed to this codec must be in big-endian format
     let block_size = (bit_rate / 8u32 * channels) as usize;
     let num_of_frames: usize = bytes.len() / block_size;
     let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * *channels as usize);
@@ -36,7 +36,6 @@ impl AudioCodec for LPCM{
             sample = sample | (*byte as i16) << ((sample_bytes.len() - i - 1) * 8);
             i += 1;
           }
-          sample.swap_bytes();  // convert to big endian
           samples.push(sample as f64 / range);
           sample = sample ^ sample; // clear sample value
         }
@@ -50,7 +49,6 @@ impl AudioCodec for LPCM{
             sample = sample | (*byte as i32) << ((sample_bytes.len() - i - 1) * 8);
             i += 1;
           }
-          sample.swap_bytes();  // convert to big endian
           samples.push(sample as f64 / range);
           sample = sample ^ sample; // clear sample value
         }
@@ -64,7 +62,6 @@ impl AudioCodec for LPCM{
             sample = sample | (*byte as i32) << ((sample_bytes.len() - i - 1) * 8);
             i += 1;
           }
-          sample.swap_bytes();  // convert to big endian
           samples.push(sample as f64 / range);
           sample = sample ^ sample; // clear sample value
         }

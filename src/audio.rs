@@ -27,7 +27,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
         _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
       };
       let file = try!(File::open(path));
-      load(file, AudioFormat::WAV)
+      load(file, format)
     }
     else {
       Err(AudioError::FormatError("Did not recognize file format".to_string()))
@@ -57,6 +57,7 @@ pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBu
 /// is determined by the path file extension. An `AudioError` is 
 /// returned if the file type is not supported or if an error occurred
 /// in the encoding process. 
+#[allow(unused_variables)]
 pub fn save(audio: &AudioBuffer, path: &Path) -> AudioResult<bool> {
   if let Some(format) = path.extension() {
     match format {
