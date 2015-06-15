@@ -39,6 +39,8 @@ fn test_save() {
 
 #[test]
 fn test_read_write_eq() {
+  use std::fs::File;
+  use std::io::Read;
   use std::path::{Path, PathBuf};
   use audio::AudioBuffer;
 
@@ -48,7 +50,7 @@ fn test_read_write_eq() {
   let files = vec![
     "i16-pcm-mono.wav",
     "i16-pcm-stereo.wav",
-    "Warrior Concerto - no meta.wav",
+    //"Warrior Concerto - no meta.wav",
   ];
 
   for file in files.iter() {
@@ -61,15 +63,41 @@ fn test_read_write_eq() {
     let sample_rate = audio.sample_rate;
     let sample_order = audio.order;
 
-    let written = audio::save(&Path::new("tmp.wav"), &audio);
+    let write_loc = Path::new("tmp.wav");
+    let written = audio::save(&write_loc, &audio);
     assert!(written.is_ok());
-    let verify: AudioBuffer = audio::open(&Path::new("tmp.wav")).unwrap();
-
-    // Assert written file is same length as read file!
+    let verify: AudioBuffer = audio::open(&write_loc).unwrap();
     assert_eq!(total_samples, verify.samples.len());
     assert_eq!(channels, verify.channels);
     assert_eq!(bit_rate, verify.bit_rate);
     assert_eq!(sample_rate, verify.sample_rate);
     assert_eq!(sample_order, verify.order);
+
+    // File sizes are the same
+    let read_file = File::open(path.as_path()).unwrap();
+    let written_file = File::open(&write_loc).unwrap();
+    let read_meta = read_file.metadata().unwrap();
+    let write_meta = written_file.metadata().unwrap();
+    assert_eq!(read_meta.len(), write_meta.len());
+
+    // Bytes are the same
+    let mut written_file_bytes = written_file.bytes();
+    for byte in read_file.bytes() {
+      assert_eq!(
+        byte.ok().expect("Error reading byte from read file"),
+        written_file_bytes.next().expect("End of file").ok().expect("Error reading byte from written file")
+      );
+    }
   }
+}
+
+#[test]
+fn test() {
+  use std::path::Path;
+  use audio::AudioBuffer;
+  let mut wav_audio = audio::open(&Path::new("tests/wav/i16-pcm-stereo.wav")).unwrap();
+  println!("{:?}", wav_audio);
+  let written1 = audio::save(&Path::new("written.wav"), &wav_audio);
+  if written1.is_ok() { println!("Done..."); }
+  panic!("Finished. This was on purpose.");
 }
