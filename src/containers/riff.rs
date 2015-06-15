@@ -6,7 +6,7 @@ const DATA: u32 = 0x64617461;
 use std::fmt;
 use std::io::{Read, Seek};
 use buffer::*;
-use byteorder::{ByteOrder, ReadBytesExt, LittleEndian};
+use byteorder::{ByteOrder, ReadBytesExt, BigEndian, LittleEndian};
 use codecs::{Codec, AudioCodec, LPCM};
 use containers::{Container, Chunk};
 use error::*;
@@ -20,7 +20,8 @@ enum ChunkType {
 
 /// The Resource Interchange File Format (RIFF) is a generic
 /// file container format that uses chunks to store data.
-/// All bytes are stored in little-endian format.
+/// All bytes used for data are stored in little-endian format,
+/// but identifier bytes are in ASCII, big-endian.
 pub struct RiffContainer {
   compression: CompressionType,
   pub bit_rate: u32,
@@ -74,6 +75,7 @@ impl Container for RiffContainer {
     }
   }
 
+  #[allow(unused_assignments)]
   fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
     /*
      *  TODO: Dealing with bit rates not supported by format.
@@ -114,10 +116,11 @@ impl Container for RiffContainer {
       // = 4 + (8 + fmt_chunk size) + (8 + (data_chunk size * block_size)) (NOTE: 8 bytes are purposely missing for riff_header and file_size)
       // = 4 + (WAVE chunks) = total_bytes - 8 (exclude first 8 bytes)
     let mut buffer      : Vec<u8>   = Vec::with_capacity(total_bytes);
-    LittleEndian::write_u32(&mut buffer[0..4], RIFF);
+    buffer = vec![0u8; total_bytes];
+    BigEndian::write_u32(&mut buffer[0..4], RIFF);
     LittleEndian::write_u32(&mut buffer[4..8], file_size);
-    LittleEndian::write_u32(&mut buffer[8..12], WAVE);
-    LittleEndian::write_u32(&mut buffer[12..16], FMT);
+    BigEndian::write_u32(&mut buffer[8..12], WAVE);
+    BigEndian::write_u32(&mut buffer[12..16], FMT);
     LittleEndian::write_u32(&mut buffer[16..20], fmt_chunk_size);
     LittleEndian::write_u16(&mut buffer[20..22], 1u16); // Always encode as PCM
     LittleEndian::write_u16(&mut buffer[22..24], num_of_channels);
@@ -125,7 +128,7 @@ impl Container for RiffContainer {
     LittleEndian::write_u32(&mut buffer[28..32], data_rate);
     LittleEndian::write_u16(&mut buffer[32..34], block_size as u16);
     LittleEndian::write_u16(&mut buffer[34..36], bit_rate);
-    LittleEndian::write_u32(&mut buffer[36..40], DATA);
+    BigEndian::write_u32(&mut buffer[36..40], DATA);
     LittleEndian::write_u32(&mut buffer[40..44], data_size);
     let mut i = 44; // Because we're only writing WAVs with 44 byte headers
     for byte in data.iter() {
@@ -144,11 +147,11 @@ impl Container for RiffContainer {
 /// skipping the length of the chunk indicated by the next four bytes available
 /// in the reader.
 fn identify<R>(r: &mut R) -> AudioResult<ChunkType> where R: Read + Seek {
-  match try!(r.read_u32::<LittleEndian>()) {
+  match try!(r.read_u32::<BigEndian>()) {
     RIFF => Ok(ChunkType::RiffHeader),
     FMT  => Ok(ChunkType::Format),
     DATA => Ok(ChunkType::Data),
-    _ => Err(AudioError::FormatError("Do not recognize RIFF chunk".to_string()))
+    err @ _ => Err(AudioError::FormatError(format!("Do not recognize RIFF chunk with identifier 0x{:x}", err)))
   }
 }
 
@@ -166,7 +169,7 @@ impl Chunk for RiffHeader {
     try!(r.read(buffer));
     // Converting to little endian
     let file_size: u32 = LittleEndian::read_u32(&buffer[0..4]);
-    let form_type: u32 = LittleEndian::read_u32(&buffer[4..8]);
+    let form_type: u32 = BigEndian::read_u32(&buffer[4..8]);
     if form_type != WAVE {
       return Err(AudioError::FormatError("This is not a valid WAV file".to_string()))
     }
@@ -208,6 +211,7 @@ impl Chunk for FormatChunk {
   fn read<R: Read + Seek>(r: &mut R) -> AudioResult<FormatChunk> {
     let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
+    buffer = vec![0u8; size as usize];
     try!(r.read(&mut buffer));
     let compression_code : u16 = LittleEndian::read_u16(&buffer[0..2]);
     let compression_type : CompressionType
@@ -249,6 +253,7 @@ impl Chunk for DataChunk {
   fn read<R: Read + Seek>(r: &mut R) -> AudioResult<DataChunk> {
     let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
+    //buffer = vec![0u8; size as usize];
     try!(r.read(&mut buffer));
     Ok(
       DataChunk {

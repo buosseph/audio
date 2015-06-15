@@ -27,6 +27,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
         "aif"|"aiff"  => AudioFormat::AIFF,
         _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
       };
+      // TODO: Test path, see if it's valid and return a useful error message
       let file = try!(File::open(path));
       load(file, format)
     }

@@ -42,7 +42,9 @@ fn test_read_write_eq() {
   use std::path::{Path, PathBuf};
   use audio::AudioBuffer;
 
-  let mut path = PathBuf::from("tests/wav");
+  let mut path = PathBuf::from("tests");
+  path.push("wav");
+  path.push("empty.wav");
   let files = vec![
     "i16-pcm-mono.wav",
     "i16-pcm-stereo.wav",
@@ -51,8 +53,8 @@ fn test_read_write_eq() {
 
   for file in files.iter() {
     path.set_file_name(file);
-
-    let audio = audio::open(path.as_path()).unwrap();
+    println!("{:?}", path.as_path());
+    let audio = audio::open(path.as_path()).unwrap(); //.ok().expect("Couldn't open file");
     let total_samples = audio.samples.len();
     let channels = audio.channels;
     let bit_rate = audio.bit_rate;
