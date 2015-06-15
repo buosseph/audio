@@ -87,7 +87,6 @@ impl Container for RiffContainer {
      *  that's less than the highest supported bit rate and use that
      *  value for the encoding bit rate.
      */
-
     match audio.order {
       SampleOrder::MONO    => {},
       SampleOrder::INTERLEAVED => {},
@@ -253,7 +252,7 @@ impl Chunk for DataChunk {
   fn read<R: Read + Seek>(r: &mut R) -> AudioResult<DataChunk> {
     let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-    //buffer = vec![0u8; size as usize];
+    buffer = vec![0u8; size as usize];
     try!(r.read(&mut buffer));
     Ok(
       DataChunk {

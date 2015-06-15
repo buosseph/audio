@@ -50,7 +50,7 @@ fn test_read_write_eq() {
   let files = vec![
     "i16-pcm-mono.wav",
     "i16-pcm-stereo.wav",
-    //"Warrior Concerto - no meta.wav",
+    "Warrior Concerto - no meta.wav",
   ];
 
   for file in files.iter() {
@@ -91,6 +91,7 @@ fn test_read_write_eq() {
   }
 }
 
+/*
 #[test]
 fn test() {
   use std::path::Path;
@@ -101,3 +102,4 @@ fn test() {
   if written1.is_ok() { println!("Done..."); }
   panic!("Finished. This was on purpose.");
 }
+*/

@@ -16,11 +16,15 @@ enum PcmSample {
 */
 
 impl AudioCodec for LPCM{
+  #[allow(unused_assignments)]
   fn read(bytes: &mut Vec<u8>, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>> {
     // All bytes passed to this codec must be in big-endian format
     let block_size = (bit_rate / 8u32 * channels) as usize;
+    let sample_size = (bit_rate / 8u32) as usize;
     let num_of_frames: usize = bytes.len() / block_size;
-    let mut samples: Vec<f64> = Vec::with_capacity(num_of_frames * *channels as usize);
+    let num_of_samples: usize = bytes.len() / sample_size;
+    debug_assert!(num_of_frames * *channels as usize == num_of_samples);
+    let mut samples: Vec<f64> = Vec::with_capacity(num_of_samples);
     let mut i;
     match *bit_rate as usize {
       8   => {
@@ -31,7 +35,7 @@ impl AudioCodec for LPCM{
       16  => {
         let mut sample: i16 = 0i16;
         let range: f64 = i16::max_value() as f64 + 1f64;
-        for sample_bytes in bytes.chunks(block_size / *channels as usize) {
+        for sample_bytes in bytes.chunks(sample_size) {
           i = 0;
           for byte in sample_bytes.iter() {
             sample = sample | (*byte as i16) << ((sample_bytes.len() - i - 1) * 8);
@@ -44,7 +48,7 @@ impl AudioCodec for LPCM{
       24  => {
         let mut sample: i32 = 0i32;
         let range: f64 = 8388608f64;
-        for sample_bytes in bytes.chunks(block_size / *channels as usize) {
+        for sample_bytes in bytes.chunks(sample_size) {
           i = 0;
           for byte in sample_bytes.iter() {
             sample = sample | (*byte as i32) << ((sample_bytes.len() - i - 1) * 8);
@@ -57,7 +61,7 @@ impl AudioCodec for LPCM{
       32  => {
         let mut sample: i32 = 0i32;
         let range: f64 = i32::max_value() as f64 + 1f64;
-        for sample_bytes in bytes.chunks(block_size / *channels as usize) {
+        for sample_bytes in bytes.chunks(sample_size) {
           i = 0;
           for byte in sample_bytes.iter() {
             sample = sample | (*byte as i32) << ((sample_bytes.len() - i - 1) * 8);
@@ -69,6 +73,8 @@ impl AudioCodec for LPCM{
       },
       _   => return Err(AudioError::UnsupportedError(format!("Cannot read {}-bit LPCM", bit_rate)))
     }
+    debug_assert_eq!(num_of_samples, samples.len());
+    debug_assert!( if num_of_frames != 0 { samples.len() != 0 } else { samples.len() == 0 });
     Ok(samples)
   }
   fn create(audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
@@ -86,7 +92,9 @@ impl AudioCodec for LPCM{
     // Only encoding as 16-bit PCM for now
     let bit_rate = 16;
     let sample_size = bit_rate / 8;
-    let mut buffer: Vec<u8> = Vec::with_capacity(audio.samples.len() * sample_size);
+    let num_of_samples = audio.samples.len() * sample_size;
+    let mut buffer: Vec<u8> = Vec::with_capacity(num_of_samples);
+    buffer = vec![0u8; num_of_samples];
     let mut sample: f64;
     let mut i = 0;
     for sample_bytes in buffer.chunks_mut(sample_size) {
@@ -100,6 +108,7 @@ impl AudioCodec for LPCM{
       BigEndian::write_i16(sample_bytes, sample as i16);
       i += 1;
     }
+    debug_assert_eq!(num_of_samples, buffer.len());
     Ok(buffer)
   }
 }
