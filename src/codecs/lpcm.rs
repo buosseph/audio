@@ -1,4 +1,5 @@
 use buffer::*;
+use byteorder::{ByteOrder, BigEndian};
 use codecs::AudioCodec;
 use error::{AudioResult, AudioError};
 
@@ -69,6 +70,37 @@ impl AudioCodec for LPCM{
       _   => return Err(AudioError::UnsupportedError(format!("Cannot read {}-bit LPCM", bit_rate)))
     }
     Ok(samples)
+  }
+  fn create(audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
+    /*
+     *  TODO: Dealing with bit rates not supported by format.
+     *
+     *  Audio can be manipulated to be of any bit rate, but codecs don't
+     *  support that. It's preferred that the fields in AudioBuffer
+     *  reflect the samples stored, so values need to be checked when
+     *  encoding. For bit rate, just round up to nearest multiple of 8
+     *  that's less than the highest supported bit rate and use that
+     *  value for the encoding bit rate.
+     */
+
+    // Only encoding as 16-bit PCM for now
+    let bit_rate = 16;
+    let sample_size = bit_rate / 8;
+    let mut buffer: Vec<u8> = Vec::with_capacity(audio.samples.len() * sample_size);
+    let mut sample: f64;
+    let mut i = 0;
+    for sample_bytes in buffer.chunks_mut(sample_size) {
+      sample = audio.samples[i] * 32768f64;
+      if sample > 32768f64 {
+        sample = 32768f64;
+      }
+      else if sample < -32768f64 {
+        sample = -32768f64;
+      }
+      BigEndian::write_i16(sample_bytes, sample as i16);
+      i += 1;
+    }
+    Ok(buffer)
   }
 }
 
