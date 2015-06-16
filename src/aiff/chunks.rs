@@ -5,14 +5,16 @@ const AIFF: i32 = 0x41494646;
 const COMM: i32 = 0x434F4D4D;
 const SSND: i32 = 0x53534E44;
 
+use std::fmt;
 use std::io::{Read, Seek};
 use buffer::*;
 use byteorder::{ByteOrder, ReadBytesExt, BigEndian, LittleEndian};
 use codecs::{Codec, AudioCodec, LPCM};
-use containers::{Container, Chunk};
+use traits::{Container, Chunk};
 use error::*;
 
-pub struct AiffFormat {
+pub struct AiffContainer {
+  compression: CompressionType,
   pub bit_rate: u32,
   pub sample_rate: u32,
   pub channels: u32,
@@ -21,8 +23,10 @@ pub struct AiffFormat {
   pub bytes: Vec<u8>
 }
 
-impl AiffFormat {
-  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<AiffFormat> {
+impl Container for AiffContainer {
+  /// Reads the bytes provided from the reader.
+  /// This is where the reading of chunks ocurrs.
+  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<AiffContainer> {
     let header: &mut[u8] = &mut[0u8; 12];
     try!(r.read(header));
     
@@ -35,9 +39,47 @@ impl AiffFormat {
     // Read chunks
     Err(AudioError::UnsupportedError("Not completed".to_string()))
   }
+
+  fn read_codec(&mut self) -> AudioResult<Vec<Sample>> {
+    let codec = match self.compression {
+      CompressionType::PCM => Codec::LPCM,
+      _ => return Err(AudioError::UnsupportedError("This file uses an unsupported codec".to_string()))
+    };
+    match codec {
+      Codec::LPCM => LPCM::read(&mut self.bytes, &self.bit_rate, &self.channels)
+    }
+  }
+
+  /// Writes the provided audio into a valid WaveContainer
+  /// give the codec specified is supported by the format.
+  ///
+  /// Currently the creation of a WaveContainer only
+  /// supports the writing of 16-bit audio using LPCM
+  #[allow(unused_assignments)]
+  fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
+    Err(AudioError::UnsupportedError("This feature is not yet complete".to_string()))
+  }
 }
 
-/************ Chunks ************/
+/// Enumeration of supported WAVE chunks
+enum AiffChunk {
+  Common,
+  SoundData
+}
+
+/// Enumeration of supported compression codes
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CompressionType {
+  Unknown = 0,
+  PCM     = 1
+}
+
+impl fmt::Display for CompressionType {
+  fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    write!(fmt, "{}", self)
+  }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct CommonChunk {
   num_channels: i16,

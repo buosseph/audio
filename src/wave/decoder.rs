@@ -1,7 +1,7 @@
 use std::io::{Read, Seek};
 use audio::{AudioDecoder};
 use buffer::*;
-use ::traits::Container;
+use traits::Container;
 use wave::chunks::WaveContainer;
 use error::AudioResult;
 

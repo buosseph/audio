@@ -1,4 +1,15 @@
-pub mod chunk;
+//! The Audio Interchange File Format
+//!
+//! AIFF files use the Interchange File Format (IFF) is a generic
+//! file container format that uses chunks to store data.
+//! Traditionally all bytes are stored in big-endian format,
+//! but some files are 
+
+//! References
+//! - [McGill University](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html)
+//! - [AIFF Spec](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/Docs/AIFF-1.3.pdf)
+
+mod chunks;
 pub mod decoder;
 pub mod encoder;
 

@@ -26,7 +26,7 @@ pub struct WaveContainer {
 #[allow(unused_variables)]
 impl Container for WaveContainer {
   /// Reads the bytes provided from the reader.
-  /// This is where the reading of chunks ocurr.s
+  /// This is where the reading of chunks ocurrs.
   fn open<R: Read + Seek>(r: &mut R) -> AudioResult<WaveContainer> {
     let header: &mut[u8] = &mut[0u8; 12];
     try!(r.read(header));
@@ -163,7 +163,7 @@ fn identify<R>(r: &mut R) -> AudioResult<WaveChunk> where R: Read + Seek {
   }
 }
 
-/// Enumeration of supported compression codes in the RIFF format chunk
+/// Enumeration of supported compression codes in the WAVE format chunk
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CompressionType {
   Unknown = 0,

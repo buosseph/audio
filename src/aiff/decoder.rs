@@ -1,7 +1,8 @@
 use std::io::{Read, Seek};
 use audio::AudioDecoder;
 use buffer::*;
-use containers::*;
+use traits::Container;
+use aiff::chunks::AiffContainer;
 use error::AudioResult;
 
 pub struct Decoder<R> {
@@ -18,7 +19,7 @@ impl<R> Decoder<R> where R: Read + Seek {
 
 impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
   fn decode(mut self) -> AudioResult<AudioBuffer> {
-    /*let mut container = try!(IffContainer::open(&mut self.reader));
+    let mut container = try!(AiffContainer::open(&mut self.reader));
     let bit_rate = container.bit_rate;
     let sample_rate = container.sample_rate;
     let channels = container.channels;
@@ -31,21 +32,6 @@ impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
         channels:     channels,
         order:        order,
         samples:      data
-      }
-    )*/
-    
-    // New approach
-    /*
-    let container = try!(IffContainer::uwrap(&mut self.reader));
-    // IFF validated
-    */
-    Ok(
-      AudioBuffer {
-        bit_rate:     0u32,
-        sample_rate:  0u32,
-        channels:     0u32,
-        order:        SampleOrder::INTERLEAVED,
-        samples:      Vec::new()
       }
     )
   }
