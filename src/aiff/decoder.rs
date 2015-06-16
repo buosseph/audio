@@ -1,14 +1,51 @@
-use audio::{
-	AudioResult,
-	AudioError,
-	RawAudio,
-	SampleOrder
-};
-use audio::SampleOrder::{MONO, INTERLEAVED};
-use std::old_io::{File};
-use super::chunk;
-use super::{FORM, COMM, SSND};
+use std::io::{Read, Seek};
+use audio::AudioDecoder;
+use buffer::*;
+use containers::*;
+use error::AudioResult;
 
+pub struct Decoder<R> {
+  reader: R,
+}
+
+impl<R> Decoder<R> where R: Read + Seek {
+  pub fn new(reader: R) -> Decoder<R> {
+    Decoder {
+      reader: reader
+    }
+  }
+}
+
+impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
+  fn decode(mut self) -> AudioResult<AudioBuffer> {
+    /*let mut container = try!(IffContainer::open(&mut self.reader));
+    let bit_rate = container.bit_rate;
+    let sample_rate = container.sample_rate;
+    let channels = container.channels;
+    let order = container.order;
+    let data: Vec<Sample> = try!(container.read_codec());
+    Ok(
+      AudioBuffer {
+        bit_rate:     bit_rate,
+        sample_rate:  sample_rate,
+        channels:     channels,
+        order:        order,
+        samples:      data
+      }
+    )*/
+    Ok(
+      AudioBuffer {
+        bit_rate:     0u32,
+        sample_rate:  0u32,
+        channels:     0u32,
+        order:        SampleOrder::INTERLEAVED,
+        samples:      Vec::new()
+      }
+    )
+  }
+}
+
+/*
 #[allow(deprecated)]
 pub fn read_file_meta(file_path: &str) -> AudioResult<()> {
 	let path = Path::new(file_path);
@@ -181,3 +218,4 @@ mod tests {
 		});
 	}
 }
+*/

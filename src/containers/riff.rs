@@ -1,3 +1,8 @@
+//! The Resource Interchange File Format (RIFF) is a generic
+//! file container format that uses chunks to store data.
+//! All bytes used for data are stored in little-endian format,
+//! but identifier bytes are in ASCII, big-endian.
+
 const RIFF: u32 = 0x52494646;
 const WAVE: u32 = 0x57415645;
 const FMT:  u32 = 0x666D7420;
@@ -18,10 +23,8 @@ enum ChunkType {
   Data
 }
 
-/// The Resource Interchange File Format (RIFF) is a generic
-/// file container format that uses chunks to store data.
-/// All bytes used for data are stored in little-endian format,
-/// but identifier bytes are in ASCII, big-endian.
+/// Struct containing all necessary information
+/// for encoding and decoding bytes to an `AudioBuffer`
 pub struct RiffContainer {
   compression: CompressionType,
   pub bit_rate: u32,

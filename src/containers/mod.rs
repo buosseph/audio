@@ -3,8 +3,10 @@ use buffer::{AudioBuffer, Sample};
 use codecs::{Codec};
 use error::*;
 
+//pub mod iff;
 pub mod riff;
 
+//pub use containers::iff::IffContainer as IffContainer;
 pub use containers::riff::RiffContainer as RiffContainer;
 
 /// This trait is used to open the file container and read metadata.

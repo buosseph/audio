@@ -10,18 +10,22 @@ mod audio;
 mod buffer;
 pub mod error;
 
-mod wave;
-mod codecs;
-mod containers;
-
 pub use buffer::{
   Sample,
   SampleOrder,
   AudioBuffer
 };
 
+mod codecs;
+mod containers;
+
+mod wave;
+mod aiff;
+
 pub use audio::{
+  AudioFormat,
   open,
   load,
-  save
+  save,
+  write
 };

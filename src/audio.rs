@@ -5,6 +5,8 @@ use error::*;
 use std::io::{Read, Seek, Write, BufReader};
 use wave::Decoder as WaveDecoder;
 use wave::Encoder as WaveEncoder;
+use aiff::Decoder as AiffDecoder;
+use aiff::Encoder as AiffEncoder;
 
 /// An enumeration of all supported audio formats
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -50,8 +52,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
     AudioFormat::WAV  => WaveDecoder::new(reader).decode(),
-    //AudioFormat::AIFF => unimplemented!(),
-    _ => Err(AudioError::FormatError(format!("A decoder for {:?} is not available", format)))
+    AudioFormat::AIFF => AiffDecoder::new(reader).decode(),
   }
 }
 
@@ -82,8 +83,8 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
 
 pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<()> {
   match format {
-    AudioFormat::WAV => WaveEncoder::new(writer).encode(audio),
-    _ => Err(AudioError::FormatError(format!("An encoder for {:?} is not available", format)))
+    AudioFormat::WAV  => WaveEncoder::new(writer).encode(audio),
+    AudioFormat::AIFF => AiffEncoder::new(writer).encode(audio),
   }
 }
 

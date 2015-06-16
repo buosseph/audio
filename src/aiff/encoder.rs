@@ -1,13 +1,32 @@
-use audio::{
-	AudioResult,
-	AudioError,
-	RawAudio
-};
-use audio::SampleOrder::{MONO, INTERLEAVED};
-use std::old_io::{File};
-use std::num::Float;
-use super::{FORM, AIFF, COMM, SSND};
+use std::io::Write;
+use audio::AudioEncoder;
+use buffer::*;
+use codecs::Codec;
+use containers::*;
+use error::AudioResult;
 
+pub struct Encoder<'w, W: 'w> {
+  writer: &'w mut W,
+}
+
+impl<'w, W> Encoder<'w, W> where W: Write {
+  pub fn new(writer: &'w mut W) -> Encoder<'w, W> {
+    Encoder {
+      writer: writer
+    }
+  }
+}
+
+impl<'w, W> AudioEncoder for Encoder<'w, W> where W: Write {
+  fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()> {
+    // Codec must be passed to container to determine if it's supported
+    //let buffer: Vec<u8> = try!(IffContainer::create(Codec::LPCM, audio));
+    //try!(self.writer.write_all(&buffer));
+    Ok(())
+  }
+}
+
+/*
 #[allow(deprecated)]
 pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	match raw_audio.order {
@@ -160,3 +179,4 @@ mod tests {
 		assert_eq!(sample_rate_in_bytes, result);
 	}
 }
+*/
