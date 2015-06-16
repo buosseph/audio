@@ -2,7 +2,8 @@ use std::io::Write;
 use audio::AudioEncoder;
 use buffer::*;
 use codecs::Codec;
-use containers::*;
+use traits::Container;
+use wave::chunks::WaveContainer;
 use error::AudioResult;
 
 pub struct Encoder<'w, W: 'w> {
@@ -20,7 +21,7 @@ impl<'w, W> Encoder<'w, W> where W: Write {
 impl<'w, W> AudioEncoder for Encoder<'w, W> where W: Write {
   fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()> {
     // Codec must be passed to container to determine if it's supported
-    let buffer: Vec<u8> = try!(RiffContainer::create(Codec::LPCM, audio));
+    let buffer: Vec<u8> = try!(WaveContainer::create(Codec::LPCM, audio));
     try!(self.writer.write_all(&buffer));
     Ok(())
   }

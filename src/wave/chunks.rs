@@ -1,8 +1,3 @@
-//! The Resource Interchange File Format (RIFF) is a generic
-//! file container format that uses chunks to store data.
-//! All bytes used for data are stored in little-endian format,
-//! but identifier bytes are in ASCII, big-endian.
-
 const RIFF: u32 = 0x52494646;
 const WAVE: u32 = 0x57415645;
 const FMT:  u32 = 0x666D7420;
@@ -13,19 +8,12 @@ use std::io::{Read, Seek};
 use buffer::*;
 use byteorder::{ByteOrder, ReadBytesExt, BigEndian, LittleEndian};
 use codecs::{Codec, AudioCodec, LPCM};
-use containers::{Container, Chunk};
+use traits::{Container, Chunk};
 use error::*;
-
-/// Enumeration of supported RIFF chunks
-enum ChunkType {
-  RiffHeader,
-  Format,
-  Data
-}
 
 /// Struct containing all necessary information
 /// for encoding and decoding bytes to an `AudioBuffer`
-pub struct RiffContainer {
+pub struct WaveContainer {
   compression: CompressionType,
   pub bit_rate: u32,
   pub sample_rate: u32,
@@ -36,14 +24,22 @@ pub struct RiffContainer {
 }
 
 #[allow(unused_variables)]
-impl Container for RiffContainer {
-  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<RiffContainer> {
-    let header_chunk_type = try!(identify(r));
-    let header            = try!(RiffHeader::read(r));
+impl Container for WaveContainer {
+  /// Reads the bytes provided from the reader.
+  /// This is where the reading of chunks ocurr.s
+  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<WaveContainer> {
+    let header: &mut[u8] = &mut[0u8; 12];
+    try!(r.read(header));
+    if BigEndian::read_u32(&header[0..4])  != RIFF
+    || BigEndian::read_u32(&header[8..12]) != WAVE {
+      return Err(AudioError::FormatError("Not valid WAVE".to_string()));
+    }
+    let file_size = LittleEndian::read_u32(&header[4..8]);
     let fmt_chunk_type    = try!(identify(r));
     let fmt_chunk         = try!(FormatChunk::read(r));
     let data_chunk_type   = try!(identify(r));
     // Rearrange all samples so that it's in big endian
+    // NOTE: Consider passing byteorder to codec to avoid reversing
     let mut data_chunk    = try!(DataChunk::read(r));
     let sample_size = fmt_chunk.bit_rate as usize / 8;
     if sample_size != 1 {
@@ -51,14 +47,13 @@ impl Container for RiffContainer {
         sample_bytes.reverse();
       }
     }
-
     let sample_order
       = if fmt_chunk.num_of_channels == 1u16 {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED
       };
-    Ok(RiffContainer {
+    Ok(WaveContainer {
       compression:  fmt_chunk.compression_type,
       bit_rate:     fmt_chunk.bit_rate as u32,
       sample_rate:  fmt_chunk.sample_rate,
@@ -79,6 +74,11 @@ impl Container for RiffContainer {
     }
   }
 
+  /// Writes the provided audio into a valid WaveContainer
+  /// give the codec specified is supported by the format.
+  ///
+  /// Currently the creation of a WaveContainer only
+  /// supports the writing of 16-bit audio using LPCM
   #[allow(unused_assignments)]
   fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
     /*
@@ -143,45 +143,23 @@ impl Container for RiffContainer {
   }
 }
 
+/// Enumeration of supported WAVE chunks
+enum WaveChunk {
+  Format,
+  Data
+}
+
 /// This function reads the four byte identifier for each RIFF chunk
 ///
 /// If an unsupported chunk is found instead, the identifier bytes are lost
 /// and makes reading the remainder of the file for chunks impossible without
 /// skipping the length of the chunk indicated by the next four bytes available
 /// in the reader.
-fn identify<R>(r: &mut R) -> AudioResult<ChunkType> where R: Read + Seek {
+fn identify<R>(r: &mut R) -> AudioResult<WaveChunk> where R: Read + Seek {
   match try!(r.read_u32::<BigEndian>()) {
-    RIFF => Ok(ChunkType::RiffHeader),
-    FMT  => Ok(ChunkType::Format),
-    DATA => Ok(ChunkType::Data),
+    FMT  => Ok(WaveChunk::Format),
+    DATA => Ok(WaveChunk::Data),
     err @ _ => Err(AudioError::FormatError(format!("Do not recognize RIFF chunk with identifier 0x{:x}", err)))
-  }
-}
-
-/// All RIFF containers start with a RIFF chunk, which contains
-/// subchunks. The file format and size are specified here.
-#[derive(Debug, Clone, Copy)]
-struct RiffHeader {
-  size: u32,
-  format: u32,
-}
-
-impl Chunk for RiffHeader {
-  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<RiffHeader> {
-    let buffer: &mut[u8] = &mut[0u8; 8];
-    try!(r.read(buffer));
-    // Converting to little endian
-    let file_size: u32 = LittleEndian::read_u32(&buffer[0..4]);
-    let form_type: u32 = BigEndian::read_u32(&buffer[4..8]);
-    if form_type != WAVE {
-      return Err(AudioError::FormatError("This is not a valid WAV file".to_string()))
-    }
-    Ok(
-      RiffHeader {
-        size: file_size,
-        format: form_type,
-      }
-    )
   }
 }
 

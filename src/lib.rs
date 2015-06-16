@@ -8,16 +8,16 @@ extern crate byteorder;
 
 mod audio;
 mod buffer;
-pub mod error;
 
+pub mod error;
 pub use buffer::{
   Sample,
   SampleOrder,
   AudioBuffer
 };
 
+mod traits;
 mod codecs;
-mod containers;
 
 mod wave;
 mod aiff;

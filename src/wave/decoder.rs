@@ -1,7 +1,8 @@
 use std::io::{Read, Seek};
 use audio::{AudioDecoder};
 use buffer::*;
-use containers::*;
+use ::traits::Container;
+use wave::chunks::WaveContainer;
 use error::AudioResult;
 
 pub struct Decoder<R> {
@@ -18,7 +19,7 @@ impl<R> Decoder<R> where R: Read + Seek {
 
 impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
   fn decode(mut self) -> AudioResult<AudioBuffer> {
-    let mut container = try!(RiffContainer::open(&mut self.reader));
+    let mut container = try!(WaveContainer::open(&mut self.reader));
     let bit_rate = container.bit_rate;
     let sample_rate = container.sample_rate;
     let channels = container.channels;
