@@ -23,7 +23,7 @@ impl AudioCodec for LPCM{
     let sample_size = (bit_rate / 8u32) as usize;
     let num_of_frames: usize = bytes.len() / block_size;
     let num_of_samples: usize = bytes.len() / sample_size;
-    debug_assert!(num_of_frames * *channels as usize == num_of_samples);
+    debug_assert_eq!(num_of_samples, num_of_frames * *channels as usize);
     let mut samples: Vec<f64> = Vec::with_capacity(num_of_samples);
     let mut i;
     match *bit_rate as usize {
@@ -36,11 +36,7 @@ impl AudioCodec for LPCM{
         let mut sample: i16 = 0i16;
         let range: f64 = i16::max_value() as f64 + 1f64;
         for sample_bytes in bytes.chunks(sample_size) {
-          i = 0;
-          for byte in sample_bytes.iter() {
-            sample = sample | (*byte as i16) << ((sample_bytes.len() - i - 1) * 8);
-            i += 1;
-          }
+          sample = BigEndian::read_i16(sample_bytes);
           samples.push(sample as f64 / range);
           sample = sample ^ sample; // clear sample value
         }
@@ -62,11 +58,7 @@ impl AudioCodec for LPCM{
         let mut sample: i32 = 0i32;
         let range: f64 = i32::max_value() as f64 + 1f64;
         for sample_bytes in bytes.chunks(sample_size) {
-          i = 0;
-          for byte in sample_bytes.iter() {
-            sample = sample | (*byte as i32) << ((sample_bytes.len() - i - 1) * 8);
-            i += 1;
-          }
+          sample = BigEndian::read_i32(sample_bytes);
           samples.push(sample as f64 / range);
           sample = sample ^ sample; // clear sample value
         }
@@ -74,6 +66,7 @@ impl AudioCodec for LPCM{
       _   => return Err(AudioError::UnsupportedError(format!("Cannot read {}-bit LPCM", bit_rate)))
     }
     debug_assert_eq!(num_of_samples, samples.len());
+    debug_assert_eq!(samples.capacity(), num_of_samples);
     debug_assert!( if num_of_frames != 0 { samples.len() != 0 } else { samples.len() == 0 });
     Ok(samples)
   }
@@ -92,11 +85,12 @@ impl AudioCodec for LPCM{
     // Only encoding as 16-bit PCM for now
     let bit_rate = 16;
     let sample_size = bit_rate / 8;
-    let num_of_samples = audio.samples.len() * sample_size;
-    let mut buffer: Vec<u8> = Vec::with_capacity(num_of_samples);
-    buffer = vec![0u8; num_of_samples];
+    let num_of_bytes = audio.samples.len() * sample_size;
+    let mut buffer: Vec<u8> = Vec::with_capacity(num_of_bytes);
+    buffer = vec![0u8; num_of_bytes];
     let mut sample: f64;
     let mut i = 0;
+    // if sample_size == 2 (16-bit)
     for sample_bytes in buffer.chunks_mut(sample_size) {
       sample = audio.samples[i] * 32768f64;
       if sample > 32768f64 {
@@ -108,7 +102,9 @@ impl AudioCodec for LPCM{
       BigEndian::write_i16(sample_bytes, sample as i16);
       i += 1;
     }
-    debug_assert_eq!(num_of_samples, buffer.len());
+    debug_assert_eq!(num_of_bytes, i * sample_size);
+    debug_assert_eq!(num_of_bytes / sample_size, audio.samples.len());
+    debug_assert_eq!(num_of_bytes, buffer.len());
     Ok(buffer)
   }
 }

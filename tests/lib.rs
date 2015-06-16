@@ -38,7 +38,7 @@ fn test_save() {
 }
 
 #[test]
-fn test_read_write_eq() {
+fn test_i16_read_write_eq() {
   use std::fs::File;
   use std::io::Read;
   use std::path::{Path, PathBuf};
@@ -90,16 +90,3 @@ fn test_read_write_eq() {
     }
   }
 }
-
-/*
-#[test]
-fn test() {
-  use std::path::Path;
-  use audio::AudioBuffer;
-  let mut wav_audio = audio::open(&Path::new("tests/wav/i16-pcm-stereo.wav")).unwrap();
-  println!("{:?}", wav_audio);
-  let written1 = audio::save(&Path::new("written.wav"), &wav_audio);
-  if written1.is_ok() { println!("Done..."); }
-  panic!("Finished. This was on purpose.");
-}
-*/

@@ -48,6 +48,7 @@ impl Container for RiffContainer {
         sample_bytes.reverse();
       }
     }
+
     let sample_order
       = if fmt_chunk.num_of_channels == 1u16 {
         SampleOrder::MONO
@@ -253,7 +254,8 @@ impl Chunk for DataChunk {
     let size :u32 = try!(r.read_u32::<LittleEndian>());
     let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
     buffer = vec![0u8; size as usize];
-    try!(r.read(&mut buffer));
+    let num_read_bytes = try!(r.read(&mut buffer));
+    debug_assert_eq!(size as usize, num_read_bytes);
     Ok(
       DataChunk {
         size: size,

@@ -49,7 +49,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 /// `Seek` traits. One example would be a `File`.
 pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
-    AudioFormat::WAV  => WaveDecoder::new(BufReader::new(reader)).decode(),
+    AudioFormat::WAV  => WaveDecoder::new(reader).decode(),
     //AudioFormat::AIFF => unimplemented!(),
     _ => Err(AudioError::FormatError(format!("A decoder for {:?} is not available", format)))
   }
