@@ -1,149 +1,151 @@
-use std::old_io::{File, IoResult};
-use std::num::Float;
-use super::AIFF;
+// Unstable
 
-#[derive(Copy)]
-pub struct IFFHeader {
-	pub size: i32,
-	pub form_type: i32,
+const FORM: i32 = 0x464F524D;
+const AIFF: i32 = 0x41494646;
+const COMM: i32 = 0x434F4D4D;
+const SSND: i32 = 0x53534E44;
+
+use std::io::{Read, Seek};
+use buffer::*;
+use byteorder::{ByteOrder, ReadBytesExt, BigEndian, LittleEndian};
+use codecs::{Codec, AudioCodec, LPCM};
+use containers::{Container, Chunk};
+use error::*;
+
+pub struct AiffFormat {
+  pub bit_rate: u32,
+  pub sample_rate: u32,
+  pub channels: u32,
+  pub block_size: u32,
+  pub order: SampleOrder,
+  pub bytes: Vec<u8>
 }
 
-impl IFFHeader {
-	#[allow(deprecated)]
-	pub fn read_chunk(file: &mut File) -> IoResult<IFFHeader> {
-		let mut buffer: [u8; 8] = [0; 8];
-		try!(file.read(&mut buffer));
+impl AiffFormat {
+  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<AiffFormat> {
+    let header: &mut[u8] = &mut[0u8; 12];
+    try!(r.read(header));
+    
+    if BigEndian::read_i32(&header[0..4])  != FORM
+    || BigEndian::read_i32(&header[8..12]) != AIFF {
+      return Err(AudioError::FormatError("Not valid AIFF".to_string()));
+    }
+    let file_size = BigEndian::read_i32(&header[4..8]);
 
-		let file_size		: i32 = (buffer[0] as i32) << 24 | (buffer[1] as i32) << 16 | (buffer[2] as i32) << 8 | buffer[3] as i32;
-		let file_form_type	: i32 = (buffer[4] as i32) << 24 | (buffer[5] as i32) << 16 | (buffer[6] as i32) << 8 | buffer[7] as i32;
-
-		if file_form_type != AIFF {
-			panic!("File is not valid AIFF.");
-		}
-
-		Ok(
-			IFFHeader {
-				size: file_size,
-				form_type: file_form_type
-			}
-		)
-	}
+    // Read chunks
+    Err(AudioError::UnsupportedError("Not completed".to_string()))
+  }
 }
 
-// Required Chunk
-#[derive(Copy)]
-pub struct CommonChunk {
-	pub size: i32,
-	pub num_of_channels: i16,
-	pub num_of_frames: u32,
-	pub bit_rate: i16,
-	pub sample_rate: f64 		// Represented as 10 byte extended precision float 
+/************ Chunks ************/
+#[derive(Debug, Clone, Copy)]
+struct CommonChunk {
+  num_channels: i16,
+  num_sample_frames: u32,
+  bit_rate: i16,
+  sample_rate: f64 //Extended
 }
 
-impl CommonChunk {
-	#[allow(deprecated)]
-	pub fn read_chunk(file: &mut File) -> IoResult<CommonChunk> {
-		let chunk_size 	: i32 		= try!(file.read_be_i32());
-		let buffer		: Vec<u8> 	= try!(file.read_exact(chunk_size as uint));
-
-		let num_of_channels	: i16 	= (buffer[0] as i16) << 8 | buffer[1] as i16;
-		let num_of_frames	: u32 	= (buffer[2] as u32) << 24 | (buffer[3] as u32) << 16 | (buffer[4] as u32) << 8 | buffer[5] as u32;
-		let bit_rate		: i16 	= (buffer[6] as i16) << 8 | buffer[7] as i16;
-		let extended		: &[u8] = &buffer[8..18];
-		let sample_rate		: f64 	= convert_from_ieee_extended(extended);
-
-		Ok(
-			CommonChunk {
-				size: chunk_size,
-				num_of_channels: num_of_channels,
-				num_of_frames: num_of_frames,
-				bit_rate: bit_rate,
-				sample_rate: sample_rate
-			}
-		)
-	}
+impl Chunk for CommonChunk {
+  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<CommonChunk> {
+    let size :i32 = try!(r.read_i32::<BigEndian>());
+    let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
+    buffer = vec![0u8; size as usize];
+    try!(r.read(&mut buffer));
+    let num_channels      : i16 = BigEndian::read_i16(&buffer[0..2]);
+    let num_sample_frames : u32 = BigEndian::read_u32(&buffer[2..6]);
+    let bit_rate          : i16 = BigEndian::read_i16(&buffer[6..8]);
+    let extended          : &[u8] = &buffer[8..18];
+    //let sample_rate       : f64 = convert_from_ieee_extended(extended);
+    Ok(
+      CommonChunk {
+        num_channels:       num_channels,
+        num_sample_frames:  num_sample_frames,
+        bit_rate:           bit_rate,
+        sample_rate:        0f64
+      }
+    )
+  }
 }
 
-// Multi-channel samples are always interleaved
-// Required Chunk
-pub struct SoundDataChunk {
-	pub size: i32,			// Includes offset and block_size => (data_size + 8)
-	pub offset: u32,
-	pub block_size: u32,
-	pub data: Vec<u8>
+struct SoundDataChunk {
+  offset: u32,
+  block_size: u32,
+  data: Vec<u8>
 }
 
-impl SoundDataChunk {
-	#[allow(deprecated)]
-	pub fn read_chunk(file: &mut File) -> IoResult<SoundDataChunk> {
-		let chunk_size 	: i32 = try!(file.read_be_i32());
-		let offset 		: u32 = try!(file.read_be_u32());
-		let block_size 	: u32 = try!(file.read_be_u32());
-
-		if offset > 0 || block_size > 0 {
-			panic!("Can't read block-aligned data!");
-		}
-
-		let data: Vec<u8> = try!(file.read_exact(chunk_size as uint - 8));
-
-		Ok(
-			SoundDataChunk {
-				size: chunk_size,
-				offset: offset,
-				block_size: block_size,
-				data: data
-			}
-		)
-	}
+impl Chunk for SoundDataChunk {
+  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<SoundDataChunk> {
+    // Chunk size includes offset and block_size => (data_size + 8)
+    let size :usize = try!(r.read_i32::<BigEndian>()) as usize;
+    let mut buffer: Vec<u8> = Vec::with_capacity(size);
+    buffer = vec![0u8; size];
+    try!(r.read(&mut buffer));
+    let offset      : u32   = BigEndian::read_u32(&buffer[0..4]);
+    let block_size  : u32   = BigEndian::read_u32(&buffer[4..8]);
+    if offset > 0 || block_size > 0 {
+      return Err(AudioError::UnsupportedError("Can't read block-aligned data".to_string()));
+    }
+    let data: Vec<u8> = buffer[8..size].to_vec();
+    Ok(
+      SoundDataChunk {
+        offset: offset,
+        block_size: block_size,
+        data: data
+      }
+    )
+  }
 }
 
+// Uses unstable functions
+/*
 fn convert_from_ieee_extended(bytes: &[u8]) -> f64 {
-	let mut num: f64;
-	let mut exponent: int;
-	let mut hi_mant: u32;
-	let mut low_mant: u32;
+  let mut num: f64;
+  let mut exponent: isize;
+  let mut hi_mant: u32;
+  let mut low_mant: u32;
 
-	exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as int;
-	hi_mant = 	(bytes[2] as u32 & 0xff)	<< 24
-			| 	(bytes[3] as u32 & 0xff)	<< 16
-			| 	(bytes[4] as u32 & 0xff)	<< 8
-			| 	(bytes[5] as u32 & 0xff);
-	low_mant = 	(bytes[6] as u32 & 0xff) 	<< 24
-			| 	(bytes[7] as u32 & 0xff) 	<< 16
-			| 	(bytes[8] as u32 & 0xff) 	<< 8
-			| 	(bytes[9] as u32 & 0xff);
+  exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as isize;
+  hi_mant =   (bytes[2] as u32 & 0xff)  << 24
+      |   (bytes[3] as u32 & 0xff)  << 16
+      |   (bytes[4] as u32 & 0xff)  << 8
+      |   (bytes[5] as u32 & 0xff);
+  low_mant =  (bytes[6] as u32 & 0xff)  << 24
+      |   (bytes[7] as u32 & 0xff)  << 16
+      |   (bytes[8] as u32 & 0xff)  << 8
+      |   (bytes[9] as u32 & 0xff);
 
-	if exponent == 0 && hi_mant == 0 && low_mant == 0 {
-		return 0f64;
-	}
+  if exponent == 0 && hi_mant == 0 && low_mant == 0 {
+    return 0f64;
+  }
 
-	if exponent == 0x7fff {
-		panic!("Sampling rate is not a number!");
-	}
-	else {
-		exponent -= 16383;
-		exponent -= 31;
-		num	= Float::ldexp(hi_mant as f64, exponent);		
-		exponent -= 32;
-		num  += Float::ldexp(low_mant as f64, exponent);
-	}
+  if exponent == 0x7fff {
+    panic!("Sampling rate is not a number!");
+  }
+  else {
+    exponent -= 16383;
+    exponent -= 31;
+    num = f64::ldexp(hi_mant as f64, exponent);   
+    exponent -= 32;
+    num  += f64::ldexp(low_mant as f64, exponent);
+  }
 
-	if bytes[0] & 0x80 > 0 {
-		return -num;
-	}
-	else {
-		return num;
-	}
+  if bytes[0] & 0x80 > 0 {
+    return -num;
+  }
+  else {
+    return num;
+  }
 }
 
 #[cfg(test)]
 mod tests {
-	use super::convert_from_ieee_extended;
-
-	#[test]
-	fn test_convert_from_ieee_extended() {
-		let sample_rate = &[0x40, 0x0E, 0xAC, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-		let result = convert_from_ieee_extended(sample_rate);
-		assert_eq!(44100u32, result as u32);
-	}
+  use super::convert_from_ieee_extended;
+  #[test]
+  fn test_convert_from_ieee_extended() {
+    let sample_rate = &[0x40, 0x0E, 0xAC, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+    let result = convert_from_ieee_extended(sample_rate);
+    assert_eq!(44100u32, result as u32);
+  }
 }
+*/

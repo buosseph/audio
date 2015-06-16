@@ -33,6 +33,12 @@ impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
         samples:      data
       }
     )*/
+    
+    // New approach
+    /*
+    let container = try!(IffContainer::uwrap(&mut self.reader));
+    // IFF validated
+    */
     Ok(
       AudioBuffer {
         bit_rate:     0u32,
