@@ -2,9 +2,10 @@ const RIFF: u32 = 0x52494646;
 const WAVE: u32 = 0x57415645;
 const FMT:  u32 = 0x666D7420;
 const DATA: u32 = 0x64617461;
+const FACT: u32 = 0x66616374;
 
 use std::fmt;
-use std::io::{Read, Seek};
+use std::io::{Read, Seek, SeekFrom};
 use buffer::*;
 use byteorder::{ByteOrder, ReadBytesExt, BigEndian, LittleEndian};
 use codecs::{Codec, AudioCodec, LPCM};
@@ -34,33 +35,77 @@ impl Container for WaveContainer {
     || BigEndian::read_u32(&header[8..12]) != WAVE {
       return Err(AudioError::FormatError("Not valid WAVE".to_string()));
     }
-    let file_size = LittleEndian::read_u32(&header[4..8]);
-    let fmt_chunk_type    = try!(identify(r));
-    let fmt_chunk         = try!(FormatChunk::read(r));
-    let data_chunk_type   = try!(identify(r));
-    // Rearrange all samples so that it's in big endian
-    // NOTE: Consider passing byteorder to codec to avoid reversing
-    let mut data_chunk    = try!(DataChunk::read(r));
-    let sample_size = fmt_chunk.bit_rate as usize / 8;
-    if sample_size != 1 {
-      for sample_bytes in data_chunk.bytes.chunks_mut(sample_size) {
-        sample_bytes.reverse();
+    let mut file_size = LittleEndian::read_u32(&header[4..8]) as usize;
+    let mut pos: i64 = 12i64;
+    let mut compression: CompressionType = CompressionType::PCM;
+    let mut bit_rate    : u32 = 0u32;
+    let mut sample_rate : u32 = 0u32;
+    let mut num_channels: u32 = 0u32;
+    let mut block_size  : u32 = 0u32;
+    let mut order: SampleOrder = SampleOrder::MONO;
+    let mut bytes: Vec<u8> = Vec::new();
+    let mut fmt_chunk_read = false;
+    let mut data_chunk_read = false;
+    while pos < file_size as i64 {
+      pos += 4i64;
+      match identify(r).ok() {
+        Some(WaveChunk::Format) => {
+          let chunk = try!(FormatChunk::read(r));
+          compression = chunk.compression_type;
+          bit_rate = chunk.bit_rate as u32;
+          sample_rate = chunk.sample_rate;
+          num_channels = chunk.num_of_channels as u32;
+          block_size = chunk.block_size as u32;
+          fmt_chunk_read = true;
+          pos += chunk.size as i64;
+        },
+        Some(WaveChunk::Data) => {
+          if !fmt_chunk_read {
+            return Err(AudioError::FormatError("File is not valid WAVE (Format chunk does not occur before Data chunk)".to_string()))
+          }
+          // Rearrange all samples so that it's in big endian
+          // NOTE: Consider passing byteorder to codec to avoid reversing
+          let mut chunk = try!(DataChunk::read(r));
+          let sample_size = bit_rate as usize / 8;
+          if sample_size != 1 {
+            for sample_bytes in chunk.bytes.chunks_mut(sample_size) {
+              sample_bytes.reverse();
+            }
+          }
+          bytes = chunk.bytes.to_vec();
+          data_chunk_read = true;
+          pos += chunk.size as i64;
+        },
+        None => {
+          let size = try!(r.read_u32::<LittleEndian>());
+          pos += size as i64;
+          if pos > file_size as i64 {
+            return Err(AudioError::FormatError("Some chunk trying to read past end of file".to_string()));
+          }
+          r.seek(SeekFrom::Current(pos));
+        }
       }
     }
+    if !fmt_chunk_read {
+      return Err(AudioError::FormatError("File is not valid WAVE (Missing required Format chunk)".to_string()))
+    }
+    else if !data_chunk_read {
+      return Err(AudioError::FormatError("File is not valid WAVE (Missing required Data chunk)".to_string()))
+    }
     let sample_order
-      = if fmt_chunk.num_of_channels == 1u16 {
+      = if num_channels == 1u32 {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED
       };
     Ok(WaveContainer {
-      compression:  fmt_chunk.compression_type,
-      bit_rate:     fmt_chunk.bit_rate as u32,
-      sample_rate:  fmt_chunk.sample_rate,
-      channels:     fmt_chunk.num_of_channels as u32,
-      block_size:   fmt_chunk.block_size as u32,
+      compression:  compression,
+      bit_rate:     bit_rate,
+      sample_rate:  sample_rate,
+      channels:     num_channels,
+      block_size:   block_size,
       order:        sample_order,
-      bytes:        data_chunk.bytes
+      bytes:        bytes
     })
   }
 
@@ -143,10 +188,11 @@ impl Container for WaveContainer {
   }
 }
 
-/// Enumeration of supported WAVE chunks
+/// Enumeration of WAVE chunks
 enum WaveChunk {
   Format,
-  Data
+  Data,
+  //Fact
 }
 
 /// This function reads the four byte identifier for each RIFF chunk
@@ -155,10 +201,11 @@ enum WaveChunk {
 /// and makes reading the remainder of the file for chunks impossible without
 /// skipping the length of the chunk indicated by the next four bytes available
 /// in the reader.
-fn identify<R>(r: &mut R) -> AudioResult<WaveChunk> where R: Read + Seek {
+fn identify<R: Read + Seek>(r: &mut R) -> AudioResult<WaveChunk> {
   match try!(r.read_u32::<BigEndian>()) {
     FMT  => Ok(WaveChunk::Format),
     DATA => Ok(WaveChunk::Data),
+    //FACT => Ok(WaveChunk::Fact),
     err @ _ => Err(AudioError::FormatError(format!("Do not recognize RIFF chunk with identifier 0x{:x}", err)))
   }
 }
@@ -241,6 +288,31 @@ impl Chunk for DataChunk {
       DataChunk {
         size: size,
         bytes: buffer,
+      }
+    )
+  }
+}
+
+/// The fact chunk contains the number of
+/// samples in the file. This chunk is 
+/// required when using a non-PCM codec.
+struct FactChunk {
+  size: u32,
+  num_samples_per_channel: u32  
+}
+
+impl Chunk for FactChunk {
+  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<FactChunk> {
+    let size :u32 = try!(r.read_u32::<LittleEndian>());
+    let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
+    buffer = vec![0u8; size as usize];
+    let num_read_bytes = try!(r.read(&mut buffer));
+    let num_samples_per_channel = LittleEndian::read_u32(&buffer);
+    debug_assert_eq!(size as usize, num_read_bytes);
+    Ok(
+      FactChunk {
+        size: size,
+        num_samples_per_channel: num_samples_per_channel,
       }
     )
   }
