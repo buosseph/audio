@@ -2,7 +2,7 @@ use std::io::{Read, Seek};
 use audio::{AudioDecoder};
 use buffer::*;
 use traits::Container;
-use wave::chunks::WaveContainer;
+use wave::container::WaveContainer;
 use error::AudioResult;
 
 pub struct Decoder<R> {

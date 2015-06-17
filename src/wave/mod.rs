@@ -9,6 +9,7 @@
 //! - [McGill University](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html)
 //! - [WAVE Spec](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/Docs/riffmci.pdf)
 
+mod container;
 mod chunks;
 pub mod decoder;
 pub mod encoder;

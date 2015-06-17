@@ -3,7 +3,7 @@ use audio::AudioEncoder;
 use buffer::*;
 use codecs::Codec;
 use traits::Container;
-use wave::chunks::WaveContainer;
+use wave::container::WaveContainer;
 use error::AudioResult;
 
 pub struct Encoder<'w, W: 'w> {
