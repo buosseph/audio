@@ -4,7 +4,7 @@ use buffer::*;
 use codecs::Codec;
 use traits::Container;
 use aiff::chunks::AiffContainer;
-use error::AudioResult;
+use error::{AudioResult, AudioError};
 
 pub struct Encoder<'w, W: 'w> {
   writer: &'w mut W,
@@ -23,7 +23,7 @@ impl<'w, W> AudioEncoder for Encoder<'w, W> where W: Write {
     // Codec must be passed to container to determine if it's supported
     //let buffer: Vec<u8> = try!(AiffContainer::create(Codec::LPCM, audio));
     //try!(self.writer.write_all(&buffer));
-    Ok(())
+    Err(AudioError::UnsupportedError("This feature is not yet complete".to_string()))
   }
 }
 
@@ -89,95 +89,5 @@ pub fn write_file(raw_audio: &RawAudio, path: &Path) -> AudioResult<bool> {
 	try!(file.write_all(buffer.as_slice()));
 
 	Ok(true)
-}
-
-fn convert_to_ieee_extended(sample_rate: uint) -> Vec<u8>{
-	if sample_rate == 0 {
-		let vec: Vec<u8> = vec![0,0,0,0,0,0,0,0,0,0];
-		return vec;
-	}
-
-	let mut num 	: f64 = sample_rate as f64;
-	let mut exponent: int;
-	let mut f_mant 	: f64;
-	let mut fs_mant	: f64;
-	let mut hi_mant	: u32;
-	let mut low_mant: u32;
-
-
-	let sign: int = match num < 0f64 {
-		true => { num *= -1f64; 0x8000 },
-		false => { 0x0000 }
-	};
-
-	let tuple = Float::frexp(num);
-	f_mant = tuple.0;
-	exponent = tuple.1;
-
-	if exponent > 16384 || !(f_mant < 1f64) {
-		exponent 	= (sign|0x7fff) as int;
-		hi_mant 	= 0;
-		low_mant 	= 0;
-	}
-	else {
-		exponent += 16382;
-		if exponent < 0 {
-			f_mant 		= Float::ldexp(f_mant, exponent);
-			exponent 	= 0;
-		}
-
-		exponent 	|= sign as int;
-		f_mant 		= Float::ldexp(f_mant, 32);
-		fs_mant 	= Float::floor(f_mant);
-		hi_mant 	= fs_mant as u32;
-		f_mant 		= Float::ldexp(f_mant - fs_mant, 32);
-		fs_mant 	= Float::floor(f_mant);
-		low_mant 	= fs_mant as u32;
-	}
-
-	let vec: Vec<u8> = vec![
-		(	exponent 		>> 8	)	as u8,
-		(	exponent				)	as u8,
-		(	hi_mant 		>> 24 	) 	as u8,
-		(	hi_mant 		>> 16 	) 	as u8,
-		(	hi_mant 		>> 8 	) 	as u8,
-			hi_mant 					as u8,
-		(	low_mant 		>> 24 	) 	as u8,
-		(	low_mant 		>> 16 	) 	as u8,
-		(	low_mant 		>> 8 	) 	as u8,
-			low_mant 					as u8
-	];
-
-	return vec;
-}
-
-
-fn u32_to_be_slice(num: u32) -> [u8; 4] {
-	[ (num >> 24) as u8, (num >> 16) as u8, (num >> 8) as u8, num as u8 ]
-}
-
-fn u16_to_be_slice(num: u16) -> [u8; 2] {
-	[ (num >> 8) as u8, num as u8 ]
-}
-
-fn i32_to_be_slice(num: i32) -> [u8; 4] {
-	[ (num >> 24) as u8, (num >> 16) as u8, (num >> 8) as u8, num as u8 ]
-}
-
-fn i16_to_be_slice(num: i16) -> [u8; 2] {
-	[ (num >> 8) as u8, num as u8 ]
-}
-
-#[cfg(test)]
-mod tests {
-	use super::convert_to_ieee_extended;
-
-	#[test]
-	fn test_convert_to_ieee_extended() {
-		let sample_rate_in_bytes = vec![0x40, 0x0E, 0xAC, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-		let sample_rate = 44100;
-		let result = convert_to_ieee_extended(sample_rate);
-		assert_eq!(sample_rate_in_bytes, result);
-	}
 }
 */
