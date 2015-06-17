@@ -1,4 +1,6 @@
+//#![feature(test)]
 extern crate audio;
+//extern crate test;
 
 #[test]
 fn test_load() {
@@ -90,3 +92,13 @@ fn test_i16_read_write_eq() {
     }
   }
 }
+
+/*
+#[bench]
+fn bench_read_wav(b: &mut test::Bencher) {
+  b.iter(|| {
+    use std::path::Path;
+    audio::open(&Path::new("tests/wav/Warrior Concerto - no meta.wav"));
+  });
+}
+*/
