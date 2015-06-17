@@ -42,13 +42,13 @@ impl AudioCodec for LPCM{
       },
       24  => {
         let mut sample: i32 = 0i32;
-        let range: f64 = 8388608f64;
-        let mut i;
+        let range: f64 = 8_388_608_f64;
+        let mut offset;
         for sample_bytes in bytes.chunks(sample_size) {
-          i = 0;
+          offset = sample_size;
           for byte in sample_bytes.iter() {
-            sample = sample | (*byte as i32) << ((sample_bytes.len() - i - 1) * 8);
-            i += 1;
+            offset -= 1;
+            sample = sample | (*byte as i32) << (offset * 8);
           }
           samples.push(sample as f64 / range);
           sample = sample ^ sample; // clear sample value
@@ -112,14 +112,35 @@ impl AudioCodec for LPCM{
         }
       },
       24  => {
-        return Err(AudioError::UnsupportedError(
-          "Can't encode 24-bit LPCM".to_string()
-        ))
+        let mut offset;
+        for sample_bytes in buffer.chunks_mut(sample_size) {
+          sample = audio.samples[i] * 8_388_608_f64;
+          if sample > 8_388_608_f64 {
+            sample = 8_388_608_f64;
+          }
+          else if sample < -8_388_608_f64 {
+            sample = -8_388_608_f64;
+          }
+          offset = sample_bytes.len();
+          for byte in sample_bytes.iter_mut() {
+            offset -= 1;
+            *byte = (sample as u32 >> (offset * 8)) as u8;
+          }
+          i += 1;
+        }
       },
       32  => {
-          return Err(AudioError::UnsupportedError(
-          "Can't encode 32-bit LPCM".to_string()
-        ))
+        for sample_bytes in buffer.chunks_mut(sample_size) {
+          sample = audio.samples[i] * 2_147_483_648f64;
+          if sample > 2_147_483_648f64 {
+            sample = 2_147_483_648f64;
+          }
+          else if sample < -2_147_483_648f64 {
+            sample = -2_147_483_648f64;
+          }
+          BigEndian::write_i32(sample_bytes, sample as i32);
+          i += 1;
+        }
       },
       b @ _ => return Err(AudioError::UnsupportedError(
         format!("Can't encode {}-bit LPCM", b)
