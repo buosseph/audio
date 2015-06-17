@@ -87,7 +87,7 @@ impl AudioCodec for LPCM{
     let sample_size = bit_rate / 8;
     let num_of_bytes = audio.samples.len() * sample_size;
     let mut buffer: Vec<u8> = Vec::with_capacity(num_of_bytes);
-    buffer = vec![0u8; num_of_bytes];
+    for _ in 0..buffer.capacity() { buffer.push(0u8); }
     let mut sample: f64;
     let mut i = 0;
     // if sample_size == 2 (16-bit)

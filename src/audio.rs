@@ -2,7 +2,7 @@ use std::path::Path;
 use std::fs::File;
 use buffer::*;
 use error::*;
-use std::io::{Read, Seek, Write, BufReader};
+use std::io::{Read, Seek, Write};
 use wave::Decoder as WaveDecoder;
 use wave::Encoder as WaveEncoder;
 use aiff::Decoder as AiffDecoder;
