@@ -5,6 +5,9 @@
 .DS_Store
 .DS_Store?
 
+/tests/results/*
+/tests/results/!empty
+
 /16-bit_pcm
 *.txt
 *.zip

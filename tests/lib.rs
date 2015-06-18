@@ -25,7 +25,7 @@ fn test_save() {
 
   // Important cases
   // - Directory (path) doesn't exist
-  let path = Path::new("results/empty.wav");
+  let path = Path::new("tests/results/empty.wav");
   let samples: Vec<f64> = Vec::with_capacity(0);
   let audio
     = AudioBuffer {
@@ -119,7 +119,7 @@ fn test_i16_wave_eq() {
     let sample_rate = audio.sample_rate;
     let sample_order = audio.order;
 
-    let write_loc = Path::new("tmp_i16.wav");
+    let write_loc = Path::new("tests/results/tmp_i16.wav");
     let written = audio::save(&write_loc, &audio);
     println!("{:?}", written);
     assert!(written.is_ok());
@@ -173,7 +173,7 @@ fn test_i24_wave_eq() {
     let sample_rate = audio.sample_rate;
     let sample_order = audio.order;
 
-    let write_loc = Path::new("tmp_i24.wav");
+    let write_loc = Path::new("tests/results/tmp_i24.wav");
     let written = audio::save(&write_loc, &audio);
     println!("{:?}", written);
     assert!(written.is_ok());
@@ -229,7 +229,7 @@ fn test_i32_wave_eq() {
     let sample_rate = audio.sample_rate;
     let sample_order = audio.order;
 
-    let write_loc = Path::new("tmp_i32.wav");
+    let write_loc = Path::new("tests/results/tmp_i32.wav");
     let written = audio::save(&write_loc, &audio);
     println!("{:?}", written);
     assert!(written.is_ok());
