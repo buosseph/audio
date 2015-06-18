@@ -3,7 +3,7 @@ A Rust audio decoding library
 
 ## TODO
 - Update aiff module to match new code organization
-- Add iterator to AudioBuffer
+- Optimize, optimize, optimize
 - Explore other audio formats (don't hold your breath on this one)
 
 ## Decoding
