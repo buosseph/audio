@@ -9,9 +9,9 @@ pub struct LPCM;
 /*
 enum PcmSample {
   8Bit(u8),       // range = 255, but conversion uses 128
-  16Bit(i16),     // range = 32768
-  24Bit(i32),     // range = 8388608
-  32Bit(i32)      // range = 2147483648 
+  16Bit(i16),     // range = 32_768
+  24Bit(i32),     // range = 16_777_216 (not 8_388_608)
+  32Bit(i32)      // range = 2_147_483_648 
 }
 */
 
@@ -42,13 +42,13 @@ impl AudioCodec for LPCM{
       },
       24  => {
         let mut sample: i32 = 0i32;
-        let range: f64 = 8_388_608_f64;
+        let range: f64 = 16_777_216f64; //8_388_608_f64;
         let mut offset;
         for sample_bytes in bytes.chunks(sample_size) {
           offset = sample_size;
           for byte in sample_bytes.iter() {
             offset -= 1;
-            sample = sample | (*byte as i32) << (offset * 8);
+            sample = sample | ((*byte as i32) << (offset * 8));
           }
           samples.push(sample as f64 / range);
           sample = sample ^ sample; // clear sample value
@@ -114,12 +114,12 @@ impl AudioCodec for LPCM{
       24  => {
         let mut offset;
         for sample_bytes in buffer.chunks_mut(sample_size) {
-          sample = audio.samples[i] * 8_388_608_f64;
-          if sample > 8_388_608_f64 {
-            sample = 8_388_608_f64;
+          sample = audio.samples[i] * 16_777_216f64;
+          if sample > 16_777_216f64 {
+            sample = 16_777_216f64;
           }
-          else if sample < -8_388_608_f64 {
-            sample = -8_388_608_f64;
+          else if sample < -16_777_216f64 {
+            sample = -16_777_216f64;
           }
           offset = sample_bytes.len();
           for byte in sample_bytes.iter_mut() {

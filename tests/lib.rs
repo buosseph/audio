@@ -177,6 +177,7 @@ fn test_i24_wave_eq() {
     let written = audio::save(&write_loc, &audio);
     println!("{:?}", written);
     assert!(written.is_ok());
+    
     let verify: AudioBuffer = audio::open(&write_loc).unwrap();
     assert_eq!(total_samples, verify.samples.len());
     assert_eq!(channels, verify.channels);
@@ -199,6 +200,7 @@ fn test_i24_wave_eq() {
         written_file_bytes.next().expect("End of file").ok().expect("Error reading byte from written file")
       );
     }
+    
   }
 }
 
