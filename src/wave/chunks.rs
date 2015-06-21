@@ -123,27 +123,26 @@ impl Chunk for FactChunk {
 }
 */
 
+#[cfg(test)]
+mod tests {
+  use byteorder::{ByteOrder, LittleEndian};
 
-#[test]
-fn test_le_to_be() {
-  let x: u32 = 0x44AC0000;
-  assert_eq!(44100, x.swap_bytes());
-}
+  #[test]
+  fn write_bytes() {
+    let mut buf = vec![0u8; 8];
+    LittleEndian::write_u32(&mut buf[0..4], 44100u32);
+    assert_eq!(0x0000AC44, LittleEndian::read_u32(&buf[0..4]));
+    assert_eq!(44100u32, LittleEndian::read_u32(&buf[0..4]));
+  }
 
-#[test]
-fn test_write_bytes() {
-  let mut buf = vec![0u8; 8];
-  LittleEndian::write_u32(&mut buf[0..4], 44100u32);
-  assert_eq!(0x0000AC44, LittleEndian::read_u32(&buf[0..4]));
-  assert_eq!(44100u32, LittleEndian::read_u32(&buf[0..4]));
-}
+  #[test]
+  fn read_bytes() {
+    let buf = vec![0x9E, 0x59, 0xB5, 0x52];
+    LittleEndian::read_i16(&buf[0..2]);
+    assert_eq!(0x599E, LittleEndian::read_i16(&buf[0..2]));
+    assert_eq!(22942i16, LittleEndian::read_i16(&buf[0..2]));
+    assert_eq!(0x52B5, LittleEndian::read_i16(&buf[2..4]));
+    assert_eq!(21173i16, LittleEndian::read_i16(&buf[2..4]));
+  }
 
-#[test]
-fn test_read_bytes() {
-  let buf = vec![0x9E, 0x59, 0xB5, 0x52];
-  LittleEndian::read_i16(&buf[0..2]);
-  assert_eq!(0x599E, LittleEndian::read_i16(&buf[0..2]));
-  assert_eq!(22942i16, LittleEndian::read_i16(&buf[0..2]));
-  assert_eq!(0x52B5, LittleEndian::read_i16(&buf[2..4]));
-  assert_eq!(21173i16, LittleEndian::read_i16(&buf[2..4]));
 }

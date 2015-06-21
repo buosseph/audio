@@ -215,14 +215,14 @@ mod tests {
   use super::convert_to_ieee_extended;
 
   #[test]
-  fn test_convert_from_ieee_extended() {
+  fn extended_to_sample_rate() {
     let sample_rate = &[0x40, 0x0E, 0xAC, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     let result = convert_from_ieee_extended(sample_rate);
     assert_eq!(44100u32, result as u32);
   }
 
   #[test]
-  fn test_convert_to_ieee_extended() {
+  fn sample_rate_to_extended() {
     let sample_rate_in_bytes = vec![0x40, 0x0E, 0xAC, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     let sample_rate = 44100f64;
     let result = convert_to_ieee_extended(sample_rate);

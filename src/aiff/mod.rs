@@ -28,7 +28,7 @@ mod tests {
   use ::buffer::AudioBuffer;
 
   #[test]
-  fn test_i16_aiff_eq() {
+  fn i16_aiff_eq() {
     let mut path = PathBuf::from("tests");
     path.push("aiff");
     path.push("empty.aiff");
@@ -40,7 +40,7 @@ mod tests {
     for file in files.iter() {
       path.set_file_name(file);
       println!("{:?}", path.as_path());
-      let audio = audio::open(path.as_path()).unwrap(); //.ok().expect("Couldn't open file");
+      let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
       let total_samples = audio.samples.len();
       let channels = audio.channels;
       let bit_rate = audio.bit_rate;
