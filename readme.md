@@ -2,7 +2,7 @@
 A Rust audio decoding library
 
 ## TODO
-- Update aiff module to match new code organization
+- Add suppor for other AIFF bit rates
 - Optimize, optimize, optimize
 - Explore other audio formats (don't hold your breath on this one)
 
@@ -12,6 +12,7 @@ Supports:
 | Format | Codec | Bit Rates |
 | ------ | ----- | --------- |
 | WAVE | PCM | 8, 16, 24, 32 |
+| AIFF | PCM | 16 |
 
 ## Encoding
 Support: 
@@ -19,3 +20,4 @@ Support:
 | Format | Codec | Bit Rates |
 | ------ | ----- | --------- |
 | WAVE | PCM | 8, 16, 24, 32 |
+| AIFF | PCM | 16 |

@@ -12,7 +12,7 @@ use aiff::Encoder as AiffEncoder;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AudioFormat {
   /// Audio in WAVE format
-  WAV,
+  WAVE,
   /// Audio in AIFF format
   AIFF
 }
@@ -25,7 +25,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
   if let Some(ext) = path.extension() {
     if let Some(file_format) = ext.to_str() {
       let format = match file_format {
-        "wav"|"wave"  => AudioFormat::WAV,
+        "wav"|"wave"  => AudioFormat::WAVE,
         "aif"|"aiff"  => AudioFormat::AIFF,
         _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
       };
@@ -51,7 +51,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 /// `Seek` traits. One example would be a `File`.
 pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
-    AudioFormat::WAV  => WaveDecoder::new(reader).decode(),
+    AudioFormat::WAVE  => WaveDecoder::new(reader).decode(),
     AudioFormat::AIFF => AiffDecoder::new(reader).decode(),
   }
 }
@@ -65,7 +65,7 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   if let Some(ext) = path.extension() {
     if let Some(file_format) = ext.to_str() {
       let format = match file_format {
-        "wav"|"wave"  => AudioFormat::WAV,
+        "wav"|"wave"  => AudioFormat::WAVE,
         "aif"|"aiff"  => AudioFormat::AIFF,
         _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
       };
@@ -83,7 +83,7 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
 
 pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<()> {
   match format {
-    AudioFormat::WAV  => WaveEncoder::new(writer).encode(audio),
+    AudioFormat::WAVE  => WaveEncoder::new(writer).encode(audio),
     AudioFormat::AIFF => AiffEncoder::new(writer).encode(audio),
   }
 }
