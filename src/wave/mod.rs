@@ -45,7 +45,7 @@ mod tests {
       let sample_rate = audio.sample_rate;
       let sample_order = audio.order;
 
-      let write_loc = Path::new("tmp_u8.wav");
+      let write_loc = Path::new("tests/results/tmp_u8.wav");
       let written = audio::save(&write_loc, &audio);
       println!("{:?}", written);
       assert!(written.is_ok());
