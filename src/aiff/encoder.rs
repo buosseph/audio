@@ -3,8 +3,8 @@ use audio::AudioEncoder;
 use buffer::*;
 use codecs::Codec;
 use traits::Container;
-use aiff::chunks::AiffContainer;
-use error::{AudioResult, AudioError};
+use aiff::container::AiffContainer;
+use error::AudioResult;
 
 pub struct Encoder<'w, W: 'w> {
   writer: &'w mut W,
@@ -21,9 +21,9 @@ impl<'w, W> Encoder<'w, W> where W: Write {
 impl<'w, W> AudioEncoder for Encoder<'w, W> where W: Write {
   fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()> {
     // Codec must be passed to container to determine if it's supported
-    //let buffer: Vec<u8> = try!(AiffContainer::create(Codec::LPCM, audio));
-    //try!(self.writer.write_all(&buffer));
-    Err(AudioError::UnsupportedError("This feature is not yet complete".to_string()))
+    let buffer: Vec<u8> = try!(AiffContainer::create(Codec::LPCM, audio));
+    try!(self.writer.write_all(&buffer));
+    Ok(())
   }
 }
 

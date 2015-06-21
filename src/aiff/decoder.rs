@@ -2,7 +2,7 @@ use std::io::{Read, Seek};
 use audio::AudioDecoder;
 use buffer::*;
 use traits::Container;
-use aiff::chunks::AiffContainer;
+use aiff::container::AiffContainer;
 use error::AudioResult;
 
 pub struct Decoder<R> {
