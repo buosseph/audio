@@ -40,7 +40,9 @@ mod tests {
     for file in files.iter() {
       path.set_file_name(file);
       println!("{:?}", path.as_path());
-      let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
+      let audio = audio::open(path.as_path()).unwrap_or_else(
+        |err| {println!("{:?}", err); panic!();}
+      );
       let total_samples = audio.samples.len();
       let channels = audio.channels;
       let bit_rate = audio.bit_rate;
