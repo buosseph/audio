@@ -10,6 +10,7 @@ pub struct Decoder<R> {
 }
 
 impl<R> Decoder<R> where R: Read + Seek {
+  #[inline]
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
       reader: reader

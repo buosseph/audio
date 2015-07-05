@@ -1,15 +1,15 @@
 use std::io::{Read, Seek, SeekFrom};
 use buffer::*;
 use byteorder::{ByteOrder, ReadBytesExt, BigEndian};
-use codecs::{Codec, AudioCodec, LPCM};
+use codecs::{Endian, Codec, AudioCodec, LPCM};
 use traits::{Container, Chunk};
 use aiff::chunks::*;
 use error::*;
 
-const FORM: i32 = 0x464F524D;
-const AIFF: i32 = 0x41494646;
-const COMM: i32 = 0x434F4D4D;
-const SSND: i32 = 0x53534E44;
+const FORM: &'static [u8; 4] = b"FORM";
+const AIFF: &'static [u8; 4] = b"AIFF";
+const COMM: &'static [u8; 4] = b"COMM";
+const SSND: &'static [u8; 4] = b"SSND";
 
 pub struct AiffContainer {
   compression: CompressionType,
@@ -25,8 +25,8 @@ impl Container for AiffContainer {
   fn open<R: Read + Seek>(r: &mut R) -> AudioResult<AiffContainer> {
     let header: &mut[u8] = &mut[0u8; 12];
     try!(r.read(header));
-    if BigEndian::read_i32(&header[0..4])  != FORM
-    || BigEndian::read_i32(&header[8..12]) != AIFF {
+    if &header[0..4]  != FORM
+    || &header[8..12] != AIFF {
       return Err(AudioError::FormatError("Not valid AIFF".to_string()));
     }
     let file_size = BigEndian::read_i32(&header[4..8]) as usize;
@@ -67,7 +67,8 @@ impl Container for AiffContainer {
         None => {
           let size = try!(r.read_i32::<BigEndian>());
           pos += size as i64;
-          let new_pos = r.seek(SeekFrom::Current(pos)).ok().expect("Error while seeking in reader");
+          let new_pos = r.seek(SeekFrom::Current(pos)).ok()
+            .expect("Error while seeking in reader");
           if new_pos > file_size as u64 {
             return Err(AudioError::FormatError(
               "Some chunk trying to read past end of file".to_string()
@@ -108,12 +109,13 @@ impl Container for AiffContainer {
   fn read_codec(&mut self) -> AudioResult<Vec<Sample>> {
     let codec = match self.compression {
       CompressionType::PCM => Codec::LPCM,
-      _ => return Err(AudioError::UnsupportedError(
-        "This file uses an unsupported codec".to_string()
-      ))
+      _ =>
+        return Err(AudioError::UnsupportedError(
+          "This file uses an unsupported codec".to_string()
+        ))
     };
     match codec {
-      Codec::LPCM => LPCM::read(&mut self.bytes, &self.bit_rate, &self.channels)
+      Codec::LPCM => LPCM::read(&mut self.bytes, Endian::BigEndian, &self.bit_rate, &self.channels)
     }
   }
 
@@ -121,15 +123,17 @@ impl Container for AiffContainer {
     match audio.order {
       SampleOrder::MONO    => {},
       SampleOrder::INTERLEAVED => {},
-      _     => return Err(AudioError::UnsupportedError(
-        "Multi-channel audio must be interleaved in IFF containers".to_string()
-      ))
+      _     =>
+        return Err(AudioError::UnsupportedError(
+          "Multi-channel audio must be interleaved in IFF containers".to_string()
+        ))
     }
+    let header_size  : usize = 54;
     let num_channels : i16   = audio.channels     as i16;
     let sample_rate  : u32   = audio.sample_rate  as u32;
     let bit_rate     : i16   = audio.bit_rate     as i16;
     let data: Vec<u8> = match codec {
-      Codec::LPCM => try!(LPCM::create(audio)),
+      Codec::LPCM => try!(LPCM::create(audio, Endian::BigEndian)),
     };
     let frame_size        : usize   = (num_channels * bit_rate) as usize / 8;
     let num_frames        : u32     = (audio.samples.len() / num_channels as usize) as u32;
@@ -139,31 +143,27 @@ impl Container for AiffContainer {
     let block_size        : u32     = 0;
     let data_size         : u32     = num_frames * frame_size as u32;
     let ssnd_chunk_size   : i32     = 8i32 + data_size as i32;
-    let total_bytes       : u32     = 12u32 + (comm_chunk_size as u32 + 8u32) + (ssnd_chunk_size as u32 + 8u32);
+    let total_bytes       : u32     = 12u32
+                                    + (comm_chunk_size as u32 + 8u32)
+                                    + (ssnd_chunk_size as u32 + 8u32);
+    debug_assert_eq!(total_bytes, header_size as u32 + data_size);
     let file_size         : u32     = total_bytes - 8;
     let mut buffer        : Vec<u8> = Vec::with_capacity(total_bytes as usize);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
-    debug_assert_eq!(buffer.capacity(), buffer.len());
-    BigEndian::write_i32(&mut buffer[0..4], FORM);
-    BigEndian::write_u32(&mut buffer[4..8], file_size);
-    BigEndian::write_i32(&mut buffer[8..12], AIFF);
-    BigEndian::write_i32(&mut buffer[12..16], COMM);
-    BigEndian::write_i32(&mut buffer[16..20], comm_chunk_size);
-    BigEndian::write_i16(&mut buffer[20..22], num_channels);
-    BigEndian::write_u32(&mut buffer[22..26], num_frames);
-    BigEndian::write_i16(&mut buffer[26..28], bit_rate);
-    for (j,i) in (28..38).enumerate() {
-      buffer[i] = extended[j];
-    }
-    BigEndian::write_i32(&mut buffer[38..42], SSND);
-    BigEndian::write_i32(&mut buffer[42..46], ssnd_chunk_size);
-    BigEndian::write_u32(&mut buffer[46..50], offset);
-    BigEndian::write_u32(&mut buffer[50..54], block_size);
-    let mut i = 54; // Because we're only writing AIFFs with 54 byte headers
-    for byte in data.iter() {
-      buffer[i] = *byte;
-      i += 1;
-    }
+    for byte in FORM.iter() { buffer.push(*byte) }
+    for i in 0..4  { buffer.push(( file_size        >> 8 * (3 - i)) as u8) }
+    for byte in AIFF.iter() { buffer.push(*byte) }
+    for byte in COMM.iter() { buffer.push(*byte) }
+    for i in 0..4  { buffer.push(( comm_chunk_size  >> 8 * (3 - i)) as u8) }
+    for i in 0..2  { buffer.push(( num_channels     >> 8 * (1 - i)) as u8) }
+    for i in 0..4  { buffer.push(( num_frames       >> 8 * (3 - i)) as u8) }
+    for i in 0..2  { buffer.push(( bit_rate         >> 8 * (1 - i)) as u8) }
+    for i in 0..10 { buffer.push(extended[i]) }
+    for byte in SSND.iter() { buffer.push(*byte) }
+    for i in 0..4  { buffer.push(( ssnd_chunk_size  >> 8 * (3 - i)) as u8) }
+    for i in 0..4  { buffer.push(( offset           >> 8 * (3 - i)) as u8) }
+    for i in 0..4  { buffer.push(( block_size       >> 8 * (3 - i)) as u8) }
+    for byte in data.iter() { buffer.push(*byte) }
+    debug_assert_eq!(total_bytes as usize, buffer.len());
     Ok(buffer)
   }
 }
@@ -175,9 +175,14 @@ impl Container for AiffContainer {
 /// skipping the length of the chunk indicated by the next four bytes available
 /// in the reader.
 fn identify<R: Read + Seek>(r: &mut R) -> AudioResult<AiffChunk> {
-  match try!(r.read_i32::<BigEndian>()) {
+  let mut buffer = [0u8; 4];
+  try!(r.read(&mut buffer));
+  match &buffer {
     COMM => Ok(AiffChunk::Common),
     SSND => Ok(AiffChunk::SoundData),
-    err @ _ => Err(AudioError::FormatError(format!("Do not recognize AIFF chunk with identifier 0x{:x}", err)))
+    err @ _ => 
+      Err(AudioError::FormatError(
+        format!("Do not recognize AIFF chunk with identifier {:?}", err)
+      ))
   }
 }

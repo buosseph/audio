@@ -59,14 +59,15 @@ fn write_aiff_track(b: &mut Bencher) {
  *
  *  One set of bench results for a quick reference
  *
- *  test buf_reader       ... bench: 104,821,811 ns/iter (+/- 27,349,621)
- *  test empty            ... bench:           0 ns/iter (+/- 0)
- *  test file             ... bench:  64,956,282 ns/iter (+/- 25,325,489)
  *  test read_aiff_track  ... bench: 327,196,191 ns/iter (+/- 83,703,581)
  *  test read_wave_track  ... bench: 356,682,279 ns/iter (+/- 55,742,915)
  *  test write_aiff_track ... bench: 843,659,323 ns/iter (+/- 519,412,469)
  *  test write_wave_track ... bench: 709,889,187 ns/iter (+/- 157,425,662)
  *
+ *  test read_aiff_track  ... bench: 325,372,453 ns/iter (+/- 47,216,694)
+ *  test read_wave_track  ... bench: 359,130,675 ns/iter (+/- 42,004,610)
+ *  test write_aiff_track ... bench: 632,809,916 ns/iter (+/- 283,424,371)
+ *  test write_wave_track ... bench: 548,723,010 ns/iter (+/- 345,871,453)
  */
 
 #[bench]

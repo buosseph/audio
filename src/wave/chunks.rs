@@ -86,7 +86,6 @@ impl Chunk for DataChunk {
     for _ in 0..buffer.capacity() { buffer.push(0u8); }
     let num_read_bytes = try!(r.read(&mut buffer));
     debug_assert_eq!(size as usize, num_read_bytes);
-    //println!("{:?}", buffer);
     Ok(
       DataChunk {
         size: size,

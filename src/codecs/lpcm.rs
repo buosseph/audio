@@ -1,30 +1,22 @@
 use buffer::*;
-use byteorder::{ByteOrder, BigEndian};
-use codecs::AudioCodec;
+use codecs::{Endian, AudioCodec};
 use error::{AudioResult, AudioError};
 
 #[allow(dead_code)]
 pub struct LPCM;
 
-/*
-enum PcmSample {
-  8Bit(u8),       // range = 255, but conversion uses 128
-  16Bit(i16),     // range = 32_768
-  24Bit(i32),     // range = 16_777_216 (not 8_388_608)
-  32Bit(i32)      // range = 2_147_483_648 
-}
-*/
-
-impl AudioCodec for LPCM{
-  #[allow(unused_assignments)]
-  fn read(bytes: &mut Vec<u8>, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>> {
-    // All bytes passed to this codec must be in big-endian format
-    let block_size = (bit_rate / 8u32 * channels) as usize;
-    let sample_size = (bit_rate / 8u32) as usize;
-    let num_of_frames: usize = bytes.len() / block_size;
-    let num_of_samples: usize = bytes.len() / sample_size;
-    debug_assert_eq!(num_of_samples, num_of_frames * *channels as usize);
-    let mut samples: Vec<f64> = Vec::with_capacity(num_of_samples);
+impl AudioCodec for LPCM {
+  fn read(bytes: &mut Vec<u8>, endian: Endian, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>> {
+    let le =
+      match endian {
+        Endian::LittleEndian => true,
+        Endian::BigEndian    => false
+      };
+    let block_size  : usize     = (bit_rate / 8u32 * channels) as usize;
+    let sample_size : usize     = (bit_rate / 8u32) as usize;
+    let num_frames  : usize     = bytes.len() / block_size;
+    let num_samples : usize     = bytes.len() / sample_size;
+    let mut samples : Vec<f64>  = Vec::with_capacity(num_samples);
     match *bit_rate as usize {
       8   => {
         for sample in bytes.iter() {
@@ -33,73 +25,91 @@ impl AudioCodec for LPCM{
       },
       16  => {
         let mut sample: i16 = 0i16;
-        let range: f64 = i16::max_value() as f64 + 1f64;
-        for sample_bytes in bytes.chunks(sample_size) {
-          sample = BigEndian::read_i16(sample_bytes);
-          samples.push(sample as f64 / range);
-          sample = sample ^ sample; // clear sample value
+        let offset: isize =
+          if le {
+            0
+          } else {
+            (sample_size - 1) as isize
+          };
+        for i in 0..num_samples {
+          for j in 0..sample_size {
+            sample |=
+              (bytes[i * sample_size + j] as i16)
+              << (8 * (-1 * j as isize + offset).abs() as usize);
+          }
+          samples.push(sample as f64 / 32_768f64);
+          sample = 0;
         }
       },
       24  => {
         let mut sample: i32 = 0i32;
-        let range: f64 = 16_777_216f64; //8_388_608_f64;
-        let mut offset;
-        for sample_bytes in bytes.chunks(sample_size) {
-          offset = sample_size;
-          for byte in sample_bytes.iter() {
-            offset -= 1;
-            sample = sample | ((*byte as i32) << (offset * 8));
+        let offset: isize =
+          if le {
+            0
+          } else {
+            (sample_size - 1) as isize
+          };
+        for i in 0..num_samples {
+          for j in 0..sample_size {
+            sample |=
+              (bytes[i * sample_size + j] as i32)
+              << (8 * (-1 * j as isize + offset).abs() as usize);
           }
-          samples.push(sample as f64 / range);
-          sample = sample ^ sample; // clear sample value
+          samples.push(sample as f64 / 16_777_216f64);
+          sample = 0;
         }
       },
       32  => {
         let mut sample: i32 = 0i32;
-        let range: f64 = i32::max_value() as f64 + 1f64;
-        for sample_bytes in bytes.chunks(sample_size) {
-          sample = BigEndian::read_i32(sample_bytes);
-          samples.push(sample as f64 / range);
-          sample = sample ^ sample; // clear sample value
+        let offset: isize =
+          if le {
+            0
+          } else {
+            (sample_size - 1) as isize
+          };
+        for i in 0..num_samples {
+          for j in 0..sample_size {
+            sample |=
+              (bytes[i * sample_size + j] as i32)
+              << (8 * (-1 * j as isize + offset).abs() as usize);
+          }
+          samples.push(sample as f64 / 2_147_483_648f64);
+          sample = 0;
         }
       },
-      _   => return Err(AudioError::UnsupportedError(format!("Cannot read {}-bit LPCM", bit_rate)))
+      _   => 
+        return Err(AudioError::UnsupportedError(
+          format!("Cannot read {}-bit LPCM", bit_rate)
+        ))
     }
-    debug_assert_eq!(num_of_samples, samples.len());
-    debug_assert_eq!(samples.capacity(), num_of_samples);
-    debug_assert!( if num_of_frames != 0 { samples.len() != 0 } else { samples.len() == 0 });
+    debug_assert_eq!(num_samples, samples.len());
+    debug_assert_eq!(samples.capacity(), num_samples);
+    debug_assert!( if num_frames != 0 { samples.len() != 0 } else { samples.len() == 0 });
     Ok(samples)
   }
 
-  fn create(audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
-    /*
-     *  TODO: Dealing with bit rates not supported by format.
-     *
-     *  Audio can be manipulated to be of any bit rate, but codecs don't
-     *  support that. It's preferred that the fields in AudioBuffer
-     *  reflect the samples stored, so values need to be checked when
-     *  encoding. For bit rate, just round up to nearest multiple of 8
-     *  that's less than the highest supported bit rate and use that
-     *  value for the encoding bit rate.
-     */
-
+  fn create(audio: &AudioBuffer, endian: Endian) -> AudioResult<Vec<u8>> {
     // Only support 8, 16, 24, 32 bit endcoding
+    let le =
+      match endian {
+        Endian::LittleEndian => true,
+        Endian::BigEndian    => false
+      };
     let bit_rate = audio.bit_rate as usize;
     let sample_size = bit_rate / 8;
-    let num_bytes = audio.samples.len() * sample_size;
+    let num_samples = audio.samples.len();
+    let num_bytes = num_samples * sample_size;
     let mut buffer: Vec<u8> = Vec::with_capacity(num_bytes);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
     let mut sample: f64;
-    let mut i = 0;
     match bit_rate {
       8   => {
-        for _ in 0..audio.samples.len() {
-          buffer[i] = (audio.samples[i] * 128f64 + 128f64) as u8;
-          i+= 1;
+        for i in 0..num_samples {
+          buffer.push((audio.samples[i] * 128f64 + 128f64) as u8);
         }
       },
       16  => {
-        for sample_bytes in buffer.chunks_mut(sample_size) {
+        let mut write_sample: i16;
+        for i in 0..num_samples {
           sample = audio.samples[i] * 32768f64;
           if sample > 32768f64 {
             sample = 32768f64;
@@ -107,13 +117,23 @@ impl AudioCodec for LPCM{
           else if sample < -32768f64 {
             sample = -32768f64;
           }
-          BigEndian::write_i16(sample_bytes, sample as i16);
-          i += 1;
+          write_sample = 
+            if le {
+              (sample as i16).swap_bytes()
+            } else {
+              sample as i16
+            };
+          for i in 0..sample_size {
+            buffer.push(
+              (write_sample
+              >> (8 * (sample_size - 1 - i))) as u8
+            );
+          }
         }
       },
       24  => {
-        let mut offset;
-        for sample_bytes in buffer.chunks_mut(sample_size) {
+        let mut write_sample: i32;
+        for i in 0..num_samples {
           sample = audio.samples[i] * 16_777_216f64;
           if sample > 16_777_216f64 {
             sample = 16_777_216f64;
@@ -121,16 +141,25 @@ impl AudioCodec for LPCM{
           else if sample < -16_777_216f64 {
             sample = -16_777_216f64;
           }
-          offset = sample_bytes.len();
-          for byte in sample_bytes.iter_mut() {
-            offset -= 1;
-            *byte = (sample as u32 >> (offset * 8)) as u8;
+          write_sample = 
+            if le {
+              (sample as i32)
+                .swap_bytes()
+                .rotate_right(8u32)
+            } else {
+              sample as i32
+            };
+          for i in 0..sample_size {
+            buffer.push(
+              (write_sample
+              >> (8 * (sample_size - 1 - i))) as u8
+            );
           }
-          i += 1;
         }
       },
       32  => {
-        for sample_bytes in buffer.chunks_mut(sample_size) {
+        let mut write_sample: i32;
+        for i in 0..num_samples {
           sample = audio.samples[i] * 2_147_483_648f64;
           if sample > 2_147_483_648f64 {
             sample = 2_147_483_648f64;
@@ -138,16 +167,24 @@ impl AudioCodec for LPCM{
           else if sample < -2_147_483_648f64 {
             sample = -2_147_483_648f64;
           }
-          BigEndian::write_i32(sample_bytes, sample as i32);
-          i += 1;
+          write_sample = 
+            if le {
+              (sample as i32).swap_bytes()
+            } else {
+              sample as i32
+            };
+          for i in 0..sample_size {
+            buffer.push(
+              (write_sample
+              >> (8 * (sample_size - 1 - i))) as u8
+            );
+          }
         }
       },
       b @ _ => return Err(AudioError::UnsupportedError(
         format!("Can't encode {}-bit LPCM", b)
       ))
     }
-    debug_assert_eq!(num_bytes, i * sample_size);
-    debug_assert_eq!(num_bytes / sample_size, audio.samples.len());
     debug_assert_eq!(num_bytes, buffer.len());
     Ok(buffer)
   }
