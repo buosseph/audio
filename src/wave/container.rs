@@ -6,8 +6,7 @@ use traits::{Container, Chunk};
 use wave::chunks::{
   CompressionType,
   WaveChunk,
-  FormatChunk,
-  DataChunk
+  FormatChunk
 };
 use error::*;
 
@@ -33,56 +32,59 @@ pub struct WaveContainer {
 impl Container for WaveContainer {
   /// Reads the bytes provided from the reader.
   /// This is where the reading of chunks ocurrs.
-  fn open<R: Read + Seek>(r: &mut R) -> AudioResult<WaveContainer> {
-    // Optimization idea:
-    // - Inline identify()
-    // - Remove size from chunk structs and just pass slices to
-    //   chunk constructors, let the io reading be done in open()
-    //   not in the abstraction.
+  fn open<R: Read + Seek>(reader: &mut R) -> AudioResult<WaveContainer> {
     let header: &mut[u8] = &mut[0u8; 12];
-    try!(r.read(header));
+    try!(reader.read(header));
     if &header[0..4]  != RIFF
     || &header[8..12] != WAVE {
       return Err(AudioError::FormatError("Not valid WAVE".to_string()));
     }
-    let file_size = LittleEndian::read_u32(&header[4..8]) as usize;
-    let mut pos: i64 = 12i64;
-    let mut compression: CompressionType = CompressionType::PCM;
-    let mut bit_rate    : u32 = 0u32;
-    let mut sample_rate : u32 = 0u32;
-    let mut num_channels: u32 = 0u32;
-    let mut block_size  : u32 = 0u32;
-    let mut bytes: Vec<u8> = Vec::new();
-    let mut fmt_chunk_read = false;
-    let mut data_chunk_read = false;
+    let     file_size   : usize   = LittleEndian::read_u32(&header[4..8]) as usize;
+    let mut pos         : i64     = 12i64;
+    let mut compression           = CompressionType::PCM;
+    let mut bit_rate    : u32     = 0u32;
+    let mut sample_rate : u32     = 0u32;
+    let mut num_channels: u32     = 0u32;
+    let mut block_size  : u32     = 0u32;
+    let mut bytes       : Vec<u8> = Vec::new();
+    let mut fmt_chunk_read        = false;
+    let mut data_chunk_read       = false;
+    let mut chunk_size;
+    let mut chunk_buffer;
     while pos < file_size as i64 {
       pos += 4i64;
-      match identify(r).ok() {
+      match identify(reader).ok() {
         Some(WaveChunk::Format) => {
-          let chunk = try!(FormatChunk::read(r));
-          compression = chunk.compression_type;
-          bit_rate = chunk.bit_rate as u32;
-          sample_rate = chunk.sample_rate;
-          num_channels = chunk.num_of_channels as u32;
-          block_size = chunk.block_size as u32;
-          fmt_chunk_read = true;
-          pos += chunk.size as i64;
+          chunk_size      = try!(reader.read_u32::<LittleEndian>());
+          chunk_buffer    = vec![0u8; chunk_size as usize];
+          try!(reader.read(&mut chunk_buffer));
+          let chunk       = try!(FormatChunk::read(&chunk_buffer));
+          compression     = chunk.compression_type;
+          bit_rate        = chunk.bit_rate        as u32;
+          sample_rate     = chunk.sample_rate;
+          num_channels    = chunk.num_of_channels as u32;
+          block_size      = chunk.block_size      as u32;
+          fmt_chunk_read  = true;
+          pos            += chunk_size            as i64;
         },
         Some(WaveChunk::Data) => {
           if !fmt_chunk_read {
             return Err(AudioError::FormatError(
-              "File is not valid WAVE (Format chunk does not occur before Data chunk)".to_string()
+              "File is not valid WAVE \
+              (Format chunk does not occur before Data chunk)".to_string()
             ))
           }
-          let chunk = try!(DataChunk::read(r));
-          bytes = chunk.bytes.to_vec();
+          chunk_size      = try!(reader.read_u32::<LittleEndian>());
+          bytes           = vec![0u8; chunk_size as usize];
+          try!(reader.read(&mut bytes));
           data_chunk_read = true;
-          pos += chunk.size as i64;
+          pos            += chunk_size as i64;
         },
         None => {
-          let size = try!(r.read_u32::<LittleEndian>());
+          let size = try!(reader.read_u32::<LittleEndian>());
           pos += size as i64;
-          let new_pos = r.seek(SeekFrom::Current(pos)).ok().expect("Error while seeking in reader");
+          let new_pos = reader.seek(SeekFrom::Current(pos))
+            .ok().expect("Error while seeking in reader");
           if new_pos > file_size as u64 {
             return Err(AudioError::FormatError(
               "Some chunk trying to read past end of file".to_string()
@@ -118,6 +120,7 @@ impl Container for WaveContainer {
     })
   }
 
+  #[inline]
   fn read_codec(&mut self) -> AudioResult<Vec<Sample>> {
     let codec = match self.compression {
       CompressionType::PCM => Codec::LPCM,
@@ -183,9 +186,10 @@ impl Container for WaveContainer {
 /// and makes reading the remainder of the file for chunks impossible without
 /// skipping the length of the chunk indicated by the next four bytes available
 /// in the reader.
-fn identify<R: Read + Seek>(r: &mut R) -> AudioResult<WaveChunk> {
+#[inline]
+fn identify<R: Read + Seek>(reader: &mut R) -> AudioResult<WaveChunk> {
   let mut buffer = [0u8; 4];
-  try!(r.read(&mut buffer));
+  try!(reader.read(&mut buffer));
   match &buffer {
     FMT  => Ok(WaveChunk::Format),
     DATA => Ok(WaveChunk::Data),

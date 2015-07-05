@@ -20,5 +20,5 @@ pub trait Container {
 
 /// The trait used to read 
 pub trait Chunk {
-  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<Self>;
+  fn read(buffer: &[u8]) -> AudioResult<Self>;
 }

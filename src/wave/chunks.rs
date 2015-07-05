@@ -1,6 +1,5 @@
 //! WAVE Chunks
 use std::fmt;
-use std::io::{Read, Seek};
 use byteorder::{ByteOrder, ReadBytesExt, LittleEndian};
 use traits::Chunk;
 use error::*;
@@ -28,7 +27,6 @@ impl fmt::Display for CompressionType {
 /// The format chunck contains most of the audio realted meta data in `WAV` files
 #[derive(Debug, Clone, Copy)]
 pub struct FormatChunk {
-  pub size: u32,
   pub compression_type: CompressionType,
   pub num_of_channels: u16,
   pub sample_rate: u32,
@@ -38,11 +36,7 @@ pub struct FormatChunk {
 }
 
 impl Chunk for FormatChunk {
-  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<FormatChunk> {
-    let size :u32 = try!(r.read_u32::<LittleEndian>());
-    let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
-    try!(r.read(&mut buffer));
+  fn read(buffer: &[u8]) -> AudioResult<FormatChunk> {
     let compression_code : u16 = LittleEndian::read_u16(&buffer[0..2]);
     let compression_type : CompressionType
       = match compression_code {
@@ -54,42 +48,15 @@ impl Chunk for FormatChunk {
     let data_rate       : u32 = LittleEndian::read_u32(&buffer[8..12]);
     let block_size      : u16 = LittleEndian::read_u16(&buffer[12..14]);
     let bit_rate        : u16 = LittleEndian::read_u16(&buffer[14..16]);
-
     // Don't care for other bytes if PCM
-
     Ok(
       FormatChunk {
-        size: size,
         compression_type: compression_type,
         num_of_channels: num_of_channels,
         sample_rate: sample_rate,
         data_rate: data_rate,
         block_size: block_size,
         bit_rate: bit_rate,
-      }
-    )
-  }
-}
-
-/// The data chunk contains the coded audio data. Multi-channel data are
-/// always interleaved in `WAV` files.
-#[allow(dead_code)]
-pub struct DataChunk {
-  pub size: u32,
-  pub bytes: Vec<u8>,
-}
-
-impl Chunk for DataChunk {
-  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<DataChunk> {
-    let size :u32 = try!(r.read_u32::<LittleEndian>());
-    let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
-    let num_read_bytes = try!(r.read(&mut buffer));
-    debug_assert_eq!(size as usize, num_read_bytes);
-    Ok(
-      DataChunk {
-        size: size,
-        bytes: buffer,
       }
     )
   }

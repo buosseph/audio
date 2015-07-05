@@ -3,7 +3,6 @@
 //! This module is unstable unitl
 //! `f64::frexp` is stablized.
 use std::fmt;
-use std::io::{Read, Seek};
 use byteorder::{ByteOrder, ReadBytesExt, BigEndian};
 use traits::Chunk;
 use error::*;
@@ -38,7 +37,6 @@ impl fmt::Display for CompressionType {
 /// required to decode the sampled data.
 #[derive(Debug, Clone, Copy)]
 pub struct CommonChunk {
-  pub size: i32,
   pub num_channels: i16,
   pub num_sample_frames: u32,
   pub bit_rate: i16,
@@ -46,66 +44,18 @@ pub struct CommonChunk {
 }
 
 impl Chunk for CommonChunk {
-  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<CommonChunk> {
-    let size :i32 = try!(r.read_i32::<BigEndian>());
-    /*let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
-    try!(r.read(&mut buffer));
-    let num_channels      : i16 = BigEndian::read_i16(&buffer[0..2]);
-    let num_sample_frames : u32 = BigEndian::read_u32(&buffer[2..6]);
-    let bit_rate          : i16 = BigEndian::read_i16(&buffer[6..8]);
-    let extended          : &[u8] = &buffer[8..18];*/
-
-    let num_channels      : i16 = try!(r.read_i16::<BigEndian>());
-    let num_sample_frames : u32 = try!(r.read_u32::<BigEndian>());
-    let bit_rate          : i16 = try!(r.read_i16::<BigEndian>());
-    let mut extended = [0u8; 10];
-    try!(r.read(&mut extended));
-    let sample_rate       : f64 = convert_from_ieee_extended(&extended);
+  fn read(buffer: &[u8]) -> AudioResult<CommonChunk> {
+    let num_channels      : i16   = BigEndian::read_i16(&buffer[0..2]);
+    let num_sample_frames : u32   = BigEndian::read_u32(&buffer[2..6]);
+    let bit_rate          : i16   = BigEndian::read_i16(&buffer[6..8]);
+    let extended          : &[u8] = &buffer[8..18];
+    let sample_rate       : f64   = convert_from_ieee_extended(extended);
     Ok(
       CommonChunk {
-        size:               size,
         num_channels:       num_channels,
         num_sample_frames:  num_sample_frames,
         bit_rate:           bit_rate,
         sample_rate:        sample_rate
-      }
-    )
-  }
-}
-
-/// The AIFF SoundData Chunk.
-///
-/// This chunk contains the encoded audio data
-/// along with additional information for handling
-/// alignment and padding in the data. Block-aligned
-/// data handling is not currently supported.
-#[allow(dead_code)]
-pub struct SoundDataChunk {
-  pub size: i32,
-  pub offset: u32,
-  pub block_size: u32,
-  pub data: Vec<u8>
-}
-
-impl Chunk for SoundDataChunk {
-  fn read<R: Read + Seek>(r: &mut R) -> AudioResult<SoundDataChunk> {
-    let size :i32 = try!(r.read_i32::<BigEndian>());
-    let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
-    try!(r.read(&mut buffer));
-    let offset      : u32   = BigEndian::read_u32(&buffer[0..4]);
-    let block_size  : u32   = BigEndian::read_u32(&buffer[4..8]);
-    if offset > 0 || block_size > 0 {
-      return Err(AudioError::UnsupportedError("Can't read block-aligned data".to_string()));
-    }
-    let data: Vec<u8> = buffer[8..size as usize].to_vec();
-    Ok(
-      SoundDataChunk {
-        size:       size,
-        offset:     offset,
-        block_size: block_size,
-        data:       data
       }
     )
   }

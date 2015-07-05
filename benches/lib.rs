@@ -64,10 +64,10 @@ fn write_aiff_track(b: &mut Bencher) {
  *  test write_aiff_track ... bench: 843,659,323 ns/iter (+/- 519,412,469)
  *  test write_wave_track ... bench: 709,889,187 ns/iter (+/- 157,425,662)
  *
- *  test read_aiff_track  ... bench: 325,372,453 ns/iter (+/- 47,216,694)
- *  test read_wave_track  ... bench: 359,130,675 ns/iter (+/- 42,004,610)
- *  test write_aiff_track ... bench: 632,809,916 ns/iter (+/- 283,424,371)
- *  test write_wave_track ... bench: 548,723,010 ns/iter (+/- 345,871,453)
+ *  test read_aiff_track  ... bench: 213,222,314 ns/iter (+/- 5,191,823)
+ *  test read_wave_track  ... bench: 190,206,245 ns/iter (+/- 6,010,546)
+ *  test write_aiff_track ... bench: 558,127,499 ns/iter (+/- 59,900,198)
+ *  test write_wave_track ... bench: 575,245,107 ns/iter (+/- 60,170,170)
  */
 
 #[bench]
