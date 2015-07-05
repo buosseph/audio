@@ -38,24 +38,19 @@ impl fmt::Display for CompressionType {
 #[derive(Debug, Clone, Copy)]
 pub struct CommonChunk {
   pub num_channels: i16,
-  pub num_sample_frames: u32,
-  pub bit_rate: i16,
-  pub sample_rate: f64
+  pub num_frames:   u32,
+  pub bit_rate:     i16,
+  pub sample_rate:  f64
 }
 
 impl Chunk for CommonChunk {
   fn read(buffer: &[u8]) -> AudioResult<CommonChunk> {
-    let num_channels      : i16   = BigEndian::read_i16(&buffer[0..2]);
-    let num_sample_frames : u32   = BigEndian::read_u32(&buffer[2..6]);
-    let bit_rate          : i16   = BigEndian::read_i16(&buffer[6..8]);
-    let extended          : &[u8] = &buffer[8..18];
-    let sample_rate       : f64   = convert_from_ieee_extended(extended);
     Ok(
       CommonChunk {
-        num_channels:       num_channels,
-        num_sample_frames:  num_sample_frames,
-        bit_rate:           bit_rate,
-        sample_rate:        sample_rate
+        num_channels: BigEndian::read_i16(&buffer[0..2]),
+        num_frames:   BigEndian::read_u32(&buffer[2..6]),
+        bit_rate:     BigEndian::read_i16(&buffer[6..8]),
+        sample_rate:  convert_from_ieee_extended(&buffer[8..18])
       }
     )
   }

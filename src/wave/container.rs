@@ -10,23 +10,22 @@ use wave::chunks::{
 };
 use error::*;
 
-/// WAVE chunk FourCCs for identification
+/// WAVE chunk identifiers
 const RIFF: &'static [u8; 4] = b"RIFF";
 const WAVE: &'static [u8; 4] = b"WAVE";
 const FMT:  &'static [u8; 4] = b"fmt ";
 const DATA: &'static [u8; 4] = b"data";
-//const FACT: u32 = 0x66616374;
 
 /// Struct containing all necessary information
 /// for encoding and decoding bytes to an `AudioBuffer`
 pub struct WaveContainer {
-  compression: CompressionType,
-  pub bit_rate: u32,
-  pub sample_rate: u32,
-  pub channels: u32,
-  pub block_size: u32,
-  pub order: SampleOrder,
-  pub bytes: Vec<u8>
+  compression:      CompressionType,
+  pub bit_rate:     u32,
+  pub sample_rate:  u32,
+  pub channels:     u32,
+  pub block_size:   u32,
+  pub order:        SampleOrder,
+  pub bytes:        Vec<u8>
 }
 
 impl Container for WaveContainer {
@@ -39,33 +38,37 @@ impl Container for WaveContainer {
     || &header[8..12] != WAVE {
       return Err(AudioError::FormatError("Not valid WAVE".to_string()));
     }
-    let     file_size   : usize   = LittleEndian::read_u32(&header[4..8]) as usize;
-    let mut pos         : i64     = 12i64;
-    let mut compression           = CompressionType::PCM;
-    let mut bit_rate    : u32     = 0u32;
-    let mut sample_rate : u32     = 0u32;
-    let mut num_channels: u32     = 0u32;
-    let mut block_size  : u32     = 0u32;
-    let mut bytes       : Vec<u8> = Vec::new();
-    let mut fmt_chunk_read        = false;
-    let mut data_chunk_read       = false;
+    let     file_size : usize = LittleEndian::read_u32(&header[4..8]) as usize;
+    let mut pos       : i64   = 12i64;
+    let mut container =
+      WaveContainer {
+        compression:  CompressionType::PCM,
+        bit_rate:     0u32,
+        sample_rate:  0u32,
+        channels:     0u32,
+        block_size:   0u32,
+        order:        SampleOrder::MONO,
+        bytes:        Vec::new()
+      };
+    let mut fmt_chunk_read  = false;
+    let mut data_chunk_read = false;
     let mut chunk_size;
     let mut chunk_buffer;
     while pos < file_size as i64 {
       pos += 4i64;
       match identify(reader).ok() {
         Some(WaveChunk::Format) => {
-          chunk_size      = try!(reader.read_u32::<LittleEndian>());
-          chunk_buffer    = vec![0u8; chunk_size as usize];
+          chunk_size    = try!(reader.read_u32::<LittleEndian>());
+          chunk_buffer  = vec![0u8; chunk_size as usize];
           try!(reader.read(&mut chunk_buffer));
-          let chunk       = try!(FormatChunk::read(&chunk_buffer));
-          compression     = chunk.compression_type;
-          bit_rate        = chunk.bit_rate        as u32;
-          sample_rate     = chunk.sample_rate;
-          num_channels    = chunk.num_of_channels as u32;
-          block_size      = chunk.block_size      as u32;
-          fmt_chunk_read  = true;
-          pos            += chunk_size            as i64;
+          let chunk     = try!(FormatChunk::read(&chunk_buffer));
+          container.compression     = chunk.compression_type;
+          container.bit_rate        = chunk.bit_rate      as u32;
+          container.sample_rate     = chunk.sample_rate;
+          container.channels        = chunk.num_channels  as u32;
+          container.block_size      = chunk.block_size    as u32;
+          fmt_chunk_read            = true;
+          pos                      += chunk_size          as i64;
         },
         Some(WaveChunk::Data) => {
           if !fmt_chunk_read {
@@ -75,14 +78,14 @@ impl Container for WaveContainer {
             ))
           }
           chunk_size      = try!(reader.read_u32::<LittleEndian>());
-          bytes           = vec![0u8; chunk_size as usize];
-          try!(reader.read(&mut bytes));
+          container.bytes = vec![0u8; chunk_size as usize];
+          try!(reader.read(&mut container.bytes));
           data_chunk_read = true;
           pos            += chunk_size as i64;
         },
         None => {
-          let size = try!(reader.read_u32::<LittleEndian>());
-          pos += size as i64;
+          chunk_size  = try!(reader.read_u32::<LittleEndian>());
+          pos        += chunk_size as i64;
           let new_pos = reader.seek(SeekFrom::Current(pos))
             .ok().expect("Error while seeking in reader");
           if new_pos > file_size as u64 {
@@ -103,21 +106,13 @@ impl Container for WaveContainer {
         "File is not valid WAVE (Missing required Data chunk)".to_string()
       ))
     }
-    let sample_order =
-      if num_channels == 1u32 {
+    container.order =
+      if container.channels == 1u32 {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED
       };
-    Ok(WaveContainer {
-      compression:  compression,
-      bit_rate:     bit_rate,
-      sample_rate:  sample_rate,
-      channels:     num_channels,
-      block_size:   block_size,
-      order:        sample_order,
-      bytes:        bytes
-    })
+    Ok(container)
   }
 
   #[inline]
@@ -193,7 +188,6 @@ fn identify<R: Read + Seek>(reader: &mut R) -> AudioResult<WaveChunk> {
   match &buffer {
     FMT  => Ok(WaveChunk::Format),
     DATA => Ok(WaveChunk::Data),
-    //FACT => Ok(WaveChunk::Fact),
     err @ _ => 
       Err(AudioError::FormatError(
         format!("Do not recognize RIFF chunk with identifier {:?}", err)

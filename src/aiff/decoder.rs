@@ -10,6 +10,7 @@ pub struct Decoder<R> where R: Read + Seek {
 }
 
 impl<R> Decoder<R> where R: Read + Seek {
+  #[inline]
   pub fn new(reader: R) -> Decoder<R> {
     Decoder {
       reader: reader
@@ -18,20 +19,16 @@ impl<R> Decoder<R> where R: Read + Seek {
 }
 
 impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
+  #[inline]
   fn decode(mut self) -> AudioResult<AudioBuffer> {
     let mut container = try!(AiffContainer::open(&mut self.reader));
-    let bit_rate = container.bit_rate;
-    let sample_rate = container.sample_rate;
-    let channels = container.channels;
-    let order = container.order;
-    let data: Vec<Sample> = try!(container.read_codec());
     Ok(
       AudioBuffer {
-        bit_rate:     bit_rate,
-        sample_rate:  sample_rate,
-        channels:     channels,
-        order:        order,
-        samples:      data
+        bit_rate:     container.bit_rate,
+        sample_rate:  container.sample_rate,
+        channels:     container.channels,
+        order:        container.order,
+        samples:      try!(container.read_codec())
       }
     )
   }

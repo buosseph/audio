@@ -13,13 +13,13 @@ const COMM: &'static [u8; 4] = b"COMM";
 const SSND: &'static [u8; 4] = b"SSND";
 
 pub struct AiffContainer {
-  compression: CompressionType,
-  pub bit_rate: u32,
-  pub sample_rate: u32,
-  pub channels: u32,
-  pub num_frames: u32,
-  pub order: SampleOrder,
-  pub bytes: Vec<u8>
+  compression:      CompressionType,
+  pub bit_rate:     u32,
+  pub sample_rate:  u32,
+  pub channels:     u32,
+  pub num_frames:   u32,
+  pub order:        SampleOrder,
+  pub bytes:        Vec<u8>
 }
 
 impl Container for AiffContainer {
@@ -30,14 +30,18 @@ impl Container for AiffContainer {
     || &header[8..12] != AIFF {
       return Err(AudioError::FormatError("Not valid AIFF".to_string()));
     }
-    let     file_size   : usize   = BigEndian::read_i32(&header[4..8]) as usize;
-    let mut pos         : i64     = 12i64;
-    let mut compression           = CompressionType::PCM;
-    let mut bit_rate    : u32     = 0u32;
-    let mut sample_rate : u32     = 0u32;
-    let mut num_channels: u32     = 0u32;
-    let mut num_frames  : u32     = 0u32;
-    let mut bytes       : Vec<u8> = Vec::new();
+    let     file_size : usize = BigEndian::read_i32(&header[4..8]) as usize;
+    let mut pos       : i64   = 12i64;
+    let mut container = 
+      AiffContainer {
+        compression:  CompressionType::PCM,
+        bit_rate:     0u32,
+        sample_rate:  0u32,
+        channels:     0u32,
+        num_frames:   0u32,
+        order:        SampleOrder::MONO,
+        bytes:        Vec::new()
+      };
     let mut comm_chunk_read       = false;
     let mut ssnd_chunk_read       = false;
     let mut chunk_size;
@@ -46,17 +50,17 @@ impl Container for AiffContainer {
       pos += 4i64;
       match identify(reader).ok() {
         Some(AiffChunk::Common) => {
-          chunk_size      = try!(reader.read_i32::<BigEndian>());
-          chunk_buffer    = vec![0u8; chunk_size as usize];
+          chunk_size    = try!(reader.read_i32::<BigEndian>());
+          chunk_buffer  = vec![0u8; chunk_size as usize];
           try!(reader.read(&mut chunk_buffer));
-          let chunk       = try!(CommonChunk::read(&chunk_buffer));
-          compression     = CompressionType::PCM; // only option in AIFF, not AIFC
-          bit_rate        = chunk.bit_rate      as u32;
-          sample_rate     = chunk.sample_rate   as u32;
-          num_channels    = chunk.num_channels  as u32;
-          num_frames      = chunk.num_sample_frames;
-          comm_chunk_read = true;
-          pos            += chunk_size          as i64;
+          let chunk     = try!(CommonChunk::read(&chunk_buffer));
+          container.compression     = CompressionType::PCM; // only option in AIFF, not AIFC
+          container.bit_rate        = chunk.bit_rate      as u32;
+          container.sample_rate     = chunk.sample_rate   as u32;
+          container.channels        = chunk.num_channels  as u32;
+          container.num_frames      = chunk.num_frames;
+          comm_chunk_read           = true;
+          pos                      += chunk_size          as i64;
         },
         Some(AiffChunk::SoundData) => {
           if !comm_chunk_read {
@@ -70,13 +74,13 @@ impl Container for AiffContainer {
           try!(reader.read(&mut chunk_buffer));
           // let offset      : u32 = BigEndian::read_u32(&chunk_buffer[0..4]);
           // let block_size  : u32 = BigEndian::read_u32(&chunk_buffer[4..8]);
-          bytes                 = chunk_buffer[8..].to_vec();
+          container.bytes       = chunk_buffer[8..].to_vec();
           ssnd_chunk_read       = true;
           pos                  += chunk_size as i64;
         },
         None => {
-          let size = try!(reader.read_i32::<BigEndian>());
-          pos += size as i64;
+          chunk_size  = try!(reader.read_i32::<BigEndian>());
+          pos        += chunk_size as i64;
           let new_pos = reader.seek(SeekFrom::Current(pos)).ok()
             .expect("Error while seeking in reader");
           if new_pos > file_size as u64 {
@@ -99,21 +103,13 @@ impl Container for AiffContainer {
         (Missing required SoundData chunk)".to_string()
       ))
     }
-    let sample_order =
-      if num_channels == 1u32 {
+    container.order =
+      if container.channels == 1u32 {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED
       };
-    Ok(AiffContainer {
-      compression:  compression,
-      bit_rate:     bit_rate,
-      sample_rate:  sample_rate,
-      channels:     num_channels,
-      num_frames:   num_frames,
-      order:        sample_order,
-      bytes:        bytes
-    })
+    Ok(container)
   }
 
   #[inline]
