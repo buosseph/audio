@@ -4,7 +4,7 @@ use byteorder::{ByteOrder, ReadBytesExt, LittleEndian};
 use traits::Chunk;
 use error::*;
 
-/// Enumeration of WAVE chunks
+/// Enumeration of supported WAVE chunks
 pub enum WaveChunk {
   Format,
   Data
@@ -23,7 +23,10 @@ impl fmt::Display for CompressionType {
   }
 }
 
-/// The format chunck contains most of the audio realted meta data in `WAV` files
+/// The WAVE Format Chunk.
+///
+/// This chunk provides most of the information
+/// required to decode the sampled data.
 #[derive(Debug, Clone, Copy)]
 pub struct FormatChunk {
   pub compression_type: CompressionType,
@@ -35,6 +38,7 @@ pub struct FormatChunk {
 }
 
 impl Chunk for FormatChunk {
+  #[inline]
   fn read(buffer: &[u8]) -> AudioResult<FormatChunk> {
     let compression_type : CompressionType = 
       match LittleEndian::read_u16(&buffer[0..2]) {
@@ -75,5 +79,4 @@ mod tests {
     assert_eq!(0x52B5, LittleEndian::read_i16(&buf[2..4]));
     assert_eq!(21173i16, LittleEndian::read_i16(&buf[2..4]));
   }
-
 }

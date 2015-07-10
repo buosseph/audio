@@ -7,7 +7,7 @@ use byteorder::{ByteOrder, ReadBytesExt, BigEndian};
 use traits::Chunk;
 use error::*;
 
-/// Enumeration of AIFF chunks.
+/// Enumeration of supported AIFF chunks.
 pub enum AiffChunk {
   Common,
   SoundData
@@ -15,7 +15,7 @@ pub enum AiffChunk {
 
 /// Enumeration of supported compression codes in the AIFC common chunk.
 ///
-/// Note, in traditional AIFF files there is no option for compression.
+/// In traditional AIFF files there is no option for compression.
 /// However, AIFC files are often labeled as `.aiff` despite being a
 /// different format. AIFC decoding is not currently supported.
 #[allow(dead_code)]

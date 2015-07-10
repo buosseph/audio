@@ -1,8 +1,9 @@
-use std::path::Path;
 use std::fs::File;
+use std::io::{Read, Seek, Write};
+use std::path::Path;
 use buffer::*;
 use error::*;
-use std::io::{Read, Seek, Write};
+use traits::{AudioDecoder, AudioEncoder};
 use wave::Decoder as WaveDecoder;
 use wave::Encoder as WaveEncoder;
 use aiff::Decoder as AiffDecoder;
@@ -60,7 +61,6 @@ pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBu
 /// is determined by the path file extension. An `AudioError` is 
 /// returned if the file type is not supported or if an error occurred
 /// in the encoding process. 
-#[allow(unused_variables)]
 pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   if let Some(ext) = path.extension() {
     if let Some(file_format) = ext.to_str() {
@@ -86,16 +86,4 @@ pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat)
     AudioFormat::WAVE  => WaveEncoder::new(writer).encode(audio),
     AudioFormat::AIFF => AiffEncoder::new(writer).encode(audio),
   }
-}
-
-/// Trait which all decoders must implement
-pub trait AudioDecoder {
-  fn decode(self) -> AudioResult<AudioBuffer>;
-  //fn open_container(&mut self) -> AudioResult<Vec<u8>>;
-  //fn read_codec(codec: Codec, data: Vec<u8>) -> AudioResult<Vec<Sample>>;
-}
-
-/// Trait which all encoders must implement
-pub trait AudioEncoder {
-  fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()>;
 }

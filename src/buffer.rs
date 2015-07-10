@@ -2,7 +2,7 @@ pub type Sample = f64;
 
 /// An enumeration for keeping track of how samples are organized in the loaded audio.
 /// Multichannel samples are usually interleaved, but other orderings are included if they
-/// are needed in the furutre.
+/// are needed in the future.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum SampleOrder { MONO, INTERLEAVED, REVERSED, PLANAR }
 
@@ -13,5 +13,5 @@ pub struct AudioBuffer {
   pub sample_rate: u32,
   pub channels: u32,
   pub order: SampleOrder,
-  pub samples: Vec<Sample>,
+  pub samples: Vec<Sample>
 }

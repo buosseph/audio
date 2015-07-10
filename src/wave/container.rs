@@ -3,11 +3,7 @@ use buffer::*;
 use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LittleEndian};
 use codecs::{Endian, Codec, AudioCodec, LPCM};
 use traits::{Container, Chunk};
-use wave::chunks::{
-  CompressionType,
-  WaveChunk,
-  FormatChunk
-};
+use wave::chunks::*;
 use error::*;
 
 /// WAVE chunk identifiers
@@ -125,14 +121,10 @@ impl Container for WaveContainer {
         ))
     };
     match codec {
-      // Change endian to LittleEndian
       Codec::LPCM => LPCM::read(&mut self.bytes, Endian::LittleEndian, &self.bit_rate, &self.channels)
     }
   }
 
-  /// Writes the provided audio into a valid WaveContainer
-  /// give the codec specified is supported by the format.
-  #[allow(unused_assignments)]
   fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
     match audio.order {
       SampleOrder::MONO         => {},

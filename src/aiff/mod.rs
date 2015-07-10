@@ -1,9 +1,7 @@
 //! The Audio Interchange File Format
 //!
-//! AIFF files use the Interchange File Format (IFF) is a generic
+//! AIFF files use the Interchange File Format (IFF), a generic
 //! file container format that uses chunks to store data.
-//! Traditionally all bytes are stored in big-endian format,
-//! but some files are 
 
 //! References
 //! - [McGill University](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html)
@@ -17,7 +15,6 @@ pub mod encoder;
 
 pub use aiff::decoder::Decoder as Decoder;
 pub use aiff::encoder::Encoder as Encoder;
-
 
 #[cfg(test)]
 mod tests {

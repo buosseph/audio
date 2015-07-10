@@ -1,6 +1,6 @@
 //! The Waveform Audio File Format
 //!
-//! WAVE files use the Resource Interchange File Format (RIFF) is a generic
+//! WAVE files use the Resource Interchange File Format (RIFF), a generic
 //! file container format that uses chunks to store data.
 //! All integers are stored in little-endian format,
 //! but identifier bytes are in ASCII, big-endian.

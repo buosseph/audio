@@ -5,6 +5,15 @@ extern crate test;
 use std::path::Path;
 use test::Bencher;
 
+/*
+  A set of bench results for quick reference
+  test read_aiff_track  ... bench: 213,222,314 ns/iter (+/- 5,191,823)
+  test read_wave_track  ... bench: 190,206,245 ns/iter (+/- 6,010,546)
+  test write_aiff_track ... bench: 558,127,499 ns/iter (+/- 59,900,198)
+  test write_wave_track ... bench: 575,245,107 ns/iter (+/- 60,170,170)
+*/
+ 
+
 #[bench]
 fn empty(b: &mut Bencher) {
   b.iter(|| 1);
@@ -49,56 +58,5 @@ fn write_aiff_track(b: &mut Bencher) {
       &Path::new("tests/results/tmp_i16.aiff"),
       &audio
     ).ok().expect("Couldn't write file");
-  });
-}
-
-
-/*
- *  The benchmarks below are just to have some comparision
- *  with strictly reading from a File or BufReader.
- *
- *  One set of bench results for a quick reference
- *
- *  test read_aiff_track  ... bench: 327,196,191 ns/iter (+/- 83,703,581)
- *  test read_wave_track  ... bench: 356,682,279 ns/iter (+/- 55,742,915)
- *  test write_aiff_track ... bench: 843,659,323 ns/iter (+/- 519,412,469)
- *  test write_wave_track ... bench: 709,889,187 ns/iter (+/- 157,425,662)
- *
- *  test read_aiff_track  ... bench: 213,222,314 ns/iter (+/- 5,191,823)
- *  test read_wave_track  ... bench: 190,206,245 ns/iter (+/- 6,010,546)
- *  test write_aiff_track ... bench: 558,127,499 ns/iter (+/- 59,900,198)
- *  test write_wave_track ... bench: 575,245,107 ns/iter (+/- 60,170,170)
- */
-
-#[bench]
-fn file(b: &mut Bencher) {
-  use std::fs::File;
-  use std::io::Read;
-
-  b.iter(|| {
-    let mut fs = File::open(&Path::new("tests/aiff/Warrior Concerto - no meta.aiff"))
-      .ok().expect("Couldn't read file");
-    let meta = fs.metadata().ok().expect("Couldn't read metadata");
-    let size = meta.len() as usize;
-    let mut buffer: Vec<u8> = Vec::with_capacity(size);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
-    fs.read(&mut buffer).ok().expect("Error reading file to buffer");
-  });
-}
-
-#[bench]
-fn buf_reader(b: &mut Bencher) {
-  use std::fs::File;
-  use std::io::{BufReader, Read};
-
-  b.iter(|| {
-    let fs = File::open(&Path::new("tests/aiff/Warrior Concerto - no meta.aiff"))
-      .ok().expect("Couldn't read file");
-    let meta = fs.metadata().ok().expect("Couldn't read metadata");
-    let size = meta.len() as usize;
-    let mut reader = BufReader::with_capacity(size, fs);
-    let mut buffer: Vec<u8> = Vec::with_capacity(size);
-    for _ in 0..buffer.capacity() { buffer.push(0u8); }
-    reader.read(&mut buffer).ok().expect("Error reading file to buffer");
   });
 }

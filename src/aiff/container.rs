@@ -12,6 +12,8 @@ const AIFF: &'static [u8; 4] = b"AIFF";
 const COMM: &'static [u8; 4] = b"COMM";
 const SSND: &'static [u8; 4] = b"SSND";
 
+/// Struct containing all necessary information
+/// for encoding and decoding bytes to an `AudioBuffer`
 pub struct AiffContainer {
   compression:      CompressionType,
   pub bit_rate:     u32,
