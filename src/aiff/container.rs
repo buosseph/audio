@@ -1,6 +1,6 @@
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 use buffer::*;
-use byteorder::{ByteOrder, ReadBytesExt, BigEndian};
+use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, BigEndian};
 use codecs::{Endian, Codec, AudioCodec, LPCM};
 use traits::{Container, Chunk};
 use aiff::chunks::*;
@@ -135,41 +135,33 @@ impl Container for AiffContainer {
           "Multi-channel audio must be interleaved in IFF containers".to_string()
         ))
     }
-    let header_size  : usize = 54;
-    let num_channels : i16   = audio.channels     as i16;
-    let sample_rate  : u32   = audio.sample_rate  as u32;
-    let bit_rate     : i16   = audio.bit_rate     as i16;
-    let data: Vec<u8> = match codec {
-      Codec::LPCM => try!(LPCM::create(audio, Endian::BigEndian)),
-    };
-    let frame_size        : usize   = (num_channels * bit_rate) as usize / 8;
-    let num_frames        : u32     = (audio.samples.len() / num_channels as usize) as u32;
-    let extended          : Vec<u8> = convert_to_ieee_extended(sample_rate as f64);
-    let comm_chunk_size   : i32     = 18; // COMM chunk always 18 since we're not adding padding or compresion
-    let offset            : u32     = 0;
-    let block_size        : u32     = 0;
-    let data_size         : u32     = num_frames * frame_size as u32;
-    let ssnd_chunk_size   : i32     = 8i32 + data_size as i32;
-    let total_bytes       : u32     = 12u32
-                                    + (comm_chunk_size as u32 + 8u32)
-                                    + (ssnd_chunk_size as u32 + 8u32);
-    debug_assert_eq!(total_bytes, header_size as u32 + data_size);
-    let file_size         : u32     = total_bytes - 8;
-    let mut buffer        : Vec<u8> = Vec::with_capacity(total_bytes as usize);
-    for byte in FORM.iter() { buffer.push(*byte) }
-    for i in 0..4  { buffer.push(( file_size        >> 8 * (3 - i)) as u8) }
-    for byte in AIFF.iter() { buffer.push(*byte) }
-    for byte in COMM.iter() { buffer.push(*byte) }
-    for i in 0..4  { buffer.push(( comm_chunk_size  >> 8 * (3 - i)) as u8) }
-    for i in 0..2  { buffer.push(( num_channels     >> 8 * (1 - i)) as u8) }
-    for i in 0..4  { buffer.push(( num_frames       >> 8 * (3 - i)) as u8) }
-    for i in 0..2  { buffer.push(( bit_rate         >> 8 * (1 - i)) as u8) }
-    for i in 0..10 { buffer.push(extended[i]) }
-    for byte in SSND.iter() { buffer.push(*byte) }
-    for i in 0..4  { buffer.push(( ssnd_chunk_size  >> 8 * (3 - i)) as u8) }
-    for i in 0..4  { buffer.push(( offset           >> 8 * (3 - i)) as u8) }
-    for i in 0..4  { buffer.push(( block_size       >> 8 * (3 - i)) as u8) }
-    for byte in data.iter() { buffer.push(*byte) }
+    let header_size     : u32     = 54; // Num bytes before audio samples. Always write 54 bytes
+    let comm_chunk_size : i32     = 18; // COMM chunk always 18 since we're not adding padding or compresion
+    let ssnd_chunk_size : i32     = 8
+                                  + (audio.samples.len() as u32 * audio.bit_rate / 8) as i32;
+    let total_bytes     : u32     = 12
+                                  + (comm_chunk_size as u32 + 8)
+                                  + (ssnd_chunk_size as u32 + 8);
+    let data            : Vec<u8> =
+      match codec {
+        Codec::LPCM => try!(LPCM::create(audio, Endian::BigEndian)),
+      };
+    debug_assert_eq!(total_bytes, header_size + audio.samples.len() as u32 * audio.bit_rate / 8);
+    let mut buffer      : Vec<u8> = Vec::with_capacity(total_bytes as usize);
+    try!(buffer.write(FORM));
+    try!(buffer.write_u32::<BigEndian>(total_bytes - 8));
+    try!(buffer.write(AIFF));
+    try!(buffer.write(COMM));
+    try!(buffer.write_i32::<BigEndian>(comm_chunk_size));
+    try!(buffer.write_i16::<BigEndian>(audio.channels as i16));
+    try!(buffer.write_u32::<BigEndian>(audio.samples.len() as u32 / audio.channels));
+    try!(buffer.write_i16::<BigEndian>(audio.bit_rate as i16));
+    try!(buffer.write(&convert_to_ieee_extended(audio.sample_rate as f64)));
+    try!(buffer.write(SSND));
+    try!(buffer.write_i32::<BigEndian>(ssnd_chunk_size));
+    try!(buffer.write_u32::<BigEndian>(0u32));  // offset. For now, always 0
+    try!(buffer.write_u32::<BigEndian>(0u32));  // block_size. For now, always 0
+    try!(buffer.write(&data));
     debug_assert_eq!(total_bytes as usize, buffer.len());
     Ok(buffer)
   }

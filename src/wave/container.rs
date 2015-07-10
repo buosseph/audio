@@ -1,6 +1,6 @@
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 use buffer::*;
-use byteorder::{ByteOrder, ReadBytesExt, LittleEndian};
+use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LittleEndian};
 use codecs::{Endian, Codec, AudioCodec, LPCM};
 use traits::{Container, Chunk};
 use wave::chunks::{
@@ -135,42 +135,39 @@ impl Container for WaveContainer {
   #[allow(unused_assignments)]
   fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
     match audio.order {
-      SampleOrder::MONO    => {},
-      SampleOrder::INTERLEAVED => {},
-      _     => return Err(AudioError::UnsupportedError("Multi-channel audio must be interleaved in RIFF containers".to_string()))
+      SampleOrder::MONO         => {},
+      SampleOrder::INTERLEAVED  => {},
+      _     => 
+        return Err(AudioError::UnsupportedError(
+          "Multi-channel audio must be interleaved in RIFF containers".to_string()
+        ))
     }
-    let header_size     : usize = 44; // Not really the header, but all data before audio samples
-    let num_of_channels : u16   = audio.channels as u16;
-    let sample_rate     : u32   = audio.sample_rate as u32;
-    let bit_rate        : u16   = audio.bit_rate as u16;
-    let data: Vec<u8> = match codec {
-      Codec::LPCM => try!(LPCM::create(audio, Endian::LittleEndian)),
-    };
-    let data_rate       : u32   = (audio.sample_rate * audio.channels * audio.bit_rate / 8) as u32;
-    let block_size      : usize = (audio.channels * audio.bit_rate) as usize / 8;
-    let fmt_chunk_size  : u32   = 16;
-    let num_of_frames   : usize = audio.samples.len() / audio.channels as usize;
-    let data_size       : u32   = (num_of_frames * block_size) as u32;
-    let total_bytes     : usize = header_size + data_size as usize; // Always write 44 byte header
-    let file_size       : u32   =  (total_bytes - 8) as u32;
-      // = 4 + (8 + fmt_chunk size) + (8 + (data_chunk size * block_size)) (NOTE: 8 bytes are purposely missing for riff_header and file_size)
-      // = 4 + (WAVE chunks) = total_bytes - 8 (exclude first 8 bytes)
-    let mut buffer      : Vec<u8>   = Vec::with_capacity(total_bytes);
-    for byte in RIFF.iter() { buffer.push(*byte) }
-    for i in 0..4 { buffer.push(( file_size         .swap_bytes() >> 8 * (3 - i)) as u8) }
-    for byte in WAVE.iter() { buffer.push(*byte) }
-    for byte in  FMT.iter() { buffer.push(*byte) }
-    for i in 0..4 { buffer.push(( fmt_chunk_size    .swap_bytes() >> 8 * (3 - i)) as u8) }
-    for i in 0..2 { buffer.push(( 1u16              .swap_bytes() >> 8 * (1 - i)) as u8) } // Always encode as PCM
-    for i in 0..2 { buffer.push(( num_of_channels   .swap_bytes() >> 8 * (1 - i)) as u8) }
-    for i in 0..4 { buffer.push(( sample_rate       .swap_bytes() >> 8 * (3 - i)) as u8) }
-    for i in 0..4 { buffer.push(( data_rate         .swap_bytes() >> 8 * (3 - i)) as u8) }
-    for i in 0..2 { buffer.push(((block_size as u16).swap_bytes() >> 8 * (1 - i)) as u8) }
-    for i in 0..2 { buffer.push(( bit_rate          .swap_bytes() >> 8 * (1 - i)) as u8) }
-    for byte in DATA.iter() { buffer.push(*byte) }
-    for i in 0..4 { buffer.push(( data_size         .swap_bytes() >> 8 * (3 - i)) as u8) }
-    for byte in data.iter() { buffer.push(*byte) }
-    debug_assert_eq!(total_bytes, buffer.len());
+    let header_size     : u32     = 44; // Num bytes before audio samples. Always write 44 bytes
+    let fmt_chunk_size  : u32     = 16;
+    let total_bytes     : u32     = 12
+                                  + (8 + fmt_chunk_size)
+                                  + (8 + (audio.samples.len() as u32 * audio.bit_rate / 8));
+    let data            : Vec<u8> =
+      match codec {
+        Codec::LPCM => try!(LPCM::create(audio, Endian::LittleEndian)),
+      };
+    debug_assert_eq!(total_bytes, header_size + audio.samples.len() as u32 * audio.bit_rate / 8);
+    let mut buffer      : Vec<u8> = Vec::with_capacity(total_bytes as usize);
+    try!(buffer.write(RIFF));
+    try!(buffer.write_u32::<LittleEndian>(total_bytes - 8));
+    try!(buffer.write(WAVE));
+    try!(buffer.write(FMT));
+    try!(buffer.write_u32::<LittleEndian>(fmt_chunk_size));
+    try!(buffer.write_u16::<LittleEndian>(1u16)); // Always LPCM
+    try!(buffer.write_u16::<LittleEndian>(audio.channels as u16));
+    try!(buffer.write_u32::<LittleEndian>(audio.sample_rate as u32));
+    try!(buffer.write_u32::<LittleEndian>(audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
+    try!(buffer.write_u16::<LittleEndian>((audio.channels * audio.bit_rate / 8u32) as u16));
+    try!(buffer.write_u16::<LittleEndian>(audio.bit_rate as u16));
+    try!(buffer.write(DATA));
+    try!(buffer.write_u32::<LittleEndian>((audio.samples.len() * ((audio.bit_rate) as usize / 8)) as u32));
+    try!(buffer.write(&data));
+    debug_assert_eq!(total_bytes as usize, buffer.len());
     Ok(buffer)
   }
 }
