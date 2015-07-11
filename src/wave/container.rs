@@ -136,7 +136,7 @@ impl Container for WaveContainer {
         ))
     };
     match codec {
-      Codec::LPCM => LPCM::read(&mut self.bytes, Endian::LittleEndian, &self.bit_rate, &self.channels)
+      Codec::LPCM => LPCM::read(&mut self.bytes, self.sample_format, Endian::LittleEndian, &self.channels)
     }
   }
 
@@ -151,14 +151,25 @@ impl Container for WaveContainer {
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
+    let sample_format = 
+      match audio.bit_rate {
+        8  => SampleFormat::Unsigned8,
+        16 => SampleFormat::Signed16,
+        24 => SampleFormat::Signed24,
+        32 => SampleFormat::Signed32,
+        _  =>
+          return Err(AudioError::FormatError(
+            "Wave format does not support sample format".to_string()
+          ))
+      };
     let header_size     : u32     = 44; // Num bytes before audio samples. Always write 44 bytes
     let fmt_chunk_size  : u32     = 16;
-    let total_bytes     : u32     = 12
+    let total_bytes     : u32     = 12 
                                   + (8 + fmt_chunk_size)
                                   + (8 + (audio.samples.len() as u32 * audio.bit_rate / 8));
-    let data            : Vec<u8> =
+    let data            : Vec<u8> = 
       match codec {
-        Codec::LPCM => try!(LPCM::create(audio, Endian::LittleEndian)),
+        Codec::LPCM => try!(LPCM::create(audio, sample_format, Endian::LittleEndian)),
       };
     debug_assert_eq!(total_bytes, header_size + audio.samples.len() as u32 * audio.bit_rate / 8);
     let mut buffer      : Vec<u8> = Vec::with_capacity(total_bytes as usize);

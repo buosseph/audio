@@ -1,30 +1,45 @@
+use std::mem;
 use buffer::*;
-use codecs::{Endian, AudioCodec};
-use error::{AudioResult, AudioError};
+use codecs::{AudioCodec, Endian};
+use error::AudioResult;
 use super::SampleFormat;
 
 #[allow(dead_code)]
 pub struct LPCM;
 
 impl AudioCodec for LPCM {
-  fn read(bytes: &mut Vec<u8>, endian: Endian, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>> {
+  fn read(bytes: &mut Vec<u8>, sample_format: SampleFormat, endian: Endian, channels: &u32) -> AudioResult<Vec<Sample>> {
     let le =
       match endian {
         Endian::LittleEndian => true,
         Endian::BigEndian    => false
+      };
+    let bit_rate    : u32       =
+      match sample_format {
+        SampleFormat::Unsigned8 => 8,
+        SampleFormat::Signed8   => 8,
+        SampleFormat::Signed16  => 16,
+        SampleFormat::Signed24  => 24,
+        SampleFormat::Signed32  => 32
       };
     let block_size  : usize     = (bit_rate / 8u32 * channels) as usize;
     let sample_size : usize     = (bit_rate / 8u32) as usize;
     let num_frames  : usize     = bytes.len() / block_size;
     let num_samples : usize     = bytes.len() / sample_size;
     let mut samples : Vec<f64>  = Vec::with_capacity(num_samples);
-    match *bit_rate as usize {
-      8   => {
+    // println!("{:?}", sample_format);
+    match sample_format {
+      SampleFormat::Unsigned8 => {
         for sample in bytes.iter() {
            samples.push((*sample as f64 - 128f64) / 128f64);
         }
       },
-      16  => {
+      SampleFormat::Signed8 => {
+        for sample in bytes.iter() {
+           samples.push(*sample as f64 / 128f64);
+        }
+      },
+      SampleFormat::Signed16 => {
         let mut sample: i16 = 0i16;
         let offset: isize =
           if le {
@@ -42,7 +57,7 @@ impl AudioCodec for LPCM {
           sample = 0;
         }
       },
-      24  => {
+      SampleFormat::Signed24 => {
         let mut sample: i32 = 0i32;
         let offset: isize =
           if le {
@@ -60,7 +75,7 @@ impl AudioCodec for LPCM {
           sample = 0;
         }
       },
-      32  => {
+      SampleFormat::Signed32 => {
         let mut sample: i32 = 0i32;
         let offset: isize =
           if le {
@@ -78,10 +93,6 @@ impl AudioCodec for LPCM {
           sample = 0;
         }
       },
-      _   => 
-        return Err(AudioError::UnsupportedError(
-          format!("Cannot read {}-bit LPCM", bit_rate)
-        ))
     }
     debug_assert_eq!(num_samples, samples.len());
     debug_assert_eq!(samples.capacity(), num_samples);
@@ -89,8 +100,7 @@ impl AudioCodec for LPCM {
     Ok(samples)
   }
 
-  fn create(audio: &AudioBuffer, endian: Endian) -> AudioResult<Vec<u8>> {
-    // Only support 8, 16, 24, 32 bit endcoding
+  fn create(audio: &AudioBuffer, sample_format: SampleFormat, endian: Endian) -> AudioResult<Vec<u8>> {
     let le =
       match endian {
         Endian::LittleEndian => true,
@@ -102,18 +112,26 @@ impl AudioCodec for LPCM {
     let num_bytes = num_samples * sample_size;
     let mut buffer: Vec<u8> = Vec::with_capacity(num_bytes);
     let mut sample: f64;
-    match bit_rate {
-      8   => {
+    match sample_format {
+      SampleFormat::Unsigned8 => {
         for i in 0..num_samples {
           buffer.push((audio.samples[i] * 128f64 + 128f64) as u8);
         }
       },
-      16  => {
+      SampleFormat::Signed8 => {
+        let mut write_sample: i8;
+        for i in 0..num_samples {
+          sample = audio.samples[i] * 128f64;
+          write_sample = sample as i8;
+          buffer.push(unsafe { mem::transmute_copy(&write_sample) });
+        }
+      },
+      SampleFormat::Signed16 => {
         let mut write_sample: i16;
         for i in 0..num_samples {
           sample = audio.samples[i] * 32768f64;
-          if sample > 32768f64 {
-            sample = 32768f64;
+          if sample > 32767f64 {
+            sample = 32767f64;
           }
           else if sample < -32768f64 {
             sample = -32768f64;
@@ -132,12 +150,12 @@ impl AudioCodec for LPCM {
           }
         }
       },
-      24  => {
+      SampleFormat::Signed24 => {
         let mut write_sample: i32;
         for i in 0..num_samples {
           sample = audio.samples[i] * 16_777_216f64;
-          if sample > 16_777_216f64 {
-            sample = 16_777_216f64;
+          if sample > 16_777_215f64 {
+            sample = 16_777_215f64;
           }
           else if sample < -16_777_216f64 {
             sample = -16_777_216f64;
@@ -158,12 +176,12 @@ impl AudioCodec for LPCM {
           }
         }
       },
-      32  => {
+      SampleFormat::Signed32 => {
         let mut write_sample: i32;
         for i in 0..num_samples {
           sample = audio.samples[i] * 2_147_483_648f64;
-          if sample > 2_147_483_648f64 {
-            sample = 2_147_483_648f64;
+          if sample > 2_147_483_647f64 {
+            sample = 2_147_483_647f64;
           }
           else if sample < -2_147_483_648f64 {
             sample = -2_147_483_648f64;
@@ -182,9 +200,6 @@ impl AudioCodec for LPCM {
           }
         }
       },
-      b @ _ => return Err(AudioError::UnsupportedError(
-        format!("Can't encode {}-bit LPCM", b)
-      ))
     }
     debug_assert_eq!(num_bytes, buffer.len());
     Ok(buffer)

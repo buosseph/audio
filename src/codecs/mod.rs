@@ -33,6 +33,6 @@ impl fmt::Display for Codec {
 
 /// A trait for all functions required by all codecs
 pub trait AudioCodec {
-  fn read(bytes: &mut Vec<u8>, endian: Endian, bit_rate: &u32, channels: &u32) -> AudioResult<Vec<Sample>>;
-  fn create(audio: &AudioBuffer, endian: Endian) -> AudioResult<Vec<u8>>;
+  fn read(bytes: &mut Vec<u8>, sample_format: SampleFormat, endian: Endian, channels: &u32) -> AudioResult<Vec<Sample>>;
+  fn create(audio: &AudioBuffer, sample_format: SampleFormat, endian: Endian) -> AudioResult<Vec<u8>>;
 }

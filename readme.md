@@ -15,11 +15,11 @@ A Rust audio decoding library
 | Format | Codec | Bit Rates |
 | ------ | ----- | --------- |
 | WAVE | PCM | u8, i16, i24, i32 |
-| AIFF | PCM | i16, i24, i32 |
+| AIFF | PCM | i8, i16, i24, i32 |
 
 ## Encoding
 
 | Format | Codec | Bit Rates |
 | ------ | ----- | --------- |
 | WAVE | PCM | u8, i16, i24, i32 |
-| AIFF | PCM | i16, i24, i32 |
+| AIFF | PCM | i8, i16, i24, i32 |
