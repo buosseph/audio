@@ -1,7 +1,7 @@
 use std::io::{Read, Seek, SeekFrom, Write};
 use buffer::*;
 use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, BigEndian};
-use codecs::{Endian, Codec, AudioCodec, LPCM};
+use codecs::{Endian, Codec, AudioCodec, LPCM, SampleFormat};
 use traits::{Container, Chunk};
 use aiff::chunks::*;
 use error::*;
@@ -16,6 +16,7 @@ const SSND: &'static [u8; 4] = b"SSND";
 /// for encoding and decoding bytes to an `AudioBuffer`
 pub struct AiffContainer {
   compression:      CompressionType,
+  sample_format:    SampleFormat,
   pub bit_rate:     u32,
   pub sample_rate:  u32,
   pub channels:     u32,
@@ -37,6 +38,7 @@ impl Container for AiffContainer {
     let mut container = 
       AiffContainer {
         compression:  CompressionType::PCM,
+        sample_format: SampleFormat::Signed16,
         bit_rate:     0u32,
         sample_rate:  0u32,
         channels:     0u32,
@@ -110,6 +112,17 @@ impl Container for AiffContainer {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED
+      };
+    container.sample_format =
+      match container.bit_rate {
+        8  => SampleFormat::Signed8, // AIFF only supports i8, AIFC supports u8
+        16 => SampleFormat::Signed16,
+        24 => SampleFormat::Signed24,
+        32 => SampleFormat::Signed32,
+        _ =>
+          return Err(AudioError::FormatError(
+            "Audio encoded with invalid sample format".to_string()
+          ))
       };
     Ok(container)
   }

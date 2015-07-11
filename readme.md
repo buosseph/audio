@@ -6,22 +6,20 @@ A Rust audio decoding library
 `AIFF` sample rates are stored as an 80 bit floating point number, so in order to read and write the bytes into a supported numeric type the conversion process uses an unstable float operation. Hopefully the operation is stablized by the next release.
 
 ## TODO
-- Add suppor for other AIFF bit rates
-- Optimize, optimize, optimize
+- Add support for other AIFF bit rates
+- Add support for AIFC (adds compression capability)
 - Explore other audio formats (don't hold your breath on this one)
 
 ## Decoding
-Supports:
 
 | Format | Codec | Bit Rates |
 | ------ | ----- | --------- |
-| WAVE | PCM | 8, 16, 24, 32 |
-| AIFF | PCM | 16 |
+| WAVE | PCM | u8, i16, i24, i32 |
+| AIFF | PCM | i16, i24, i32 |
 
 ## Encoding
-Support: 
 
 | Format | Codec | Bit Rates |
 | ------ | ----- | --------- |
-| WAVE | PCM | 8, 16, 24, 32 |
-| AIFF | PCM | 16 |
+| WAVE | PCM | u8, i16, i24, i32 |
+| AIFF | PCM | i16, i24, i32 |

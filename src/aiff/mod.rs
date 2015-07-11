@@ -74,4 +74,106 @@ mod tests {
       }
     }
   }
+
+  #[test]
+  fn i24_aiff_eq() {
+    let mut path = PathBuf::from("tests");
+    path.push("aiff");
+    path.push("empty.aiff");
+    let files = vec![
+      "mono440-i24-44100.aiff",
+      "stereo440-i24-44100.aiff"
+    ];
+
+    for file in files.iter() {
+      path.set_file_name(file);
+      println!("{:?}", path.as_path());
+      let audio = audio::open(path.as_path()).unwrap_or_else(
+        |err| {println!("{:?}", err); panic!();}
+      );
+      let total_samples = audio.samples.len();
+      let channels = audio.channels;
+      let bit_rate = audio.bit_rate;
+      let sample_rate = audio.sample_rate;
+      let sample_order = audio.order;
+
+      let write_loc = Path::new("tests/results/tmp_i24.aiff");
+      let written = audio::save(&write_loc, &audio);
+      println!("{:?}", written);
+      assert!(written.is_ok());
+      let verify: AudioBuffer = audio::open(&write_loc).unwrap();
+      assert_eq!(total_samples, verify.samples.len());
+      assert_eq!(channels, verify.channels);
+      assert_eq!(bit_rate, verify.bit_rate);
+      assert_eq!(sample_rate, verify.sample_rate);
+      assert_eq!(sample_order, verify.order);
+
+      // File sizes are the same
+      let read_file = File::open(path.as_path()).unwrap();
+      let written_file = File::open(&write_loc).unwrap();
+      let read_meta = read_file.metadata().unwrap();
+      let write_meta = written_file.metadata().unwrap();
+      assert_eq!(read_meta.len(), write_meta.len());
+
+      // Bytes are the same
+      let mut written_file_bytes = written_file.bytes();
+      for byte in read_file.bytes() {
+        assert_eq!(
+          byte.ok().expect("Error reading byte from read file"),
+          written_file_bytes.next().expect("End of file").ok().expect("Error reading byte from written file")
+        );
+      }
+    }
+  }
+
+  #[test]
+  fn i32_aiff_eq() {
+    let mut path = PathBuf::from("tests");
+    path.push("aiff");
+    path.push("empty.aiff");
+    let files = vec![
+      "mono440-i32-44100.aiff",
+      "stereo440-i32-44100.aiff"
+    ];
+
+    for file in files.iter() {
+      path.set_file_name(file);
+      println!("{:?}", path.as_path());
+      let audio = audio::open(path.as_path()).unwrap_or_else(
+        |err| {println!("{:?}", err); panic!();}
+      );
+      let total_samples = audio.samples.len();
+      let channels = audio.channels;
+      let bit_rate = audio.bit_rate;
+      let sample_rate = audio.sample_rate;
+      let sample_order = audio.order;
+
+      let write_loc = Path::new("tests/results/tmp_i32.aiff");
+      let written = audio::save(&write_loc, &audio);
+      println!("{:?}", written);
+      assert!(written.is_ok());
+      let verify: AudioBuffer = audio::open(&write_loc).unwrap();
+      assert_eq!(total_samples, verify.samples.len());
+      assert_eq!(channels, verify.channels);
+      assert_eq!(bit_rate, verify.bit_rate);
+      assert_eq!(sample_rate, verify.sample_rate);
+      assert_eq!(sample_order, verify.order);
+
+      // File sizes are the same
+      let read_file = File::open(path.as_path()).unwrap();
+      let written_file = File::open(&write_loc).unwrap();
+      let read_meta = read_file.metadata().unwrap();
+      let write_meta = written_file.metadata().unwrap();
+      assert_eq!(read_meta.len(), write_meta.len());
+
+      // Bytes are the same
+      let mut written_file_bytes = written_file.bytes();
+      for byte in read_file.bytes() {
+        assert_eq!(
+          byte.ok().expect("Error reading byte from read file"),
+          written_file_bytes.next().expect("End of file").ok().expect("Error reading byte from written file")
+        );
+      }
+    }
+  }
 }

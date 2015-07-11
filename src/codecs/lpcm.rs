@@ -1,6 +1,7 @@
 use buffer::*;
 use codecs::{Endian, AudioCodec};
 use error::{AudioResult, AudioError};
+use super::SampleFormat;
 
 #[allow(dead_code)]
 pub struct LPCM;
@@ -189,7 +190,6 @@ impl AudioCodec for LPCM {
     Ok(buffer)
   }
 }
-
 
 #[cfg(test)]
 mod tests {

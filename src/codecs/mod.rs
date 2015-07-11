@@ -10,6 +10,16 @@ pub enum Endian {
   BigEndian
 }
 
+/// How a sample is stored.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SampleFormat {
+  Unsigned8,
+  Signed8,
+  Signed16,
+  Signed24,
+  Signed32
+}
+
 /// An enumeration of all supported audio codecs
 pub enum Codec {
   LPCM

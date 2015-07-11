@@ -1,7 +1,7 @@
 use std::io::{Read, Seek, SeekFrom, Write};
 use buffer::*;
 use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LittleEndian};
-use codecs::{Endian, Codec, AudioCodec, LPCM};
+use codecs::{Endian, Codec, AudioCodec, LPCM, SampleFormat};
 use traits::{Container, Chunk};
 use wave::chunks::*;
 use error::*;
@@ -16,6 +16,7 @@ const DATA: &'static [u8; 4] = b"data";
 /// for encoding and decoding bytes to an `AudioBuffer`
 pub struct WaveContainer {
   compression:      CompressionType,
+  sample_format:    SampleFormat,
   pub bit_rate:     u32,
   pub sample_rate:  u32,
   pub channels:     u32,
@@ -32,13 +33,16 @@ impl Container for WaveContainer {
     try!(reader.read(header));
     if &header[0..4]  != RIFF
     || &header[8..12] != WAVE {
-      return Err(AudioError::FormatError("Not valid WAVE".to_string()));
+      return Err(AudioError::FormatError(
+        "Not valid WAVE".to_string()
+      ));
     }
     let     file_size : usize = LittleEndian::read_u32(&header[4..8]) as usize;
     let mut pos       : i64   = 12i64;
     let mut container =
       WaveContainer {
         compression:  CompressionType::PCM,
+        sample_format: SampleFormat::Signed16,
         bit_rate:     0u32,
         sample_rate:  0u32,
         channels:     0u32,
@@ -108,6 +112,17 @@ impl Container for WaveContainer {
       } else {
         SampleOrder::INTERLEAVED
       };
+    container.sample_format =
+      match container.bit_rate {
+        8  => SampleFormat::Unsigned8,
+        16 => SampleFormat::Signed16,
+        24 => SampleFormat::Signed24,
+        32 => SampleFormat::Signed32,
+        _ =>
+          return Err(AudioError::FormatError(
+            "Audio encoded with invalid sample format".to_string()
+          ))
+      };
     Ok(container)
   }
 
@@ -126,6 +141,8 @@ impl Container for WaveContainer {
   }
 
   fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
+    // Allow use of SampleFormat
+    // Must check for SampleFormat unsupported by wave
     match audio.order {
       SampleOrder::MONO         => {},
       SampleOrder::INTERLEAVED  => {},

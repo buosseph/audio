@@ -59,10 +59,10 @@ impl Chunk for CommonChunk {
 /// Converts the 10-byte extended floating-point format
 /// to a `f64` value.
 pub fn convert_from_ieee_extended(bytes: &[u8]) -> f64 {
-  let mut num: f64;
-  let mut exponent: isize;
-  let mut hi_mant: u32;
-  let mut low_mant: u32;
+  let mut num       : f64;
+  let mut exponent  : isize;
+  let     hi_mant   : u32;
+  let     low_mant  : u32;
 
   exponent = ( ((bytes[0] as u16 & 0x7f) << 8) | (bytes[1] & 0xff) as u16 ) as isize;
   hi_mant =   (bytes[2] as u32 & 0xff)  << 24
@@ -105,24 +105,19 @@ pub fn convert_to_ieee_extended(sample_rate: f64) -> Vec<u8>{
     let vec: Vec<u8> = vec![0,0,0,0,0,0,0,0,0,0];
     return vec;
   }
-
-  let mut num   : f64 = sample_rate;
-  let mut exponent: isize;
-  let mut f_mant  : f64;
-  let mut fs_mant : f64;
-  let mut hi_mant : u32;
-  let mut low_mant: u32;
-
-
+  let mut num       : f64 = sample_rate;
+  let mut exponent  : isize;
+  let mut f_mant    : f64;
+  let mut fs_mant   : f64;
+  let     hi_mant   : u32;
+  let     low_mant  : u32;
   let sign: isize = match num < 0f64 {
-    true => { num *= -1f64; 0x8000 },
+    true  => { num *= -1f64; 0x8000 },
     false => { 0x0000 }
   };
-
   let tuple = num.frexp();
   f_mant    = tuple.0;
   exponent  = tuple.1;
-
   if exponent > 16384 || !(f_mant < 1f64) {
     exponent  = (sign|0x7fff) as isize;
     hi_mant   = 0;
@@ -135,7 +130,7 @@ pub fn convert_to_ieee_extended(sample_rate: f64) -> Vec<u8>{
       exponent  = 0;
     }
 
-    exponent  |= sign as isize;
+    exponent |= sign as isize;
     f_mant    = f_mant * (32 as f64).exp2();
     fs_mant   = f_mant.floor();
     hi_mant   = fs_mant as u32;
@@ -143,7 +138,6 @@ pub fn convert_to_ieee_extended(sample_rate: f64) -> Vec<u8>{
     fs_mant   = f_mant.floor();
     low_mant  = fs_mant as u32;
   }
-
   let vec: Vec<u8> = vec![
     (exponent >> 8)   as u8,
      exponent         as u8,
@@ -156,7 +150,6 @@ pub fn convert_to_ieee_extended(sample_rate: f64) -> Vec<u8>{
     (low_mant >> 8)   as u8,
      low_mant         as u8
   ];
-
   return vec;
 }
 
