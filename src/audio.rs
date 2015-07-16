@@ -31,8 +31,8 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
         _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
       };
       // TODO: Test path, see if it's valid and return a useful error message
-      let file = try!(File::open(path));
-      load(file, format)
+      let mut file = try!(File::open(path));
+      load(&mut file, format)
     }
     else {
       Err(AudioError::FormatError("Did not recognize file format".to_string()))
@@ -50,9 +50,9 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 ///
 /// A reader, in this case, is any struct that implements the `Read` and
 /// `Seek` traits. One example would be a `File`.
-pub fn load<R: Read+Seek>(reader: R, format: AudioFormat) -> AudioResult<AudioBuffer> {
+pub fn load<R: Read+Seek>(reader: &mut R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
-    AudioFormat::WAVE  => WaveDecoder::new(reader).decode(),
+    AudioFormat::WAVE => WaveDecoder::new(reader).decode(),
     AudioFormat::AIFF => AiffDecoder::new(reader).decode(),
   }
 }
@@ -83,7 +83,7 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
 
 pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<()> {
   match format {
-    AudioFormat::WAVE  => WaveEncoder::new(writer).encode(audio),
+    AudioFormat::WAVE => WaveEncoder::new(writer).encode(audio),
     AudioFormat::AIFF => AiffEncoder::new(writer).encode(audio),
   }
 }

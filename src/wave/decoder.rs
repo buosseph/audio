@@ -6,27 +6,27 @@ use error::AudioResult;
 
 /// Decodes audio in wave format from the
 /// provided reader.
-pub struct Decoder<R> where R: Read + Seek {
-  reader: R,
+pub struct Decoder<'r, R: 'r> where R: Read + Seek {
+  reader: &'r mut R,
 }
 
-impl<R> Decoder<R> where R: Read + Seek {
+impl<'r, R> Decoder<'r, R> where R: Read + Seek {
   /// Create a new wave format `Decoder` using
   /// the provided reader.
   #[inline]
-  pub fn new(reader: R) -> Decoder<R> {
+  pub fn new(reader: &'r mut R) -> Decoder<R> {
     Decoder {
       reader: reader
     }
   }
 }
 
-impl<R> AudioDecoder for Decoder<R> where R: Read + Seek {
+impl<'r, R> AudioDecoder for Decoder<'r, R> where R: Read + Seek {
   /// Creates an `AudioBuffer` from the included reader via
   /// a `WaveContainer`.
   #[inline]
   fn decode(mut self) -> AudioResult<AudioBuffer> {
-    let mut container = try!(WaveContainer::open(&mut self.reader));
+    let mut container = try!(WaveContainer::open(self.reader));
     Ok(
       AudioBuffer {
         bit_rate:     container.bit_rate,
