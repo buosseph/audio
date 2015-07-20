@@ -48,10 +48,10 @@ impl Container for AiffContainer {
       };
     let mut comm_chunk_read       = false;
     let mut ssnd_chunk_read       = false;
-    let mut chunk_size;
-    let mut chunk_buffer;
+    let mut chunk_size    : i32;
+    let mut chunk_buffer  : Vec<u8>;
     while pos < file_size as i64 {
-      pos += 4i64;
+      pos += 4;
       match identify(reader).ok() {
         Some(AiffChunk::Common) => {
           chunk_size    = try!(reader.read_i32::<BigEndian>());
@@ -108,7 +108,7 @@ impl Container for AiffContainer {
       ))
     }
     container.order =
-      if container.channels == 1u32 {
+      if container.channels == 1 {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED

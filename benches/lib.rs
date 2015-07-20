@@ -12,12 +12,6 @@ use test::Bencher;
   test write_aiff_track ... bench: 558,127,499 ns/iter (+/- 59,900,198)
   test write_wave_track ... bench: 575,245,107 ns/iter (+/- 60,170,170)
 */
- 
-
-#[bench]
-fn empty(b: &mut Bencher) {
-  b.iter(|| 1);
-}
 
 #[bench]
 fn read_wave_track(b: &mut Bencher) {

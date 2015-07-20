@@ -222,4 +222,44 @@ mod tests {
       }
     }
   }
+
+  #[test]
+  fn wave_metadata() {
+      let path = Path::new("tests/wav/Warrior Concerto.wav");
+      // let audio = audio::open(&path).ok().expect("Couldn't open read file");
+      let audio = match audio::open(&path) {
+        Ok(a) => a,
+        Err(e) => {println!("{:?}", e); panic!();}
+      };
+      let total_samples = audio.samples.len();
+      let channels = audio.channels;
+      let bit_rate = audio.bit_rate;
+      let sample_rate = audio.sample_rate;
+      let sample_order = audio.order;
+
+      let write_path = Path::new("tests/results/tmp_i16.wav");
+      let written = audio::save(&write_path, &audio);
+      println!("{:?}", written);
+      assert!(written.is_ok());
+      let verify: AudioBuffer = audio::open(&write_path).unwrap();
+      assert_eq!(total_samples, verify.samples.len());
+      assert_eq!(channels, verify.channels);
+      assert_eq!(bit_rate, verify.bit_rate);
+      assert_eq!(sample_rate, verify.sample_rate);
+      assert_eq!(sample_order, verify.order);
+
+      // Check if bytes are the same,
+      // but file sizes won't be.
+      let read_file = File::open(&path).unwrap();
+      let written_file = File::open(&write_path).unwrap();
+      let mut read_file_bytes = read_file.bytes().skip(8);
+      let written_file_bytes = written_file.bytes().skip(8);
+
+      for byte in written_file_bytes {
+        assert_eq!(
+          byte.ok().expect("Error reading byte from read file"),
+          read_file_bytes.next().expect("End of file").ok().expect("Error reading byte from written file")
+        );
+      }
+  }
 }

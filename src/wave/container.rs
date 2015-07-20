@@ -37,8 +37,8 @@ impl Container for WaveContainer {
         "Not valid WAVE".to_string()
       ));
     }
-    let     file_size : usize = LittleEndian::read_u32(&header[4..8]) as usize;
-    let mut pos       : i64   = 12i64;
+    let     file_size : i64 = LittleEndian::read_u32(&header[4..8]) as i64;
+    let mut pos       : i64 = 12;
     let mut container =
       WaveContainer {
         compression:  CompressionType::PCM,
@@ -52,10 +52,10 @@ impl Container for WaveContainer {
       };
     let mut fmt_chunk_read  = false;
     let mut data_chunk_read = false;
-    let mut chunk_size;
-    let mut chunk_buffer;
-    while pos < file_size as i64 {
-      pos += 4i64;
+    let mut chunk_size    : u32;
+    let mut chunk_buffer  : Vec<u8>;
+    while pos < file_size {
+      pos += 4;
       match identify(reader).ok() {
         Some(WaveChunk::Format) => {
           chunk_size    = try!(reader.read_u32::<LittleEndian>());
@@ -86,9 +86,9 @@ impl Container for WaveContainer {
         None => {
           chunk_size  = try!(reader.read_u32::<LittleEndian>());
           pos        += chunk_size as i64;
-          let new_pos = reader.seek(SeekFrom::Current(pos))
+          let new_pos = reader.seek(SeekFrom::Current(0i64))
             .ok().expect("Error while seeking in reader");
-          if new_pos > file_size as u64 {
+          if new_pos as i64 > file_size {
             return Err(AudioError::FormatError(
               "Some chunk trying to read past end of file".to_string()
             ));
@@ -107,7 +107,7 @@ impl Container for WaveContainer {
       ))
     }
     container.order =
-      if container.channels == 1u32 {
+      if container.channels == 1 {
         SampleOrder::MONO
       } else {
         SampleOrder::INTERLEAVED
