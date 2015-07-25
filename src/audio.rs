@@ -50,6 +50,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 ///
 /// A reader, in this case, is any struct that implements the `Read` and
 /// `Seek` traits. One example would be a `File`.
+#[inline]
 pub fn load<R: Read+Seek>(reader: &mut R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
     AudioFormat::WAVE => WaveDecoder::new(reader).decode(),
@@ -81,6 +82,7 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   }
 }
 
+#[inline]
 pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<()> {
   match format {
     AudioFormat::WAVE => WaveEncoder::new(writer).encode(audio),

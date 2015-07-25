@@ -11,6 +11,11 @@ use test::Bencher;
   test read_wave_track  ... bench: 190,206,245 ns/iter (+/- 6,010,546)
   test write_aiff_track ... bench: 558,127,499 ns/iter (+/- 59,900,198)
   test write_wave_track ... bench: 575,245,107 ns/iter (+/- 60,170,170)
+
+  test read_aiff_track  ... bench: 213,277,240 ns/iter (+/- 21,170,408)
+  test read_wave_track  ... bench: 188,553,543 ns/iter (+/- 10,530,567)
+  test write_aiff_track ... bench: 511,071,694 ns/iter (+/- 41,764,043)
+  test write_wave_track ... bench: 511,452,893 ns/iter (+/- 29,463,334)
 */
 
 #[bench]
