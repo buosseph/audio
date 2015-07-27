@@ -1,23 +1,20 @@
 //! AIFF Chunks
-//!
-//! This module is unstable unitl
-//! `f64::frexp` is stablized.
 use std::fmt;
 use byteorder::{ByteOrder, ReadBytesExt, BigEndian};
 use traits::Chunk;
 use error::*;
 
-/// Enumeration of supported AIFF chunks.
+/// Supported AIFF chunks.
 pub enum AiffChunk {
   Common,
   SoundData
 }
 
-/// Enumeration of supported compression codes in the AIFC common chunk.
+/// Supported compression codes in the AIFC common chunk.
 ///
-/// In traditional AIFF files there is no option for compression.
-/// However, AIFC files are often labeled as `.aiff` despite being a
-/// different format. AIFC decoding is not currently supported.
+/// In traditional AIFF files there is no option for compression. However, AIFC
+/// files are often labeled as `.aiff` despite being a different format. AIFC 
+/// decoding is not currently supported.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionType {
@@ -33,8 +30,8 @@ impl fmt::Display for CompressionType {
 
 /// The AIFF Common Chunk.
 ///
-/// This chunk provides most of the information
-/// required to decode the sampled data.
+/// This chunk provides most of the information required to decode the sampled
+/// data.
 #[derive(Debug, Clone, Copy)]
 pub struct CommonChunk {
   pub num_channels: i16,
@@ -56,8 +53,42 @@ impl Chunk for CommonChunk {
   }
 }
 
-/// Converts the 10-byte extended floating-point format
-/// to a `f64` value.
+/// Breaks number into a normalized fraction and a base-2 exponent, satisfying:
+/// > - `self = x * 2^exp`
+/// > - `0.5 <= abs(x) < 1.0`
+fn frexp(num: f64) -> (f64, isize) {
+  use std::mem;
+
+  if num == 0f64 || num.is_nan() || num.is_infinite(){
+    (num, 0isize)
+  }
+  else {
+    let neg = num < 0f64;
+    let bits: u64 = unsafe {mem::transmute_copy(&num)};
+    let mut exponent: isize = ((bits >> 52) & (0x7ff)) as isize;
+    let mut mantissa: u64 = bits & 0xfffffffffffff;
+    if exponent == 0 {
+      exponent += 1;
+    }
+    else {
+      mantissa = mantissa | (1u64 << 52);
+    }
+    exponent -= 1075;
+    let mut real_mantissa = mantissa as f64;
+    // Normalize
+    while real_mantissa > 1f64 {
+      mantissa >>= 1;
+      real_mantissa /= 2f64;
+      exponent += 1;
+    }
+    if neg {
+      real_mantissa *= -1f64;
+    }
+    (real_mantissa, exponent)
+  }
+}
+
+/// Converts the 10-byte extended floating-point format to a `f64` value.
 pub fn convert_from_ieee_extended(bytes: &[u8]) -> f64 {
   let mut num       : f64;
   let mut exponent  : isize;
@@ -98,8 +129,7 @@ pub fn convert_from_ieee_extended(bytes: &[u8]) -> f64 {
 }
 
 
-/// Converts a `f64` value to a 10-byte extended
-/// floating-point format.
+/// Converts a `f64` value to a 10-byte extended floating-point format.
 pub fn convert_to_ieee_extended(sample_rate: f64) -> Vec<u8>{
   if sample_rate == 0f64 {
     let vec: Vec<u8> = vec![0,0,0,0,0,0,0,0,0,0];
@@ -115,7 +145,7 @@ pub fn convert_to_ieee_extended(sample_rate: f64) -> Vec<u8>{
     true  => { num *= -1f64; 0x8000 },
     false => { 0x0000 }
   };
-  let tuple = num.frexp();
+  let tuple = frexp(num);
   f_mant    = tuple.0;
   exponent  = tuple.1;
   if exponent > 16384 || !(f_mant < 1f64) {

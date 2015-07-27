@@ -4,13 +4,13 @@ use byteorder::{ByteOrder, ReadBytesExt, LittleEndian};
 use traits::Chunk;
 use error::*;
 
-/// Enumeration of supported WAVE chunks
+/// Supported WAVE chunks
 pub enum WaveChunk {
   Format,
   Data
 }
 
-/// Enumeration of supported compression codes in the WAVE format chunk
+/// Supported compression codes in the WAVE format chunk
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionType {
   Unknown = 0,
@@ -25,8 +25,8 @@ impl fmt::Display for CompressionType {
 
 /// The WAVE Format Chunk.
 ///
-/// This chunk provides most of the information
-/// required to decode the sampled data.
+/// This chunk provides most of the information required to decode the sampled
+/// data.
 #[derive(Debug, Clone, Copy)]
 pub struct FormatChunk {
   pub compression_type: CompressionType,

@@ -1,5 +1,3 @@
-#![feature(float_extras)]
-
 /** Terminology:
  *  Sample  - A single recorded value independent of channel.
  *  Frame - A set of samples, one from each channel, to be played simultaneously. This is also called a block in some formats.
