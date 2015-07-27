@@ -23,6 +23,7 @@ mod tests {
   use std::path::{Path, PathBuf};
   use ::audio;
   use ::buffer::AudioBuffer;
+  use ::codecs::SampleFormat;
 
   /* AIFF supports i8, AIFC supports u8 */
   #[test]
@@ -48,7 +49,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i8.aiff");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed8);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -99,7 +100,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i16.aiff");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed16);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -150,7 +151,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i24.aiff");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed24);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -201,7 +202,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i32.aiff");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed32);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();

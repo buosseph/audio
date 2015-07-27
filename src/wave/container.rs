@@ -1,19 +1,22 @@
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use buffer::*;
-use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LittleEndian};
-use codecs::{Endian, Codec, AudioCodec, LPCM, SampleFormat};
-use traits::{Container, Chunk};
+use buffer::SampleOrder::*;
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
+use codecs::{AudioCodec, Codec, Endian, LPCM, SampleFormat};
+use codecs::SampleFormat::*;
+use traits::{Chunk, Container};
 use wave::chunks::*;
+use wave::chunks::WaveChunk::*;
 use error::*;
 
-/// WAVE chunk identifiers
+/// WAVE chunk identifiers.
 const RIFF: &'static [u8; 4] = b"RIFF";
 const WAVE: &'static [u8; 4] = b"WAVE";
 const FMT:  &'static [u8; 4] = b"fmt ";
 const DATA: &'static [u8; 4] = b"data";
 
-/// Struct containing all necessary information
-/// for encoding and decoding bytes to an `AudioBuffer`
+/// Struct containing all necessary information for encoding and decoding
+/// bytes to an `AudioBuffer`.
 pub struct WaveContainer {
   compression:      CompressionType,
   sample_format:    SampleFormat,
@@ -22,192 +25,192 @@ pub struct WaveContainer {
   pub channels:     u32,
   pub block_size:   u32,
   pub order:        SampleOrder,
-  pub bytes:        Vec<u8>
+  pub samples:      Vec<Sample>
 }
 
 impl Container for WaveContainer {
-  /// Reads the bytes provided from the reader.
-  /// This is where the reading of chunks ocurrs.
   fn open<R: Read + Seek>(reader: &mut R) -> AudioResult<WaveContainer> {
-    let header: &mut[u8] = &mut[0u8; 12];
-    try!(reader.read(header));
-    if &header[0..4]  != RIFF
-    || &header[8..12] != WAVE {
+    // Read and validate riff header
+    let mut riff_header: [u8; 12] = [0u8; 12];
+    try!(reader.read(&mut riff_header));
+    if &riff_header[0..4]  != RIFF
+    || &riff_header[8..12] != WAVE {
       return Err(AudioError::FormatError(
         "Not valid WAVE".to_string()
       ));
     }
-    let     file_size : i64 = LittleEndian::read_u32(&header[4..8]) as i64;
-    let mut pos       : i64 = 12;
+    let file_size : u32 = LittleEndian::read_u32(&riff_header[4..8]);
+    let mut buffer: Cursor<Vec<u8>> = Cursor::new(vec![0u8; file_size as usize]);
+    try!(reader.read(buffer.get_mut()));
+    // Read all supported chunks
     let mut container =
       WaveContainer {
-        compression:  CompressionType::PCM,
-        sample_format: SampleFormat::Signed16,
-        bit_rate:     0u32,
-        sample_rate:  0u32,
-        channels:     0u32,
-        block_size:   0u32,
-        order:        SampleOrder::MONO,
-        bytes:        Vec::new()
+        compression:    CompressionType::PCM,
+        sample_format:  SampleFormat::Signed16,
+        bit_rate:       0u32,
+        sample_rate:    0u32,
+        channels:       1u32,
+        block_size:     0u32,
+        order:          SampleOrder::MONO,
+        samples:        Vec::with_capacity(1024)
       };
-    let mut fmt_chunk_read  = false;
-    let mut data_chunk_read = false;
-    let mut chunk_size    : u32;
-    let mut chunk_buffer  : Vec<u8>;
-    while pos < file_size {
-      pos += 4;
-      match identify(reader).ok() {
-        Some(WaveChunk::Format) => {
-          chunk_size    = try!(reader.read_u32::<LittleEndian>());
-          chunk_buffer  = vec![0u8; chunk_size as usize];
-          try!(reader.read(&mut chunk_buffer));
-          let chunk     = try!(FormatChunk::read(&chunk_buffer));
-          container.compression     = chunk.compression_type;
-          container.bit_rate        = chunk.bit_rate      as u32;
-          container.sample_rate     = chunk.sample_rate;
-          container.channels        = chunk.num_channels  as u32;
-          container.block_size      = chunk.block_size    as u32;
-          fmt_chunk_read            = true;
-          pos                      += chunk_size          as i64;
+    let mut chunk_header    : [u8; 8] = [0u8; 8];
+    let mut read_fmt_chunk  : bool    = false;
+    let mut read_data_chunk : bool    = false;
+    while buffer.position() < file_size as u64 {
+      try!(buffer.read(&mut chunk_header));
+      let chunk_size  : usize = 
+        LittleEndian::read_u32(&chunk_header[4..8]) as usize;
+      let pos         : usize = buffer.position() as usize;
+      match identify(&chunk_header[0..4]).ok() {
+        Some(Format) => {
+          let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
+          let fmt_chunk = try!(FormatChunk::read(&chunk_bytes));
+          container.compression     = fmt_chunk.compression_type;
+          container.bit_rate        = fmt_chunk.bit_rate      as u32;
+          container.sample_rate     = fmt_chunk.sample_rate;
+          container.channels        = fmt_chunk.num_channels  as u32;
+          container.block_size      = fmt_chunk.block_size    as u32;
+          container.order           =
+            if container.channels == 1 {
+              SampleOrder::MONO
+            } else {
+              SampleOrder::INTERLEAVED
+            };
+          container.sample_format   =
+            match container.bit_rate {
+              8  => SampleFormat::Unsigned8,
+              16 => SampleFormat::Signed16,
+              24 => SampleFormat::Signed24,
+              32 => SampleFormat::Signed32,
+              _ =>
+                return Err(AudioError::FormatError(
+                  "Audio encoded with invalid sample format".to_string()
+                ))
+            };
+          read_fmt_chunk            = true;
         },
-        Some(WaveChunk::Data) => {
-          if !fmt_chunk_read {
+        Some(Data) => {
+          if !read_fmt_chunk {
             return Err(AudioError::FormatError(
               "File is not valid WAVE \
               (Format chunk does not occur before Data chunk)".to_string()
             ))
           }
-          chunk_size      = try!(reader.read_u32::<LittleEndian>());
-          container.bytes = vec![0u8; chunk_size as usize];
-          try!(reader.read(&mut container.bytes));
-          data_chunk_read = true;
-          pos            += chunk_size as i64;
+          let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
+          container.samples =
+            try!(read_codec(chunk_bytes, container.compression,
+                            container.sample_format, Endian::LittleEndian));
+          read_data_chunk = true;
         },
-        None => {
-          chunk_size  = try!(reader.read_u32::<LittleEndian>());
-          pos        += chunk_size as i64;
-          let new_pos = reader.seek(SeekFrom::Current(0i64))
-            .ok().expect("Error while seeking in reader");
-          if new_pos as i64 > file_size {
-            return Err(AudioError::FormatError(
-              "Some chunk trying to read past end of file".to_string()
-            ));
-          }
-        }
+        None => {}
       }
+      try!(buffer.seek(SeekFrom::Current(chunk_size as i64)));
     }
-    if !fmt_chunk_read {
+    // Check if required chunks were read
+    if !read_fmt_chunk {
       return Err(AudioError::FormatError(
         "File is not valid WAVE (Missing required Format chunk)".to_string()
       ))
     }
-    else if !data_chunk_read {
+    else if !read_data_chunk {
       return Err(AudioError::FormatError(
         "File is not valid WAVE (Missing required Data chunk)".to_string()
       ))
     }
-    container.order =
-      if container.channels == 1 {
-        SampleOrder::MONO
-      } else {
-        SampleOrder::INTERLEAVED
-      };
-    container.sample_format =
-      match container.bit_rate {
-        8  => SampleFormat::Unsigned8,
-        16 => SampleFormat::Signed16,
-        24 => SampleFormat::Signed24,
-        32 => SampleFormat::Signed32,
-        _ =>
-          return Err(AudioError::FormatError(
-            "Audio encoded with invalid sample format".to_string()
-          ))
-      };
     Ok(container)
   }
-
-  #[inline]
-  fn read_codec(&mut self) -> AudioResult<Vec<Sample>> {
-    let codec = match self.compression {
-      CompressionType::PCM => Codec::LPCM,
-      _ =>
-        return Err(AudioError::UnsupportedError(
-          "This file uses an unsupported codec".to_string()
-        ))
-    };
-    match codec {
-      Codec::LPCM => LPCM::read(&mut self.bytes, self.sample_format, Endian::LittleEndian, &self.channels)
-    }
-  }
-
-  fn create(codec: Codec, audio: &AudioBuffer) -> AudioResult<Vec<u8>> {
-    // Allow use of SampleFormat
-    // Must check for SampleFormat unsupported by wave
+  fn create<W: Write>(writer: &mut W, audio: &AudioBuffer, sample_format: SampleFormat, codec: Codec) -> AudioResult<()> {
+    // Determine if the sample order of the AudioBuffer is supported by the 
+    // wave format.
     match audio.order {
-      SampleOrder::MONO         => {},
-      SampleOrder::INTERLEAVED  => {},
-      _     => 
+      MONO        => {},
+      INTERLEAVED => {},
+      _           => 
         return Err(AudioError::UnsupportedError(
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
-    let sample_format = 
-      match audio.bit_rate {
-        8  => SampleFormat::Unsigned8,
-        16 => SampleFormat::Signed16,
-        24 => SampleFormat::Signed24,
-        32 => SampleFormat::Signed32,
-        _  =>
-          return Err(AudioError::FormatError(
-            "Wave format does not support sample format".to_string()
-          ))
-      };
-    let header_size     : u32     = 44; // Num bytes before audio samples. Always write 44 bytes
-    let fmt_chunk_size  : u32     = 16;
-    let total_bytes     : u32     = 12 
-                                  + (8 + fmt_chunk_size)
-                                  + (8 + (audio.samples.len() as u32 * audio.bit_rate / 8));
+    // Determine if sample format is supported by wave format.
+    match sample_format {
+      Unsigned8 |
+      Signed16  |
+      Signed24  |
+      Signed32  => {},
+      sf @ _    => 
+        return Err(AudioError::FormatError(
+          format!("Wave format does not support {:?} sample format", sf)
+        ))
+    }
+    // Convert the audio samples to the format of the corresponding codec.
     let data            : Vec<u8> = 
       match codec {
         Codec::LPCM => try!(LPCM::create(audio, sample_format, Endian::LittleEndian)),
       };
-    debug_assert_eq!(total_bytes, header_size + audio.samples.len() as u32 * audio.bit_rate / 8);
-    let mut buffer      : Vec<u8> = Vec::with_capacity(total_bytes as usize);
-    try!(buffer.write(RIFF));
-    try!(buffer.write_u32::<LittleEndian>(total_bytes - 8));
-    try!(buffer.write(WAVE));
-    try!(buffer.write(FMT));
-    try!(buffer.write_u32::<LittleEndian>(fmt_chunk_size));
-    try!(buffer.write_u16::<LittleEndian>(1u16)); // Always LPCM
-    try!(buffer.write_u16::<LittleEndian>(audio.channels as u16));
-    try!(buffer.write_u32::<LittleEndian>(audio.sample_rate as u32));
-    try!(buffer.write_u32::<LittleEndian>(audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
-    try!(buffer.write_u16::<LittleEndian>((audio.channels * audio.bit_rate / 8u32) as u16));
-    try!(buffer.write_u16::<LittleEndian>(audio.bit_rate as u16));
-    try!(buffer.write(DATA));
-    try!(buffer.write_u32::<LittleEndian>((audio.samples.len() * ((audio.bit_rate) as usize / 8)) as u32));
-    try!(buffer.write(&data));
-    debug_assert_eq!(total_bytes as usize, buffer.len());
-    Ok(buffer)
+    // Wave files created by this library do not support compression, so the
+    // format chunk will always be the same size: 16 bytes.
+    let fmt_chunk_size  : u32     = 16;
+    // Total number of bytes is determined by chunk sizes and the RIFF header,
+    // which is always 12 bytes. Every chunk specifies their size but doesn't
+    // include the chunk header, the first 8 bytes which contain the chunk
+    // identifier and chunk size.
+    //
+    // Currently, wave files created by this library only contains the necessary
+    // chunks for audio playback with no option for adding additional chunks for
+    // metadata.
+    let total_bytes     : u32     = 12
+                                  + (8 + fmt_chunk_size)
+                                  + (8 + data.len() as u32);
+    // Write the riff header to the writer.
+    try!(writer.write(RIFF));
+    try!(writer.write_u32::<LittleEndian>(total_bytes - 8));
+    try!(writer.write(WAVE));
+    // Write fmt chunk to the writer.
+    try!(writer.write(FMT));
+    try!(writer.write_u32::<LittleEndian>(fmt_chunk_size));
+    // Currently, all wave files created by this library will only be encoded
+    // using LPCM, the format standard.
+    try!(writer.write_u16::<LittleEndian>(1u16));
+    try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
+    try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
+    try!(writer.write_u32::<LittleEndian>(
+      audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
+    try!(writer.write_u16::<LittleEndian>(
+      (audio.channels * audio.bit_rate / 8u32) as u16));
+    try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
+    // Write data chunk to the writer.
+    try!(writer.write(DATA));
+    try!(writer.write_u32::<LittleEndian>(
+      (audio.samples.len() * ((audio.bit_rate) as usize / 8)) as u32));
+    try!(writer.write_all(&data));
+    Ok(())
   }
 }
 
-/// This function reads the four byte identifier for each RIFF chunk
-///
-/// If an unsupported chunk is found instead, the identifier bytes are lost
-/// and makes reading the remainder of the file for chunks impossible without
-/// skipping the length of the chunk indicated by the next four bytes available
-/// in the reader.
+/// This function reads the four byte identifier for each WAVE chunk.
 #[inline]
-fn identify<R: Read + Seek>(reader: &mut R) -> AudioResult<WaveChunk> {
-  let mut buffer = [0u8; 4];
-  try!(reader.read(&mut buffer));
-  match &buffer {
-    FMT  => Ok(WaveChunk::Format),
-    DATA => Ok(WaveChunk::Data),
+fn identify(bytes: &[u8]) -> AudioResult<WaveChunk> {
+  match &[bytes[0], bytes[1], bytes[2], bytes[3]] {
+    FMT  => Ok(Format),
+    DATA => Ok(Data),
     err @ _ => 
       Err(AudioError::FormatError(
-        format!("Do not recognize RIFF chunk with identifier {:?}", err)
+        format!("Do not recognize WAVE chunk with identifier {:?}", err)
       ))
+  }
+}
+fn read_codec(bytes: &[u8],
+              compression: CompressionType,
+              sample_format: SampleFormat,
+              endian: Endian) -> AudioResult<Vec<Sample>> {
+  let codec = match compression {
+    CompressionType::PCM => Codec::LPCM,
+    _ =>
+      return Err(AudioError::UnsupportedError(
+        "This file uses an unsupported codec".to_string()
+      ))
+  };
+  match codec {
+    Codec::LPCM => LPCM::read(bytes, sample_format, endian)
   }
 }

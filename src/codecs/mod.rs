@@ -20,7 +20,7 @@ pub enum SampleFormat {
   Signed32
 }
 
-/// An enumeration of all supported audio codecs
+/// All supported audio codecs.
 pub enum Codec {
   LPCM
 }
@@ -31,8 +31,8 @@ impl fmt::Display for Codec {
   }
 }
 
-/// A trait for all functions required by all codecs
+/// All functions required by all codecs
 pub trait AudioCodec {
-  fn read(bytes: &mut Vec<u8>, sample_format: SampleFormat, endian: Endian, channels: &u32) -> AudioResult<Vec<Sample>>;
+  fn read(bytes: &[u8], sample_format: SampleFormat, endian: Endian) -> AudioResult<Vec<Sample>>;
   fn create(audio: &AudioBuffer, sample_format: SampleFormat, endian: Endian) -> AudioResult<Vec<u8>>;
 }

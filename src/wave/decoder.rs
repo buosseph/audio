@@ -26,14 +26,14 @@ impl<'r, R> AudioDecoder for Decoder<'r, R> where R: Read + Seek {
   /// a `WaveContainer`.
   #[inline]
   fn decode(mut self) -> AudioResult<AudioBuffer> {
-    let mut container = try!(WaveContainer::open(self.reader));
+    let container = try!(WaveContainer::open(self.reader));
     Ok(
       AudioBuffer {
         bit_rate:     container.bit_rate,
         sample_rate:  container.sample_rate,
         channels:     container.channels,
         order:        container.order,
-        samples:      try!(container.read_codec())
+        samples:      container.samples
       }
     )
   }

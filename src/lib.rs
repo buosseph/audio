@@ -29,5 +29,7 @@ pub use audio::{
   open,
   load,
   save,
-  write
+  save_as,
+  write,
+  write_as
 };

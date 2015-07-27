@@ -24,6 +24,7 @@ mod tests {
   use std::path::{Path, PathBuf};
   use ::audio;
   use ::buffer::AudioBuffer;
+  use ::codecs::SampleFormat;
 
   #[test]
   fn u8_wave_eq() {
@@ -46,7 +47,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_u8.wav");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Unsigned8);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -87,7 +88,11 @@ mod tests {
     for file in files.iter() {
       path.set_file_name(file);
       println!("{:?}", path.as_path());
-      let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
+      let audio =
+        match audio::open(path.as_path()) {
+          Ok(a) => a,
+          Err(e) => panic!(format!("Error: {:?}", e))
+        };
       let total_samples = audio.samples.len();
       let channels = audio.channels;
       let bit_rate = audio.bit_rate;
@@ -95,7 +100,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i16.wav");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed16);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -144,7 +149,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i24.wav");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed24);
       println!("{:?}", written);
       assert!(written.is_ok());
       
@@ -195,7 +200,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i32.wav");
-      let written = audio::save(&write_loc, &audio);
+      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed32);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();

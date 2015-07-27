@@ -1,7 +1,8 @@
 use std::fs::File;
-use std::io::{Read, Seek, Write};
+use std::io::{BufWriter, Read, Seek, Write};
 use std::path::Path;
 use buffer::*;
+use codecs::SampleFormat;
 use error::*;
 use traits::{AudioDecoder, AudioEncoder};
 use wave::Decoder as WaveDecoder;
@@ -82,10 +83,41 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   }
 }
 
+pub fn save_as(path: &Path, audio: &AudioBuffer, sample_format: SampleFormat) -> AudioResult<()> {
+  if let Some(ext) = path.extension() {
+    if let Some(file_format) = ext.to_str() {
+      let format = match file_format {
+        "wav"|"wave"  => AudioFormat::WAVE,
+        "aif"|"aiff"  => AudioFormat::AIFF,
+        _ => return Err(AudioError::FormatError(format!("Did not recognize `.{:?}` as an audio file format", ext)))
+      };
+      let mut file = try!(File::create(path));
+      write_as(&mut file, audio, format, sample_format)
+    }
+    else {
+      Err(AudioError::FormatError("Did not recognize file format".to_string()))
+    }
+  }
+  else {
+    Err(AudioError::FormatError("Did not recognize file format".to_string()))
+  }
+}
+
+/// Buffers and writes audio to the provided writer. The necessary decoder
+/// is determined by the provided `AudioFormat`. An `AudioError` is 
+/// returned if the format is not supported or if an error occurred
+/// in the encoding process.
 #[inline]
 pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat) -> AudioResult<()> {
   match format {
-    AudioFormat::WAVE => WaveEncoder::new(writer).encode(audio),
-    AudioFormat::AIFF => AiffEncoder::new(writer).encode(audio),
+    AudioFormat::WAVE => WaveEncoder::new(&mut BufWriter::new(writer)).encode(audio),
+    AudioFormat::AIFF => AiffEncoder::new(&mut BufWriter::new(writer)).encode(audio)
+  }
+}
+#[inline]
+pub fn write_as<W: Write>(writer: &mut W, audio: &AudioBuffer, format: AudioFormat, sample_format: SampleFormat) -> AudioResult<()> {
+  match format {
+    AudioFormat::WAVE => WaveEncoder::new(&mut BufWriter::new(writer)).encode_as(audio, sample_format),
+    AudioFormat::AIFF => AiffEncoder::new(&mut BufWriter::new(writer)).encode_as(audio, sample_format)
   }
 }
