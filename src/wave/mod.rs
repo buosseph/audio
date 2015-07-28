@@ -229,6 +229,48 @@ mod tests {
   }
 
   #[test]
+  fn read_wave_format_extensible() {
+    let mut path = PathBuf::from("tests");
+    path.push("wav");
+    path.push("empty.wav");
+    let files = vec![
+      "wavex-mono440-i16-44100.wav",
+    ];
+
+    for file in files.iter() {
+      path.set_file_name(file);
+      println!("{:?}", path.as_path());
+      let wavex =
+        match audio::open(path.as_path()) {
+          Ok(a) => a,
+          Err(e) => panic!(format!("Error: {:?}", e))
+        };
+      let total_samples = wavex.samples.len();
+      let channels      = wavex.channels;
+      let bit_rate      = wavex.bit_rate;
+      let sample_rate   = wavex.sample_rate;
+      let sample_order  = wavex.order;
+      // Compare to regular wave file with same data
+      path.set_file_name("mono440-i16-44100.wav");
+      println!("{:?}", path.as_path());
+      let wave =
+        match audio::open(path.as_path()) {
+          Ok(a) => a,
+          Err(e) => panic!(format!("Error: {:?}", e))
+        };
+      assert_eq!(wave.channels, channels);
+      assert_eq!(wave.bit_rate, bit_rate);
+      assert_eq!(wave.sample_rate, sample_rate);
+      assert_eq!(wave.order, sample_order);
+      assert_eq!(wave.samples.len(), total_samples);
+      for (wave_sample, wavex_sample) in wave.samples.iter().zip(&wavex.samples) {
+        assert_eq!(wave_sample, wavex_sample);
+      }
+    }
+  }
+
+
+  #[test]
   fn wave_metadata() {
       let path = Path::new("tests/wav/Warrior Concerto.wav");
       // let audio = audio::open(&path).ok().expect("Couldn't open read file");

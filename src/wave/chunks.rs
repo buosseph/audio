@@ -4,6 +4,10 @@ use byteorder::{ByteOrder, ReadBytesExt, LittleEndian};
 use traits::Chunk;
 use error::*;
 
+/// Format tag for the wave extensible format. Unlike chunk identifiers,
+/// this is read as little endian data since it is within the chunk.
+const WAVE_FORMAT_EXTENSIBLE: u16 = 0xFFFE;
+
 /// Supported WAVE chunks
 pub enum WaveChunk {
   Format,
@@ -27,6 +31,16 @@ impl fmt::Display for CompressionType {
 ///
 /// This chunk provides most of the information required to decode the sampled
 /// data.
+///
+/// The format chunk can be of three different sizes: 16, 18, and 40 bytes. If
+/// the data is encoded as LPCM, then the chunk will be 16 bytes long. If the
+/// data is encoded using any other codec, then the chunk will be 18 bytes long.
+/// Non-LPCM data also requires the presence of a fact chunk within the file.
+///
+/// Wave files also have an extensible format which provided additional data
+/// to eliminate ambiguities in the standard format. The `WAVE_EXTENSIBLE_FORMAT`
+/// requires the chunk to be 40 bytes long, and moves the compression type
+/// information later in the chunk.
 #[derive(Debug, Clone, Copy)]
 pub struct FormatChunk {
   pub compression_type: CompressionType,
@@ -40,8 +54,12 @@ pub struct FormatChunk {
 impl Chunk for FormatChunk {
   #[inline]
   fn read(buffer: &[u8]) -> AudioResult<FormatChunk> {
+    let mut format_tag: u16 = LittleEndian::read_u16(&buffer[0..2]);
+    if format_tag == WAVE_FORMAT_EXTENSIBLE {
+      format_tag = LittleEndian::read_u16(&buffer[24..26])
+    }
     let compression_type : CompressionType = 
-      match LittleEndian::read_u16(&buffer[0..2]) {
+      match format_tag {
         1 => CompressionType::PCM,
         _ => CompressionType::Unknown,
       };
