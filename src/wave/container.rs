@@ -6,15 +6,10 @@ use codecs::{AudioCodec, Codec, LPCM};
 use codecs::Codec::*;
 use error::*;
 use traits::{Chunk, Container};
+use wave::{RIFF, WAVE, FMT, FACT, DATA};
 use wave::chunks::*;
-use wave::chunks::CompressionType::*;
+use wave::chunks::FormatChunkVariant::*;
 use wave::chunks::WaveChunk::*;
-
-/// WAVE chunk identifiers.
-const RIFF: &'static [u8; 4] = b"RIFF";
-const WAVE: &'static [u8; 4] = b"WAVE";
-const FMT:  &'static [u8; 4] = b"fmt ";
-const DATA: &'static [u8; 4] = b"data";
 
 /// Struct containing all necessary information for encoding and decoding
 /// bytes to an `AudioBuffer`.
@@ -40,14 +35,14 @@ impl Container for WaveContainer {
         "Not valid WAVE".to_string()
       ));
     }
-    let file_size : u32 = LittleEndian::read_u32(&riff_header[4..8]);
+    let file_size : u32 = LittleEndian::read_u32(&riff_header[4..8]) - 4;
     let mut buffer: Cursor<Vec<u8>> = Cursor::new(vec![0u8; file_size as usize]);
     try!(reader.read(buffer.get_mut()));
     // Read all supported chunks
     let mut container =
       WaveContainer {
         codec:          Codec::LPCM_I16_LE,     // Default codec
-        compression:    CompressionType::PCM,
+        compression:    CompressionType::Pcm,
         bit_rate:       0u32,
         sample_rate:    0u32,
         channels:       1u32,
@@ -55,9 +50,10 @@ impl Container for WaveContainer {
         order:          SampleOrder::MONO,
         samples:        Vec::with_capacity(1024)
       };
-    let mut chunk_header    : [u8; 8] = [0u8; 8];
-    let mut read_fmt_chunk  : bool    = false;
-    let mut read_data_chunk : bool    = false;
+    let mut chunk_header      : [u8; 8] = [0u8; 8];
+    let mut read_fmt_chunk    : bool    = false;
+    let mut read_fact_chunk   : bool    = false;
+    let mut read_data_chunk   : bool    = false;
     while buffer.position() < file_size as u64 {
       try!(buffer.read(&mut chunk_header));
       let chunk_size  : usize = 
@@ -91,6 +87,11 @@ impl Container for WaveContainer {
             };
           read_fmt_chunk            = true;
         },
+        Some(Fact) => {
+          let chunk_bytes   = &(buffer.get_ref()[pos .. pos + chunk_size]);
+          // let num_samples_per_channel = LittleEndian::read_u32(&chunk_bytes[0..4]);
+          read_fact_chunk   = true;
+        }
         Some(Data) => {
           if !read_fmt_chunk {
             return Err(AudioError::FormatError(
@@ -110,6 +111,12 @@ impl Container for WaveContainer {
     if !read_fmt_chunk {
       return Err(AudioError::FormatError(
         "File is not valid WAVE (Missing required Format chunk)".to_string()
+      ))
+    }
+    else if container.compression != CompressionType::Pcm && !read_fact_chunk {
+      return Err(AudioError::FormatError(
+        "File is not valid WAVE \
+        (Missing Fact chunk for non-PCM data)".to_string()
       ))
     }
     else if !read_data_chunk {
@@ -146,7 +153,7 @@ impl Container for WaveContainer {
     // TODO: Replace with FormatChunk::calculate_size(codec)
     // Wave files created by this library do not support compression, so the
     // format chunk will always be the same size: 16 bytes.
-    let fmt_chunk_size  : u32     = 16;
+    let fmt_chunk_size : u32 = FormatChunkVariant::WaveFormatPcm as u32;
     // Total number of bytes is determined by chunk sizes and the RIFF header,
     // which is always 12 bytes. Every chunk specifies their size but doesn't
     // include the chunk header, the first 8 bytes which contain the chunk
@@ -155,27 +162,16 @@ impl Container for WaveContainer {
     // Currently, wave files created by this library only contains the necessary
     // chunks for audio playback with no option for adding additional chunks for
     // metadata.
-    let total_bytes     : u32     = 12
-                                  + (8 + fmt_chunk_size)
-                                  + (8 + data.len() as u32);
+    let total_bytes : u32 = 12
+                          + (8 + fmt_chunk_size)
+                          + (8 + data.len() as u32);
     // Write the riff header to the writer.
     try!(writer.write(RIFF));
     try!(writer.write_u32::<LittleEndian>(total_bytes - 8));
     try!(writer.write(WAVE));
     // TODO: Replace with FormatChunk::write(writer, codec)
     // Write fmt chunk to the writer.
-    try!(writer.write(FMT));
-    try!(writer.write_u32::<LittleEndian>(fmt_chunk_size));
-    // Currently, all wave files created by this library will only be encoded
-    // using LPCM, the format standard.
-    try!(writer.write_u16::<LittleEndian>(1u16));
-    try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
-    try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
-    try!(writer.write_u32::<LittleEndian>(
-      audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
-    try!(writer.write_u16::<LittleEndian>(
-      (audio.channels * audio.bit_rate / 8u32) as u16));
-    try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
+    try!(FormatChunk::write(writer, audio));
     // Write data chunk to the writer.
     try!(writer.write(DATA));
     try!(writer.write_u32::<LittleEndian>(
@@ -190,6 +186,7 @@ impl Container for WaveContainer {
 fn identify(bytes: &[u8]) -> AudioResult<WaveChunk> {
   match &[bytes[0], bytes[1], bytes[2], bytes[3]] {
     FMT  => Ok(Format),
+    FACT => Ok(Fact),
     DATA => Ok(Data),
     err @ _ => 
       Err(AudioError::FormatError(

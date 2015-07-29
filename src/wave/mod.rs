@@ -16,6 +16,13 @@ pub mod encoder;
 pub use wave::decoder::Decoder as Decoder;
 pub use wave::encoder::Encoder as Encoder;
 
+/// WAVE chunk identifiers.
+const RIFF: &'static [u8; 4] = b"RIFF";
+const WAVE: &'static [u8; 4] = b"WAVE";
+const FMT:  &'static [u8; 4] = b"fmt ";
+const DATA: &'static [u8; 4] = b"data";
+const FACT: &'static [u8; 4] = b"fact";
+
 #[cfg(test)]
 mod tests {
   use std::fs::File;
