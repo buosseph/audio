@@ -3,6 +3,8 @@ use std::fmt;
 use std::io::Write;
 use buffer::AudioBuffer;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
+use codecs::SampleFormat;
+use codecs::SampleFormat::*;
 use error::*;
 use self::CompressionType::*;
 use self::FormatChunkVariant::*;
@@ -24,14 +26,15 @@ pub enum WaveChunk {
   Data
 }
 
-/// Supported compression codes in the WAVE format chunk
+/// Supported compression codes in the WAVE format chunk. These also correspond
+/// to wave format tags.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionType {
-  Unknown = 0x0000,
-  Pcm     = 0x0001
-  // Float   = 0x0003,
-  // ALaw    = 0x0006,
-  // MuLaw   = 0x0007
+  Unknown   = 0x0000,
+  Pcm       = 0x0001
+  // IEEEFloat = 0x0003,
+  // ALaw      = 0x0006,
+  // MuLaw     = 0x0007
 }
 
 impl fmt::Display for CompressionType {
