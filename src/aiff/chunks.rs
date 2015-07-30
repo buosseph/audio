@@ -1,8 +1,22 @@
 //! AIFF Chunks
 use std::fmt;
-use byteorder::{ByteOrder, ReadBytesExt, BigEndian};
+use std::io::Write;
+use aiff::COMM;
+use buffer::AudioBuffer;
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
+use codecs::SampleFormat;
+use codecs::SampleFormat::*;
+use self::CompressionType::*;
 use traits::Chunk;
 use error::*;
+
+/// AIFC compression type tags and strings.
+const NONE: (&'static [u8; 4], &'static str) = (b"NONE", "not compressed");
+const RAW : (&'static [u8; 4], &'static str) = (b"raw ", "");
+// const ULAW: (&'static [u8; 4], &'static str) = (b"ulaw", "µLaw 2:1");
+// const ALAW: (&'static [u8; 4], &'static str) = (b"alaw", "ALaw 2:1");
+// const FL32: (&'static [u8; 4], &'static str) = (b"fl32", "32-bit floating point");
+// const FL64: (&'static [u8; 4], &'static str) = (b"fl64", "64-bit floating point");
 
 /// Supported AIFF chunks.
 pub enum AiffChunk {
@@ -15,11 +29,14 @@ pub enum AiffChunk {
 /// In traditional AIFF files there is no option for compression. However, AIFC
 /// files are often labeled as `.aiff` despite being a different format. AIFC 
 /// decoding is not currently supported.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionType {
-  Unknown = 0,
-  PCM     = 1
+  Pcm,
+  Raw,
+  // Float32,
+  // Float64,
+  // ALaw,
+  // MuLaw,
 }
 
 impl fmt::Display for CompressionType {
@@ -34,20 +51,103 @@ impl fmt::Display for CompressionType {
 /// data.
 #[derive(Debug, Clone, Copy)]
 pub struct CommonChunk {
-  pub num_channels: i16,
-  pub num_frames:   u32,
-  pub bit_rate:     i16,
-  pub sample_rate:  f64
+  pub num_channels:     i16,
+  pub num_frames:       u32,
+  pub bit_rate:         i16,
+  pub sample_rate:      f64,
+  pub compression_type: CompressionType
+}
+
+/// Determines if the `SampleFormat` given requires the audio to be encoded as
+/// AIFF-C. 
+#[inline]
+pub fn is_aifc(sample_format: SampleFormat) -> bool {
+  match sample_format {
+    Unsigned8 => true,
+    Signed8   |
+    Signed16  |
+    Signed24  |
+    Signed32  => false
+  }
+}
+
+impl CommonChunk {
+  #[inline]
+  pub fn calculate_chunk_size(sample_format: SampleFormat) -> i32 {
+    match sample_format {
+      Unsigned8 => 24,
+      Signed8   |
+      Signed16  |
+      Signed24  |
+      Signed32  => 18
+    }
+  }
+  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, sample_format: SampleFormat) -> AudioResult<()> {
+    try!(writer.write(COMM));
+    let chunk_size: i32 = Self::calculate_chunk_size(sample_format);
+    try!(writer.write_i32::<BigEndian>(chunk_size));
+    try!(writer.write_i16::<BigEndian>(audio.channels as i16));
+    try!(writer.write_u32::<BigEndian>(audio.samples.len() as u32 / audio.channels));
+    try!(writer.write_i16::<BigEndian>(audio.bit_rate as i16));
+    try!(writer.write(&convert_to_ieee_extended(audio.sample_rate as f64)));
+    // Write additional information if aifc
+    if is_aifc(sample_format) {
+      // Write compression type identifier
+      let compression =
+        match sample_format {
+          Unsigned8 => RAW,
+          fmt @ _   =>
+            return Err(AudioError::UnsupportedError(
+              format!("Common chunk does not support {:?}", fmt)
+            ))
+        };
+      try!(writer.write(compression.0));
+      if compression.1.len() == 0 {
+        try!(writer.write_i16::<BigEndian>(0));
+      }
+      // It's only here where the chunk size can become odd.
+      else {
+        try!(writer.write_u8(compression.1.len() as u8));
+        try!(writer.write(compression.1.as_bytes()));
+        // Add trailing byte if string length + 1 is odd.
+        if (compression.1.len() + 1) % 2 == 1 {
+          try!(writer.write_u8(0));
+        }
+      }
+    }
+    Ok(())
+  }
 }
 
 impl Chunk for CommonChunk {
   fn read(buffer: &[u8]) -> AudioResult<CommonChunk> {
+    let compression_type =
+      if buffer.len() > 18 {
+        match &buffer[18..22] {
+          tag if tag == NONE.0 => Pcm,
+          tag if tag == RAW.0  => Raw,
+          // tag if tag == FL32.0 => Float32,
+          // tag if tag == FL64.0 => Float64,
+          // tag if tag == ALAW.0 => ALaw,
+          // tag if tag == ULAW.0 => MuLaw,
+          _ => {
+            // Add a better error message
+            return Err(AudioError::UnsupportedError(
+              "Unknown compression type".to_string()
+            ))
+          }
+        }
+      }
+      else {
+        Pcm
+      };
     Ok(
       CommonChunk {
-        num_channels: BigEndian::read_i16(&buffer[0..2]),
-        num_frames:   BigEndian::read_u32(&buffer[2..6]),
-        bit_rate:     BigEndian::read_i16(&buffer[6..8]),
-        sample_rate:  convert_from_ieee_extended(&buffer[8..18])
+        compression_type: compression_type,
+        num_channels:     BigEndian::read_i16(&buffer[0..2]),
+        num_frames:       BigEndian::read_u32(&buffer[2..6]),
+        bit_rate:         BigEndian::read_i16(&buffer[6..8]),
+        sample_rate:      convert_from_ieee_extended(&buffer[8..18])
       }
     )
   }

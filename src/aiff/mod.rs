@@ -16,6 +16,17 @@ pub mod encoder;
 pub use aiff::decoder::Decoder as Decoder;
 pub use aiff::encoder::Encoder as Encoder;
 
+/// AIFF/AIFC chunk identifiers.
+const FORM: &'static [u8; 4] = b"FORM";
+const AIFF: &'static [u8; 4] = b"AIFF";
+const AIFC: &'static [u8; 4] = b"AIFC";
+const FVER: &'static [u8; 4] = b"FVER";
+const COMM: &'static [u8; 4] = b"COMM";
+const SSND: &'static [u8; 4] = b"SSND";
+
+/// AIFF-C Version 1 timestamp for the FVER chunk.
+const AIFC_VERSION: u32 = 0xA2805140;
+
 #[cfg(test)]
 mod tests {
   use std::fs::File;
@@ -227,6 +238,87 @@ mod tests {
           written_file_bytes.next().expect("End of file").ok().expect("Error reading byte from written file")
         );
       }
+    }
+  }
+
+  #[test]
+  fn aiff_mod_aifc_eq() {
+    let mut path = PathBuf::from("tests");
+    path.push("aiff");
+    path.push("empty.aiff");
+    path.set_file_name("M1F1-int16-AFsp.aif");
+    println!("{:?}", path.as_path());
+    let aiff =
+      match audio::open(path.as_path()) {
+        Ok(a) => a,
+        Err(e) => panic!(format!("Error: {:?}", e))
+      };
+    let total_samples = aiff.samples.len();
+    let channels      = aiff.channels;
+    let bit_rate      = aiff.bit_rate;
+    let sample_rate   = aiff.sample_rate;
+    let sample_order  = aiff.order;
+    // Compare to aifc file with same data
+    path.set_file_name("M1F1-int16C-AFsp.aif");
+    println!("{:?}", path.as_path());
+    let aifc =
+      match audio::open(path.as_path()) {
+        Ok(a) => a,
+        Err(e) => panic!(format!("Error: {:?}", e))
+      };
+    assert_eq!(aifc.channels, channels);
+    assert_eq!(aifc.bit_rate, bit_rate);
+    assert_eq!(aifc.sample_rate, sample_rate);
+    assert_eq!(aifc.order, sample_order);
+    assert_eq!(aifc.samples.len(), total_samples);
+    for (aiff_sample, aifc_sample) in aiff.samples.iter().zip(&aifc.samples) {
+      assert_eq!(aiff_sample, aifc_sample);
+    }
+  }
+
+  #[test]
+  fn u8_aifc_eq() {
+    let mut path = PathBuf::from("tests");
+    path.push("aiff");
+    path.push("empty.aiff");
+    path.set_file_name("mono440-u8-odd-bytes.aiff");
+    println!("{:?}", path.as_path());
+    let aifc =
+      match audio::open(path.as_path()) {
+        Ok(a) => a,
+        Err(e) => panic!(format!("Error: {:?}", e))
+      };
+    let total_samples = aifc.samples.len();
+    let channels      = aifc.channels;
+    let bit_rate      = aifc.bit_rate;
+    let sample_rate   = aifc.sample_rate;
+    let sample_order  = aifc.order;
+    println!("Read file");
+    // Write to file.
+    let write_path = Path::new("tests/results/tmp_u8.aiff");
+    let written = audio::save_as(&write_path, &aifc, SampleFormat::Unsigned8);
+    assert!(written.is_ok());
+    println!("File written");
+    // Read written file and verify read audio is the same.
+    let verify: AudioBuffer = audio::open(&write_path).unwrap();
+    assert_eq!(channels,      verify.channels);
+    assert_eq!(bit_rate,      verify.bit_rate);
+    assert_eq!(sample_rate,   verify.sample_rate);
+    assert_eq!(sample_order,  verify.order);
+    assert_eq!(total_samples, verify.samples.len());
+    for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
+      assert_eq!(inital_sample, written_sample);
+    }
+    println!("Read new file");
+    // File sizes are the same.
+    let read_file     = File::open(path.as_path()).unwrap();
+    let written_file  = File::open(&write_path).unwrap();
+    let read_meta     = read_file.metadata().unwrap();
+    let write_meta    = written_file.metadata().unwrap();
+    assert_eq!(read_meta.len(), write_meta.len());
+    // Assert every byte is the same between the two files.
+    for (inital_byte, written_byte) in read_file.bytes().zip(written_file.bytes()) {
+      assert_eq!(inital_byte.ok(), written_byte.ok());
     }
   }
 }
