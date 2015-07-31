@@ -3,8 +3,8 @@ use std::fmt;
 use std::io::Write;
 use buffer::AudioBuffer;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use codecs::SampleFormat;
-use codecs::SampleFormat::*;
+use codecs::Codec;
+use codecs::Codec::*;
 use error::*;
 use self::CompressionType::*;
 use self::FormatChunkVariant::*;
@@ -56,7 +56,7 @@ impl fmt::Display for CompressionType {
 /// Wave files also have an extensible format which provided additional data
 /// to eliminate ambiguities in the standard format. The `WAVE_EXTENSIBLE_FORMAT`
 /// requires the chunk to be 40 bytes long, and moves the compression type
-/// information later in the chunk.
+/// information later in the chunk. Extensible format data is included 
 #[derive(Debug, Clone, Copy)]
 pub struct FormatChunk {
   pub compression_type: CompressionType,
@@ -139,7 +139,64 @@ pub enum FormatChunkVariant {
 //   }
 // }
 
+/// Determines if codec is supported by container.
+pub fn is_supported(codec: Codec) -> AudioResult<bool> {
+  match codec {
+    LPCM_U8     |
+    LPCM_I16_LE |
+    LPCM_I24_LE |
+    LPCM_I32_LE => Ok(true),
+    c @ _       =>
+      return Err(AudioError::UnsupportedError(
+        format!("Wave does not support {:?} codec", c)
+      ))
+  }
+}
+
+/// Determines if the given audio requires the use of the wave extensible format.
+pub fn is_extensible(audio: &AudioBuffer, codec: Codec) -> AudioResult<bool> {
+  match (audio.channels, codec) {
+    // The simple version:
+    // (ch, _) if ch >= 3  => true,
+    // if bit_rate % 8 != 0 => true,
+    // speaker_positions != 0 => true
+    //
+    // If audio has more than two channels, it must use the extensible format,
+    // but the codec must still be checked if it is supported by the container.
+    (ch, LPCM_U8)     if ch >= 3  => Ok(true),
+    (ch, LPCM_I16_LE) if ch >= 3  => Ok(true),
+    (ch, LPCM_I24_LE) if ch >= 3  => Ok(true),
+    (ch, LPCM_I32_LE) if ch >= 3  => Ok(true),
+    // 1 or 2 channel LPCM can use the standard format.
+    (ch, LPCM_U8)     if ch < 2   => Ok(false),
+    (ch, LPCM_I16_LE) if ch < 2   => Ok(false),
+    (ch, LPCM_I24_LE) if ch < 2   => Ok(false),
+    (ch, LPCM_I32_LE) if ch < 2   => Ok(false),
+    (_, c @ _) =>
+      return Err(AudioError::UnsupportedError(
+        format!("Wave does not support {:?} codec", c)
+      ))
+  }
+}
+
 impl FormatChunk {
+  #[inline]
+  pub fn calculate_size(codec: Codec) -> AudioResult<u32> {
+    match codec {
+      LPCM_U8     |
+      LPCM_I16_LE |
+      LPCM_I24_LE |
+      LPCM_I32_LE => Ok(WaveFormatPcm as u32),
+      // LPCM_ALAW   |
+      // LPCM_ULAW   |
+      // LPCM_F32_LE |
+      // LPCM_F64_LE => Ok(WaveFormatNonPcm as u32),
+      c @ _       =>
+        return Err(AudioError::UnsupportedError(
+          format!("Wave does not support {:?} codec", c)
+        ))
+    }
+  }
   // Cases:
   // is WAVE_FORMAT_EXTENSIBLE if:
   //  - LPCM data is more than 16-bits per sample

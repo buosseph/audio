@@ -76,10 +76,10 @@ impl Container for WaveContainer {
             };
           container.codec           =
             match (fmt_chunk.compression_type, fmt_chunk.bit_rate) {
-              (CompressionType::PCM, 8 ) => LPCM_U8,
-              (CompressionType::PCM, 16) => LPCM_I16_LE,
-              (CompressionType::PCM, 24) => LPCM_I24_LE,
-              (CompressionType::PCM, 32) => LPCM_I32_LE,
+              (CompressionType::Pcm, 8 ) => LPCM_U8,
+              (CompressionType::Pcm, 16) => LPCM_I16_LE,
+              (CompressionType::Pcm, 24) => LPCM_I24_LE,
+              (CompressionType::Pcm, 32) => LPCM_I32_LE,
               (_, _ ) =>
                 return Err(AudioError::UnsupportedError(
                   "Audio encoded with unsupported codec".to_string()
@@ -137,23 +137,14 @@ impl Container for WaveContainer {
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
-    // Determine if codec is supported by container.
-    match codec {
-      LPCM_U8     |
-      LPCM_I16_LE |
-      LPCM_I24_LE |
-      LPCM_I32_LE => {},
-      c @ _       =>
-        return Err(AudioError::UnsupportedError(
-          format!("Wave does not support {:?} codec", c)
-        ))
-    }
+    // Determine if codec is supported by container and if extensible format
+    // must be used.
+    // let extensible      : bool    = try!(is_extensible(audio, codec));
     // Convert the audio samples to the format of the corresponding codec.
     let data            : Vec<u8> = try!(write_codec(audio, codec));
-    // TODO: Replace with FormatChunk::calculate_size(codec)
     // Wave files created by this library do not support compression, so the
     // format chunk will always be the same size: 16 bytes.
-    let fmt_chunk_size : u32 = FormatChunkVariant::WaveFormatPcm as u32;
+    let fmt_chunk_size  : u32     = try!(FormatChunk::calculate_size(codec));
     // Total number of bytes is determined by chunk sizes and the RIFF header,
     // which is always 12 bytes. Every chunk specifies their size but doesn't
     // include the chunk header, the first 8 bytes which contain the chunk
