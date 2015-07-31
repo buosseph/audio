@@ -1,9 +1,10 @@
 use std::io::Write;
 use buffer::AudioBuffer;
-use codecs::{Codec, SampleFormat};
+use codecs::Codec;
+use codecs::Codec::LPCM_I16_LE;
+use error::AudioResult;
 use traits::{AudioEncoder, Container};
 use wave::container::WaveContainer;
-use error::AudioResult;
 
 /// Encodes audio to wave format to the provided writer.
 pub struct Encoder<'w, W: 'w> {
@@ -25,16 +26,13 @@ impl<'w, W> AudioEncoder for Encoder<'w, W> where W: Write {
   /// is encoded to standard 16-bit, uncompressed LPCM audio.
   #[inline]
   fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()> {
-    WaveContainer::create(&mut self.writer, audio,
-                          SampleFormat::Signed16, Codec::LPCM)
+    WaveContainer::create(&mut self.writer, audio, LPCM_I16_LE)
   }
   /// Creates and writes a `WaveContainer` using the provided `SampleFormat`
   /// to the included writer. This is how audio can be encoded to different
   /// bit rates supported by the format.
   #[inline]
-  fn encode_as(&mut self, audio: &AudioBuffer,
-               sample_format: SampleFormat) -> AudioResult<()> {
-    WaveContainer::create(&mut self.writer, audio,
-                          sample_format, Codec::LPCM)
+  fn encode_as(&mut self, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
+    WaveContainer::create(&mut self.writer, audio, codec)
   }
 }

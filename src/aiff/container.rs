@@ -1,21 +1,21 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
-use aiff::{AIFF, AIFC, AIFC_VERSION, FORM, FVER, COMM, SSND};
+use aiff::{AIFF, AIFC, AIFC_VERSION1, FORM, FVER, COMM, SSND};
 use aiff::chunks::*;
 use aiff::chunks::AiffChunk::*;
 use aiff::chunks::CompressionType::*;
 use buffer::*;
 use buffer::SampleOrder::*;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use codecs::{AudioCodec, Codec, Endian, LPCM, SampleFormat};
-use codecs::SampleFormat::*;
+use codecs::{AudioCodec, Codec, LPCM};
+use codecs::Codec::*;
 use error::*;
 use traits::{Chunk, Container};
 
 /// Struct containing all necessary information for encoding and decoding
 /// bytes to an `AudioBuffer`.
 pub struct AiffContainer {
+  codec:            Codec,
   compression:      CompressionType,
-  sample_format:    SampleFormat,
   pub bit_rate:     u32,
   pub sample_rate:  u32,
   pub channels:     u32,
@@ -46,8 +46,8 @@ impl Container for AiffContainer {
     // Read all supported chunks
     let mut container = 
       AiffContainer {
+        codec:          LPCM_I16_BE,
         compression:    CompressionType::Pcm,
-        sample_format:  SampleFormat::Signed16,
         bit_rate:       0u32,
         sample_rate:    0u32,
         channels:       1u32,
@@ -85,18 +85,18 @@ impl Container for AiffContainer {
             } else {
               SampleOrder::INTERLEAVED
             };
-          container.sample_format   =
-            match (container.compression, container.bit_rate) {
+          container.codec           =
+            match (comm_chunk.compression_type, comm_chunk.bit_rate) {
               // AIFC supports:
-              (Raw, 8 ) => Unsigned8,
+              (Raw, 8 ) => LPCM_U8,
               // AIFF supports:
-              (Pcm, 8 ) => Signed8,
-              (Pcm, 16) => Signed16,
-              (Pcm, 24) => Signed24,
-              (Pcm, 32) => Signed32,
+              (Pcm, 8 ) => LPCM_I8,
+              (Pcm, 16) => LPCM_I16_BE,
+              (Pcm, 24) => LPCM_I24_BE,
+              (Pcm, 32) => LPCM_I32_BE,
               ( _ , _ ) => return
                 Err(AudioError::UnsupportedError(
-                  "Audio encoded with unsupported sample format".to_string()
+                  "Audio encoded with unsupported codec".to_string()
                 ))
             };
           read_comm_chunk           = true;
@@ -108,13 +108,11 @@ impl Container for AiffContainer {
               (Common chunk does not occur before SoundData chunk)".to_string()
             ))
           }
-          let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
+          let chunk_bytes   = &(buffer.get_ref()[pos .. pos + chunk_size]);
           // let offset      : u32 = BigEndian::read_u32(&chunk_bytes[0..4]);
           // let block_size  : u32 = BigEndian::read_u32(&chunk_bytes[4..8]);
-          container.samples =
-            try!(read_codec(&chunk_bytes[8..], container.compression,
-                            container.sample_format, Endian::BigEndian));
-          read_ssnd_chunk       = true;
+          container.samples = try!(read_codec(&chunk_bytes[8..], container.codec));
+          read_ssnd_chunk   = true;
         },
         None => {}
       }
@@ -135,7 +133,7 @@ impl Container for AiffContainer {
     }
     Ok(container)
   }
-  fn create<W: Write>(writer: &mut W, audio: &AudioBuffer, sample_format: SampleFormat, codec: Codec) -> AudioResult<()> {
+  fn create<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
     // Determine if the sample order of the AudioBuffer is supported by the 
     // aiff format.
     match audio.order {
@@ -146,16 +144,14 @@ impl Container for AiffContainer {
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
-    // Determine if sample format is supported by aiff or aiff-c format.
-    let aifc            : bool    = is_aifc(sample_format);
+    // Determine if codec is supported by container and if it's supported by
+    // aiff or aiff-c.
+    let aifc            : bool    = try!(is_aifc(codec));
     // Convert the audio samples to the format of the corresponding codec.
-    let data            : Vec<u8> = 
-      match codec {
-        Codec::LPCM => try!(LPCM::create(audio, sample_format, Endian::BigEndian)),
-      };
+    let data            : Vec<u8> = try!(write_codec(audio, codec));
     // Aiff files created by this library do not support compression, so the
     // comm chunk will always be the same size: 18 bytes.
-    let comm_chunk_size : i32     = CommonChunk::calculate_chunk_size(sample_format);
+    let comm_chunk_size : i32     = try!(CommonChunk::calculate_size(codec));
     // The ssnd chunk contains additional information besides the audio data.
     let ssnd_chunk_size : i32     = 8 
                                   + data.len() as i32;
@@ -184,13 +180,13 @@ impl Container for AiffContainer {
       // Write form version chunk to writer. Requried by aiff-c.
       try!(writer.write(FVER));
       try!(writer.write_u32::<BigEndian>(4));
-      try!(writer.write_u32::<BigEndian>(AIFC_VERSION));
+      try!(writer.write_u32::<BigEndian>(AIFC_VERSION1));
     }
     else {
       try!(writer.write(AIFF));
     }
     // Write comm chunk to the writer.
-    try!(CommonChunk::write(writer, audio, sample_format));
+    try!(CommonChunk::write(writer, audio, codec));
     // Write ssnd chunk to the writer.
     try!(writer.write(SSND));
     try!(writer.write_i32::<BigEndian>(ssnd_chunk_size));
@@ -217,18 +213,35 @@ fn identify(bytes: &[u8]) -> AudioResult<AiffChunk> {
       ))
   }
 }
-fn read_codec(bytes: &[u8],
-              compression: CompressionType,
-              sample_format: SampleFormat,
-              endian: Endian) -> AudioResult<Vec<Sample>> {
-  let codec = match compression {
-    CompressionType::Pcm | CompressionType::Raw => Codec::LPCM,
-    // _ =>
-    //   return Err(AudioError::UnsupportedError(
-    //     "This file uses an unsupported codec".to_string()
-    //   ))
-  };
+
+/// Returns samples read using the given codec. If the container does not
+/// support a codec, an error is returned.
+fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
   match codec {
-    Codec::LPCM => LPCM::read(bytes, sample_format, endian)
+    LPCM_U8      |
+    LPCM_I8      |
+    LPCM_I16_BE  |
+    LPCM_I24_BE  |
+    LPCM_I32_BE  => LPCM::read(bytes, codec),
+    _ =>
+      return Err(AudioError::UnsupportedError(
+        "Audio encoded with unsupported codec".to_string()
+      ))
+  }
+}
+
+/// Returns samples as bytes created using the given codec. If the container
+/// does not support a codec, an error is returned.
+fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
+  match codec {
+    LPCM_U8      |
+    LPCM_I8      |
+    LPCM_I16_BE  |
+    LPCM_I24_BE  |
+    LPCM_I32_BE  => LPCM::create(audio, codec),
+    _ =>
+      return Err(AudioError::UnsupportedError(
+        "Audio encoded with unsupported codec".to_string()
+      ))
   }
 }

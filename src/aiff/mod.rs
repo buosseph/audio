@@ -1,8 +1,9 @@
 //! The Audio Interchange File Format
 //!
-//! AIFF files use the Interchange File Format (IFF), a generic
-//! file container format that uses chunks to store data.
-
+//! AIFF files use the Interchange File Format (IFF), a generic file container
+//! format that uses chunks to store data. All bytes are stored in big-endian
+//! format.
+//!
 //! References
 //! - [McGill University](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html)
 //! - [AIFF Spec](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/Docs/AIFF-1.3.pdf)
@@ -25,7 +26,7 @@ const COMM: &'static [u8; 4] = b"COMM";
 const SSND: &'static [u8; 4] = b"SSND";
 
 /// AIFF-C Version 1 timestamp for the FVER chunk.
-const AIFC_VERSION: u32 = 0xA2805140;
+const AIFC_VERSION1: u32 = 0xA2805140;
 
 #[cfg(test)]
 mod tests {
@@ -34,7 +35,7 @@ mod tests {
   use std::path::{Path, PathBuf};
   use ::audio;
   use ::buffer::AudioBuffer;
-  use ::codecs::SampleFormat;
+  use ::codecs::Codec::*;
 
   /* AIFF supports i8, AIFC supports u8 */
   #[test]
@@ -60,7 +61,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i8.aiff");
-      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed8);
+      let written = audio::save_as(&write_loc, &audio, LPCM_I8);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -111,7 +112,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i16.aiff");
-      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed16);
+      let written = audio::save_as(&write_loc, &audio, LPCM_I16_BE);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -162,7 +163,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i24.aiff");
-      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed24);
+      let written = audio::save_as(&write_loc, &audio, LPCM_I24_BE);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -213,7 +214,7 @@ mod tests {
       let sample_order = audio.order;
 
       let write_loc = Path::new("tests/results/tmp_i32.aiff");
-      let written = audio::save_as(&write_loc, &audio, SampleFormat::Signed32);
+      let written = audio::save_as(&write_loc, &audio, LPCM_I32_BE);
       println!("{:?}", written);
       assert!(written.is_ok());
       let verify: AudioBuffer = audio::open(&write_loc).unwrap();
@@ -296,7 +297,7 @@ mod tests {
     println!("Read file");
     // Write to file.
     let write_path = Path::new("tests/results/tmp_u8.aiff");
-    let written = audio::save_as(&write_path, &aifc, SampleFormat::Unsigned8);
+    let written = audio::save_as(&write_path, &aifc, LPCM_U8);
     assert!(written.is_ok());
     println!("File written");
     // Read written file and verify read audio is the same.

@@ -4,5 +4,6 @@
 /tests/results/*
 /tests/results/!empty
 
+tmp*
 *.DS_Store
 *.txt

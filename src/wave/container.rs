@@ -2,12 +2,13 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use buffer::*;
 use buffer::SampleOrder::*;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use codecs::{AudioCodec, Codec, Endian, LPCM, SampleFormat};
-use codecs::SampleFormat::*;
+use codecs::{AudioCodec, Codec, LPCM};
+use codecs::Codec::*;
+use error::*;
 use traits::{Chunk, Container};
 use wave::chunks::*;
+use wave::chunks::CompressionType::*;
 use wave::chunks::WaveChunk::*;
-use error::*;
 
 /// WAVE chunk identifiers.
 const RIFF: &'static [u8; 4] = b"RIFF";
@@ -18,8 +19,8 @@ const DATA: &'static [u8; 4] = b"data";
 /// Struct containing all necessary information for encoding and decoding
 /// bytes to an `AudioBuffer`.
 pub struct WaveContainer {
+  codec:            Codec,
   compression:      CompressionType,
-  sample_format:    SampleFormat,
   pub bit_rate:     u32,
   pub sample_rate:  u32,
   pub channels:     u32,
@@ -45,8 +46,8 @@ impl Container for WaveContainer {
     // Read all supported chunks
     let mut container =
       WaveContainer {
+        codec:          Codec::LPCM_I16_LE,     // Default codec
         compression:    CompressionType::PCM,
-        sample_format:  SampleFormat::Signed16,
         bit_rate:       0u32,
         sample_rate:    0u32,
         channels:       1u32,
@@ -77,15 +78,15 @@ impl Container for WaveContainer {
             } else {
               SampleOrder::INTERLEAVED
             };
-          container.sample_format   =
-            match container.bit_rate {
-              8  => SampleFormat::Unsigned8,
-              16 => SampleFormat::Signed16,
-              24 => SampleFormat::Signed24,
-              32 => SampleFormat::Signed32,
-              _ =>
-                return Err(AudioError::FormatError(
-                  "Audio encoded with invalid sample format".to_string()
+          container.codec           =
+            match (fmt_chunk.compression_type, fmt_chunk.bit_rate) {
+              (CompressionType::PCM, 8 ) => LPCM_U8,
+              (CompressionType::PCM, 16) => LPCM_I16_LE,
+              (CompressionType::PCM, 24) => LPCM_I24_LE,
+              (CompressionType::PCM, 32) => LPCM_I32_LE,
+              (_, _ ) =>
+                return Err(AudioError::UnsupportedError(
+                  "Audio encoded with unsupported codec".to_string()
                 ))
             };
           read_fmt_chunk            = true;
@@ -97,11 +98,9 @@ impl Container for WaveContainer {
               (Format chunk does not occur before Data chunk)".to_string()
             ))
           }
-          let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
-          container.samples =
-            try!(read_codec(chunk_bytes, container.compression,
-                            container.sample_format, Endian::LittleEndian));
-          read_data_chunk = true;
+          let chunk_bytes   = &(buffer.get_ref()[pos .. pos + chunk_size]);
+          container.samples = try!(read_codec(chunk_bytes, container.codec));
+          read_data_chunk   = true;
         },
         None => {}
       }
@@ -120,7 +119,7 @@ impl Container for WaveContainer {
     }
     Ok(container)
   }
-  fn create<W: Write>(writer: &mut W, audio: &AudioBuffer, sample_format: SampleFormat, codec: Codec) -> AudioResult<()> {
+  fn create<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
     // Determine if the sample order of the AudioBuffer is supported by the 
     // wave format.
     match audio.order {
@@ -131,22 +130,20 @@ impl Container for WaveContainer {
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
-    // Determine if sample format is supported by wave format.
-    match sample_format {
-      Unsigned8 |
-      Signed16  |
-      Signed24  |
-      Signed32  => {},
-      sf @ _    => 
-        return Err(AudioError::FormatError(
-          format!("Wave format does not support {:?} sample format", sf)
+    // Determine if codec is supported by container.
+    match codec {
+      LPCM_U8     |
+      LPCM_I16_LE |
+      LPCM_I24_LE |
+      LPCM_I32_LE => {},
+      c @ _       =>
+        return Err(AudioError::UnsupportedError(
+          format!("Wave does not support {:?} codec", c)
         ))
     }
     // Convert the audio samples to the format of the corresponding codec.
-    let data            : Vec<u8> = 
-      match codec {
-        Codec::LPCM => try!(LPCM::create(audio, sample_format, Endian::LittleEndian)),
-      };
+    let data            : Vec<u8> = try!(write_codec(audio, codec));
+    // TODO: Replace with FormatChunk::calculate_size(codec)
     // Wave files created by this library do not support compression, so the
     // format chunk will always be the same size: 16 bytes.
     let fmt_chunk_size  : u32     = 16;
@@ -165,6 +162,7 @@ impl Container for WaveContainer {
     try!(writer.write(RIFF));
     try!(writer.write_u32::<LittleEndian>(total_bytes - 8));
     try!(writer.write(WAVE));
+    // TODO: Replace with FormatChunk::write(writer, codec)
     // Write fmt chunk to the writer.
     try!(writer.write(FMT));
     try!(writer.write_u32::<LittleEndian>(fmt_chunk_size));
@@ -199,18 +197,33 @@ fn identify(bytes: &[u8]) -> AudioResult<WaveChunk> {
       ))
   }
 }
-fn read_codec(bytes: &[u8],
-              compression: CompressionType,
-              sample_format: SampleFormat,
-              endian: Endian) -> AudioResult<Vec<Sample>> {
-  let codec = match compression {
-    CompressionType::PCM => Codec::LPCM,
+
+/// Returns samples read using the given codec. If the container does not
+/// support a codec, an error is returned.
+fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
+  match codec {
+    LPCM_U8      |
+    LPCM_I16_LE  |
+    LPCM_I24_LE  |
+    LPCM_I32_LE  => LPCM::read(bytes, codec),
     _ =>
       return Err(AudioError::UnsupportedError(
-        "This file uses an unsupported codec".to_string()
+        "Audio encoded with unsupported codec".to_string()
       ))
-  };
+  }
+}
+
+/// Returns samples as bytes created using the given codec. If the container
+/// does not support a codec, an error is returned.
+fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
   match codec {
-    Codec::LPCM => LPCM::read(bytes, sample_format, endian)
+    LPCM_U8      |
+    LPCM_I16_LE  |
+    LPCM_I24_LE  |
+    LPCM_I32_LE  => LPCM::create(audio, codec),
+    _ =>
+      return Err(AudioError::UnsupportedError(
+        "Audio encoded with unsupported codec".to_string()
+      ))
   }
 }

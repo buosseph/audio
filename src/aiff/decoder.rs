@@ -1,8 +1,8 @@
 use std::io::{Read, Seek};
 use buffer::AudioBuffer;
+use error::AudioResult;
 use traits::{AudioDecoder, Container};
 use aiff::container::AiffContainer;
-use error::AudioResult;
 
 /// Decodes audio in aiff format from the
 /// provided reader.

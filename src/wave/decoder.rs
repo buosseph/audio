@@ -1,8 +1,8 @@
 use std::io::{Read, Seek};
 use buffer::AudioBuffer;
+use error::AudioResult;
 use traits::{AudioDecoder, Container};
 use wave::container::WaveContainer;
-use error::AudioResult;
 
 /// Decodes audio in wave format from the
 /// provided reader.

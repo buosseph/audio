@@ -4,8 +4,8 @@ use std::io::Write;
 use aiff::COMM;
 use buffer::AudioBuffer;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use codecs::SampleFormat;
-use codecs::SampleFormat::*;
+use codecs::Codec;
+use codecs::Codec::*;
 use self::CompressionType::*;
 use traits::Chunk;
 use error::*;
@@ -58,44 +58,51 @@ pub struct CommonChunk {
   pub compression_type: CompressionType
 }
 
-/// Determines if the `SampleFormat` given requires the audio to be encoded as
-/// AIFF-C. 
+/// Determines if the `Codec` given requires the audio to be encoded as AIFF-C.
 #[inline]
-pub fn is_aifc(sample_format: SampleFormat) -> bool {
-  match sample_format {
-    Unsigned8 => true,
-    Signed8   |
-    Signed16  |
-    Signed24  |
-    Signed32  => false
+pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
+  match codec {
+    LPCM_U8     => Ok(true),
+    LPCM_I8     |
+    LPCM_I16_BE |
+    LPCM_I24_BE |
+    LPCM_I32_BE => Ok(false),
+    c @ _       =>
+      return Err(AudioError::UnsupportedError(
+        format!("Aiff does not support {:?} codec", c)
+      ))
   }
 }
 
 impl CommonChunk {
   #[inline]
-  pub fn calculate_chunk_size(sample_format: SampleFormat) -> i32 {
-    match sample_format {
-      Unsigned8 => 24,
-      Signed8   |
-      Signed16  |
-      Signed24  |
-      Signed32  => 18
+  pub fn calculate_size(codec: Codec) -> AudioResult<i32> {
+    match codec {
+      LPCM_U8      => Ok(24),
+      LPCM_I8      |
+      LPCM_I16_BE  |
+      LPCM_I24_BE  |
+      LPCM_I32_BE  => Ok(18),
+      c @ _       =>
+        return Err(AudioError::UnsupportedError(
+          format!("Aiff does not support {:?} codec", c)
+        ))
     }
   }
-  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, sample_format: SampleFormat) -> AudioResult<()> {
+  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
     try!(writer.write(COMM));
-    let chunk_size: i32 = Self::calculate_chunk_size(sample_format);
+    let chunk_size: i32 = try!(Self::calculate_size(codec));
     try!(writer.write_i32::<BigEndian>(chunk_size));
     try!(writer.write_i16::<BigEndian>(audio.channels as i16));
     try!(writer.write_u32::<BigEndian>(audio.samples.len() as u32 / audio.channels));
     try!(writer.write_i16::<BigEndian>(audio.bit_rate as i16));
     try!(writer.write(&convert_to_ieee_extended(audio.sample_rate as f64)));
     // Write additional information if aifc
-    if is_aifc(sample_format) {
+    if try!(is_aifc(codec)) {
       // Write compression type identifier
       let compression =
-        match sample_format {
-          Unsigned8 => RAW,
+        match codec {
+          LPCM_U8 => RAW,
           fmt @ _   =>
             return Err(AudioError::UnsupportedError(
               format!("Common chunk does not support {:?}", fmt)

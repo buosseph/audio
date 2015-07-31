@@ -3,7 +3,7 @@
 //! These are traits shared by multiple audio formats
 use std::io::{Read, Seek, Write};
 use buffer::AudioBuffer;
-use codecs::{Codec, SampleFormat};
+use codecs::Codec;
 use error::*;
 
 // Decodes audio formats to create `AudioBuffer`s.
@@ -14,8 +14,9 @@ pub trait AudioDecoder {
 /// Encodes `AudioBuffer`s to an audio format.
 pub trait AudioEncoder {
   fn encode(&mut self, audio: &AudioBuffer) -> AudioResult<()>;
-  fn encode_as(&mut self, audio: &AudioBuffer,
-               sample_format: SampleFormat) -> AudioResult<()>;
+  fn encode_as(&mut self,
+               audio: &AudioBuffer,
+               codec: Codec) -> AudioResult<()>;
 }
 
 /// A `Container` is the higher level representation of the audio format.
@@ -27,7 +28,6 @@ pub trait Container {
   /// format and using the given `Codec` and `SampleFormat`.
   fn create<W: Write>(writer: &mut W,
                       audio: &AudioBuffer,
-                      sample_format: SampleFormat,
                       codec: Codec) -> AudioResult<()>;
 }
 

@@ -5,24 +5,25 @@ use error::AudioResult;
 pub mod lpcm;
 pub use codecs::lpcm::LPCM as LPCM;
 
-pub enum Endian {
-  LittleEndian,
-  BigEndian
-}
-
-/// How a sample is stored.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SampleFormat {
-  Unsigned8,
-  Signed8,
-  Signed16,
-  Signed24,
-  Signed32
-}
-
-/// All supported audio codecs.
+/// All supported audio codecs. Any codec where endianess and type influence
+/// coding is represented with a separate variant.
+#[allow(non_camel_case_types, dead_code)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Codec {
-  LPCM
+  LPCM_U8,
+  LPCM_I8,
+  LPCM_ALAW,
+  LPCM_ULAW,
+  LPCM_I16_LE,
+  LPCM_I16_BE,
+  LPCM_I24_LE,
+  LPCM_I24_BE,
+  LPCM_I32_LE,
+  LPCM_I32_BE,
+  LPCM_F32_LE,
+  LPCM_F32_BE,
+  LPCM_F64_LE,
+  LPCM_F64_BE
 }
 
 impl fmt::Display for Codec {
@@ -31,8 +32,8 @@ impl fmt::Display for Codec {
   }
 }
 
-/// All functions required by all codecs
+/// All functions required by all codecs.
 pub trait AudioCodec {
-  fn read(bytes: &[u8], sample_format: SampleFormat, endian: Endian) -> AudioResult<Vec<Sample>>;
-  fn create(audio: &AudioBuffer, sample_format: SampleFormat, endian: Endian) -> AudioResult<Vec<u8>>;
+  fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>>;
+  fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>>;
 }
