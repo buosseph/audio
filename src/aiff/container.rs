@@ -216,38 +216,50 @@ fn identify(bytes: &[u8]) -> AudioResult<AiffChunk> {
   }
 }
 
-/// Returns samples read using the given codec. If the container does not
-/// support a codec, an error is returned.
-fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
+// TODO: Add function to Container trait.
+/// Determines if codec is supported by container.
+fn is_supported(codec: Codec) -> AudioResult<bool> {
   match codec {
     LPCM_U8      |
     LPCM_I8      |
+    LPCM_ALAW    |
+    LPCM_ULAW    |
     LPCM_I16_BE  |
     LPCM_I24_BE  |
     LPCM_I32_BE  |
     LPCM_F32_BE  |
-    LPCM_F64_BE  => LPCM::read(bytes, codec),
-    _ =>
+    LPCM_F64_BE  => Ok(true),
+    c @ _ =>
       return Err(AudioError::UnsupportedError(
-        "Audio encoded with unsupported codec".to_string()
+        format!("Aiff does not support the {:?} codec", c)
       ))
   }
 }
 
+// TODO: Add function to Container trait.
+/// Returns samples read using the given codec. If the container does not
+/// support a codec, an error is returned.
+fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
+  if try!(is_supported(codec)) {
+    LPCM::read(bytes, codec)
+  }
+  else {
+    return Err(AudioError::UnsupportedError(
+      format!("Cannot read bytes using {:?} codec", codec)
+    ))
+  }
+}
+
+// TODO: Add function to Container trait.
 /// Returns samples as bytes created using the given codec. If the container
 /// does not support a codec, an error is returned.
 fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
-  match codec {
-    LPCM_U8      |
-    LPCM_I8      |
-    LPCM_I16_BE  |
-    LPCM_I24_BE  |
-    LPCM_I32_BE  |
-    LPCM_F32_BE  |
-    LPCM_F64_BE  => LPCM::create(audio, codec),
-    _ =>
-      return Err(AudioError::UnsupportedError(
-        "Audio encoded with unsupported codec".to_string()
-      ))
+  if try!(is_supported(codec)) {
+    LPCM::create(audio, codec)
+  }
+  else {
+    return Err(AudioError::UnsupportedError(
+      format!("Cannot create bytes using {:?} codec", codec)
+    ))
   }
 }
