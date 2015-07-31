@@ -115,88 +115,30 @@ impl AudioCodec for LPCM {
             *sample = (BigEndian::read_i32(&bytes[4 * i .. 4 * i + 4])) as f64 / 2_147_483_648f64;
           }
         },
-        LPCM_F32_LE => unimplemented!(),
-        LPCM_F32_BE => unimplemented!(),
-        LPCM_F64_LE => unimplemented!(),
-        LPCM_F64_BE => unimplemented!()
+        LPCM_F32_LE => {
+          for (i, sample) in samples.iter_mut().enumerate() {
+            *sample = (LittleEndian::read_f32(&bytes[4 * i .. 4 * i + 4])) as f64;
+          }
+        },
+        LPCM_F32_BE => {
+          for (i, sample) in samples.iter_mut().enumerate() {
+            *sample = (BigEndian::read_f32(&bytes[4 * i .. 4 * i + 4])) as f64;
+          }
+        },
+        LPCM_F64_LE => {
+          for (i, sample) in samples.iter_mut().enumerate() {
+            *sample = LittleEndian::read_f64(&bytes[8 * i .. 8 * i + 8]);
+          }
+        },
+        LPCM_F64_BE => {
+          for (i, sample) in samples.iter_mut().enumerate() {
+            *sample = BigEndian::read_f64(&bytes[8 * i .. 8 * i + 8]);
+          }
+        }
       }
     }
     Ok(samples)
-
-    /*
-      let le =
-        match endian {
-          Endian::LittleEndian => true,
-          Endian::BigEndian    => false
-        };
-      let bit_rate    : usize     =
-        match sample_format {
-          SampleFormat::Unsigned8 => 8,
-          SampleFormat::Signed8   => 8,
-          SampleFormat::Signed16  => 16,
-          SampleFormat::Signed24  => 24,
-          SampleFormat::Signed32  => 32
-        };
-      let num_samples : usize     = bytes.len() / (bit_rate / 8);
-      let mut samples : Vec<f64>  = vec![0f64; num_samples];
-      if num_samples != 0 {
-        match codec {
-          SampleFormat::Unsigned8 => {
-            for (i, sample) in samples.iter_mut().enumerate() {
-              *sample = (bytes[i] as f64 - 128f64) / 128f64;
-            }
-          },
-          SampleFormat::Signed8 => {
-            for (i, sample) in samples.iter_mut().enumerate() {
-              *sample = bytes[i] as f64 / 128f64;
-            }
-          },
-          SampleFormat::Signed16 => {
-            if le {
-              for (i, sample) in samples.iter_mut().enumerate() {
-                *sample = (LittleEndian::read_i16(&bytes[2 * i .. 2 * i + 2])) as f64 / 32_768f64;
-              }
-            }
-            else {
-              for (i, sample) in samples.iter_mut().enumerate() {
-                *sample = (BigEndian::read_i16(&bytes[2 * i .. 2 * i + 2])) as f64 / 32_768f64;
-              }
-            }
-          },
-          SampleFormat::Signed24 => {
-            if le {
-              for (i, sample) in samples.iter_mut().enumerate() {
-                *sample =
-                  (((bytes[3 * i + 2] as i32) << 16) | ((bytes[3 * i + 1] as i32) << 8) | (bytes[3 * i] as i32)) as f64
-                  / 16_777_216f64;
-              }
-            }
-            else {
-              for (i, sample) in samples.iter_mut().enumerate() {
-                *sample =
-                  (((bytes[3 * i] as i32) << 16) | ((bytes[3 * i + 1] as i32) << 8) | (bytes[3 * i + 2] as i32)) as f64
-                  / 16_777_216f64;
-              }
-            }
-          },
-          SampleFormat::Signed32 => {
-            if le {
-              for (i, sample) in samples.iter_mut().enumerate() {
-                *sample = (LittleEndian::read_i32(&bytes[4 * i .. 4 * i + 4])) as f64 / 2_147_483_648f64;
-              }
-            }
-            else {
-              for (i, sample) in samples.iter_mut().enumerate() {
-                *sample = (BigEndian::read_i32(&bytes[4 * i .. 4 * i + 4])) as f64 / 2_147_483_648f64;
-              }
-            }
-          },
-        }
-      }
-      Ok(samples)
-    */
   }
-
   fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
     let num_bits_per_sample =
       match codec {
@@ -232,122 +174,64 @@ impl AudioCodec for LPCM {
         LPCM_ALAW   => unimplemented!(),
         LPCM_ULAW   => unimplemented!(),
         LPCM_I16_LE => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
-            }
+          for (i, sample) in audio.samples.iter().enumerate() {
+            LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
+          }
         },
         LPCM_I16_BE => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
-            }
+          for (i, sample) in audio.samples.iter().enumerate() {
+            BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
+          }
         },
         LPCM_I24_LE => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              let tmp = (sample * 16_777_216f64) as i32;
-              bytes[3 * i + 2] = (tmp >> 16) as u8;
-              bytes[3 * i + 1] = (tmp >> 8)  as u8;
-              bytes[3 * i]     =  tmp        as u8;
-            }
+          for (i, sample) in audio.samples.iter().enumerate() {
+            let tmp = (sample * 16_777_216f64) as i32;
+            bytes[3 * i + 2] = (tmp >> 16) as u8;
+            bytes[3 * i + 1] = (tmp >> 8)  as u8;
+            bytes[3 * i]     =  tmp        as u8;
+          }
         },
         LPCM_I24_BE => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              let tmp = (sample * 16_777_216f64) as i32;
-              bytes[3 * i]     = (tmp >> 16) as u8;
-              bytes[3 * i + 1] = (tmp >> 8)  as u8;
-              bytes[3 * i + 2] =  tmp        as u8;
-            }
+          for (i, sample) in audio.samples.iter().enumerate() {
+            let tmp = (sample * 16_777_216f64) as i32;
+            bytes[3 * i]     = (tmp >> 16) as u8;
+            bytes[3 * i + 1] = (tmp >> 8)  as u8;
+            bytes[3 * i + 2] =  tmp        as u8;
+          }
         },
         LPCM_I32_LE => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
-            }
+          for (i, sample) in audio.samples.iter().enumerate() {
+            LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
+          }
         },
         LPCM_I32_BE => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
-            }
+          for (i, sample) in audio.samples.iter().enumerate() {
+            BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
+          }
         },
-        LPCM_F32_LE => unimplemented!(),
-        LPCM_F32_BE => unimplemented!(),
-        LPCM_F64_LE => unimplemented!(),
-        LPCM_F64_BE => unimplemented!()
+        LPCM_F32_LE => {
+          for (i, sample) in audio.samples.iter().enumerate() {
+            LittleEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], *sample as f32);
+          }
+        },
+        LPCM_F32_BE => {
+          for (i, sample) in audio.samples.iter().enumerate() {
+            BigEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], *sample as f32);
+          }
+        },
+        LPCM_F64_LE => {
+          for (i, sample) in audio.samples.iter().enumerate() {
+            LittleEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], *sample);
+          }
+        },
+        LPCM_F64_BE => {
+          for (i, sample) in audio.samples.iter().enumerate() {
+            BigEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], *sample);
+          }
+        }
       }
     }
     Ok(bytes)
-
-    /*
-      let le =
-        match endian {
-          Endian::LittleEndian => true,
-          Endian::BigEndian    => false
-        };    
-      let num_bits_per_sample = 
-        match sample_format {
-          Unsigned8| Signed8  => 8,
-          Signed16            => 16,
-          Signed24            => 24,
-          Signed32            => 32
-        };
-      let num_bytes = audio.samples.len() * (num_bits_per_sample / 8);
-      let mut bytes = vec![0u8; num_bytes];
-      if num_bytes != 0 {
-        match sample_format {
-          Unsigned8 => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              bytes[i] = (sample * 128f64 + 128f64) as u8;
-            }
-          },
-          Signed8   => {
-            for (i, sample) in audio.samples.iter().enumerate() {
-              bytes[i] = unsafe { mem::transmute_copy(&((sample * 128f64) as i8)) };
-            }
-          },
-          Signed16  => {
-            if le {
-              for (i, sample) in audio.samples.iter().enumerate() {
-                LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
-              }
-            }
-            else {
-              for (i, sample) in audio.samples.iter().enumerate() {
-                BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
-              }
-            }
-          },
-          Signed24  => {
-            if le {
-              for (i, sample) in audio.samples.iter().enumerate() {
-                let tmp = (sample * 16_777_216f64) as i32;
-                bytes[3 * i + 2] = (tmp >> 16) as u8;
-                bytes[3 * i + 1] = (tmp >> 8)  as u8;
-                bytes[3 * i]     =  tmp        as u8;
-              }
-            }
-            else {
-              for (i, sample) in audio.samples.iter().enumerate() {
-                let tmp = (sample * 16_777_216f64) as i32;
-                bytes[3 * i]     = (tmp >> 16) as u8;
-                bytes[3 * i + 1] = (tmp >> 8)  as u8;
-                bytes[3 * i + 2] =  tmp        as u8;
-              }
-            }
-          },
-          Signed32  => {
-            if le {
-              for (i, sample) in audio.samples.iter().enumerate() {
-                LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
-              }
-            }
-            else {
-              for (i, sample) in audio.samples.iter().enumerate() {
-                BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
-              }
-            }
-          },
-        }
-      }
-      Ok(bytes)
-    */
   }
 }
 

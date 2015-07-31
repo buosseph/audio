@@ -15,8 +15,8 @@ const NONE: (&'static [u8; 4], &'static str) = (b"NONE", "not compressed");
 const RAW : (&'static [u8; 4], &'static str) = (b"raw ", "");
 // const ULAW: (&'static [u8; 4], &'static str) = (b"ulaw", "µLaw 2:1");
 // const ALAW: (&'static [u8; 4], &'static str) = (b"alaw", "ALaw 2:1");
-// const FL32: (&'static [u8; 4], &'static str) = (b"fl32", "32-bit floating point");
-// const FL64: (&'static [u8; 4], &'static str) = (b"fl64", "64-bit floating point");
+const FL32: (&'static [u8; 4], &'static str) = (b"fl32", "IEEE 32-bit float");
+const FL64: (&'static [u8; 4], &'static str) = (b"fl64", "IEEE 64-bit float");
 
 /// Supported AIFF chunks.
 pub enum AiffChunk {
@@ -33,10 +33,10 @@ pub enum AiffChunk {
 pub enum CompressionType {
   Pcm,
   Raw,
-  // Float32,
-  // Float64,
   // ALaw,
   // MuLaw,
+  Float32,
+  Float64
 }
 
 impl fmt::Display for CompressionType {
@@ -62,7 +62,9 @@ pub struct CommonChunk {
 #[inline]
 pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
   match codec {
-    LPCM_U8     => Ok(true),
+    LPCM_U8     |
+    LPCM_F32_BE |
+    LPCM_F64_BE => Ok(true),
     LPCM_I8     |
     LPCM_I16_BE |
     LPCM_I24_BE |
@@ -79,6 +81,8 @@ impl CommonChunk {
   pub fn calculate_size(codec: Codec) -> AudioResult<i32> {
     match codec {
       LPCM_U8      => Ok(24),
+      LPCM_F32_BE  |
+      LPCM_F64_BE  => Ok(40),
       LPCM_I8      |
       LPCM_I16_BE  |
       LPCM_I24_BE  |
@@ -103,6 +107,8 @@ impl CommonChunk {
       let compression =
         match codec {
           LPCM_U8 => RAW,
+          LPCM_F32_BE => FL32,
+          LPCM_F64_BE => FL64,
           fmt @ _   =>
             return Err(AudioError::UnsupportedError(
               format!("Common chunk does not support {:?}", fmt)
@@ -133,8 +139,8 @@ impl Chunk for CommonChunk {
         match &buffer[18..22] {
           tag if tag == NONE.0 => Pcm,
           tag if tag == RAW.0  => Raw,
-          // tag if tag == FL32.0 => Float32,
-          // tag if tag == FL64.0 => Float64,
+          tag if tag == FL32.0 => Float32,
+          tag if tag == FL64.0 => Float64,
           // tag if tag == ALAW.0 => ALaw,
           // tag if tag == ULAW.0 => MuLaw,
           _ => {

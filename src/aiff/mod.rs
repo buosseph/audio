@@ -37,7 +37,6 @@ mod tests {
   use ::buffer::AudioBuffer;
   use ::codecs::Codec::*;
 
-  /* AIFF supports i8, AIFC supports u8 */
   #[test]
   fn i8_aiff_eq() {
     let mut path = PathBuf::from("tests");
@@ -319,6 +318,92 @@ mod tests {
     assert_eq!(read_meta.len(), write_meta.len());
     // Assert every byte is the same between the two files.
     for (inital_byte, written_byte) in read_file.bytes().zip(written_file.bytes()) {
+      assert_eq!(inital_byte.ok(), written_byte.ok());
+    }
+  }
+
+  #[test]
+  fn f32_aifc() {
+    let mut path = PathBuf::from("tests");
+    path.push("aiff");
+    path.push("empty.aiff");
+    path.set_file_name("M1F1-float32C-AFsp.aif");
+    println!("{:?}", path.as_path());
+    let aifc =
+      match audio::open(path.as_path()) {
+        Ok(a) => a,
+        Err(e) => panic!(format!("Error: {:?}", e))
+      };
+    let total_samples = aifc.samples.len();
+    let channels      = aifc.channels;
+    let bit_rate      = aifc.bit_rate;
+    let sample_rate   = aifc.sample_rate;
+    let sample_order  = aifc.order;
+    println!("Read file");
+    // Write to file.
+    let write_path = Path::new("tests/results/tmp_f32.aiff");
+    let written = audio::save_as(&write_path, &aifc, LPCM_F32_BE);
+    assert!(written.is_ok());
+    println!("File written");
+    // Read written file and verify read audio is the same.
+    let verify: AudioBuffer = audio::open(&write_path).unwrap();
+    assert_eq!(channels,      verify.channels);
+    assert_eq!(bit_rate,      verify.bit_rate);
+    assert_eq!(sample_rate,   verify.sample_rate);
+    assert_eq!(sample_order,  verify.order);
+    assert_eq!(total_samples, verify.samples.len());
+    for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
+      assert_eq!(inital_sample, written_sample);
+    }
+    println!("Read new file");
+    // File sizes are not the same.
+    let read_file     = File::open(path.as_path()).unwrap();
+    let written_file  = File::open(&write_path).unwrap();
+    // Assert every byte in the SSND chunk is the same between the two files.
+    for (inital_byte, written_byte) in read_file.bytes().skip(154).zip(written_file.bytes().skip(72)) {
+      assert_eq!(inital_byte.ok(), written_byte.ok());
+    }
+  }
+
+  #[test]
+  fn f64_aifc() {
+    let mut path = PathBuf::from("tests");
+    path.push("aiff");
+    path.push("empty.aiff");
+    path.set_file_name("M1F1-float64C-AFsp.aif");
+    println!("{:?}", path.as_path());
+    let aifc =
+      match audio::open(path.as_path()) {
+        Ok(a) => a,
+        Err(e) => panic!(format!("Error: {:?}", e))
+      };
+    let total_samples = aifc.samples.len();
+    let channels      = aifc.channels;
+    let bit_rate      = aifc.bit_rate;
+    let sample_rate   = aifc.sample_rate;
+    let sample_order  = aifc.order;
+    println!("Read file");
+    // Write to file.
+    let write_path = Path::new("tests/results/tmp_f64.aiff");
+    let written = audio::save_as(&write_path, &aifc, LPCM_F64_BE);
+    assert!(written.is_ok());
+    println!("File written");
+    // Read written file and verify read audio is the same.
+    let verify: AudioBuffer = audio::open(&write_path).unwrap();
+    assert_eq!(channels,      verify.channels);
+    assert_eq!(bit_rate,      verify.bit_rate);
+    assert_eq!(sample_rate,   verify.sample_rate);
+    assert_eq!(sample_order,  verify.order);
+    assert_eq!(total_samples, verify.samples.len());
+    for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
+      assert_eq!(inital_sample, written_sample);
+    }
+    println!("Read new file");
+    // File sizes are not the same.
+    let read_file     = File::open(path.as_path()).unwrap();
+    let written_file  = File::open(&write_path).unwrap();
+    // Assert every byte in the SSND chunk is the same between the two files.
+    for (inital_byte, written_byte) in read_file.bytes().skip(154).zip(written_file.bytes().skip(72)) {
       assert_eq!(inital_byte.ok(), written_byte.ok());
     }
   }

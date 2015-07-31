@@ -88,7 +88,9 @@ impl Container for AiffContainer {
           container.codec           =
             match (comm_chunk.compression_type, comm_chunk.bit_rate) {
               // AIFC supports:
-              (Raw, 8 ) => LPCM_U8,
+              (Raw,     8 ) => LPCM_U8,
+              (Float32, 32) => LPCM_F32_BE,
+              (Float64, 64) => LPCM_F64_BE,
               // AIFF supports:
               (Pcm, 8 ) => LPCM_I8,
               (Pcm, 16) => LPCM_I16_BE,
@@ -222,7 +224,9 @@ fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
     LPCM_I8      |
     LPCM_I16_BE  |
     LPCM_I24_BE  |
-    LPCM_I32_BE  => LPCM::read(bytes, codec),
+    LPCM_I32_BE  |
+    LPCM_F32_BE  |
+    LPCM_F64_BE  => LPCM::read(bytes, codec),
     _ =>
       return Err(AudioError::UnsupportedError(
         "Audio encoded with unsupported codec".to_string()
@@ -238,7 +242,9 @@ fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
     LPCM_I8      |
     LPCM_I16_BE  |
     LPCM_I24_BE  |
-    LPCM_I32_BE  => LPCM::create(audio, codec),
+    LPCM_I32_BE  |
+    LPCM_F32_BE  |
+    LPCM_F64_BE  => LPCM::create(audio, codec),
     _ =>
       return Err(AudioError::UnsupportedError(
         "Audio encoded with unsupported codec".to_string()
