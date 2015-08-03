@@ -71,24 +71,24 @@ impl AudioCodec for LPCM {
       match codec {
         LPCM_U8     => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (bytes[i] as f64 - 128f64) / 128f64;
+            *sample = bytes[i].to_sample();
           }
         },
         LPCM_I8     => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = bytes[i] as f64 / 128f64;
+            *sample = (bytes[i] as i8).to_sample();
           }
         },
         LPCM_ALAW   => unimplemented!(),
         LPCM_ULAW   => unimplemented!(),
         LPCM_I16_LE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (LittleEndian::read_i16(&bytes[2 * i .. 2 * i + 2])) as f64 / 32_768f64;
+            *sample = LittleEndian::read_i16(&bytes[2 * i .. 2 * i + 2]).to_sample();
           }
         },
         LPCM_I16_BE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (BigEndian::read_i16(&bytes[2 * i .. 2 * i + 2])) as f64 / 32_768f64;
+            *sample = BigEndian::read_i16(&bytes[2 * i .. 2 * i + 2]).to_sample();
           }
         },
         LPCM_I24_LE => {
@@ -107,32 +107,32 @@ impl AudioCodec for LPCM {
         },
         LPCM_I32_LE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (LittleEndian::read_i32(&bytes[4 * i .. 4 * i + 4])) as f64 / 2_147_483_648f64;
+            *sample = LittleEndian::read_i32(&bytes[4 * i .. 4 * i + 4]).to_sample();
           }
         },
         LPCM_I32_BE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (BigEndian::read_i32(&bytes[4 * i .. 4 * i + 4])) as f64 / 2_147_483_648f64;
+            *sample = BigEndian::read_i32(&bytes[4 * i .. 4 * i + 4]).to_sample();
           }
         },
         LPCM_F32_LE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (LittleEndian::read_f32(&bytes[4 * i .. 4 * i + 4])) as f64;
+            *sample = LittleEndian::read_f32(&bytes[4 * i .. 4 * i + 4]).to_sample();
           }
         },
         LPCM_F32_BE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (BigEndian::read_f32(&bytes[4 * i .. 4 * i + 4])) as f64;
+            *sample = BigEndian::read_f32(&bytes[4 * i .. 4 * i + 4]).to_sample();
           }
         },
         LPCM_F64_LE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = LittleEndian::read_f64(&bytes[8 * i .. 8 * i + 8]);
+            *sample = LittleEndian::read_f64(&bytes[8 * i .. 8 * i + 8]).to_sample();
           }
         },
         LPCM_F64_BE => {
           for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = BigEndian::read_f64(&bytes[8 * i .. 8 * i + 8]);
+            *sample = BigEndian::read_f64(&bytes[8 * i .. 8 * i + 8]).to_sample();
           }
         }
       }
@@ -163,24 +163,24 @@ impl AudioCodec for LPCM {
       match codec {
         LPCM_U8     => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            bytes[i] = (sample * 128f64 + 128f64) as u8;
+            bytes[i] = u8::from_sample(*sample);
           }
         },
         LPCM_I8     => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            bytes[i] = unsafe { mem::transmute_copy(&((sample * 128f64) as i8)) };
+            bytes[i] = unsafe { mem::transmute_copy(&(i8::from_sample(*sample))) };
           }
         },
         LPCM_ALAW   => unimplemented!(),
         LPCM_ULAW   => unimplemented!(),
         LPCM_I16_LE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
+            LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
           }
         },
         LPCM_I16_BE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], (sample * 32_768f64) as i16);
+            BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
           }
         },
         LPCM_I24_LE => {
@@ -201,32 +201,32 @@ impl AudioCodec for LPCM {
         },
         LPCM_I32_LE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
+            LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
           }
         },
         LPCM_I32_BE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], (sample * 2_147_483_648f64) as i32);
+            BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
           }
         },
         LPCM_F32_LE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], *sample as f32);
+            LittleEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
           }
         },
         LPCM_F32_BE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], *sample as f32);
+            BigEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
           }
         },
         LPCM_F64_LE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], *sample);
+            LittleEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
           }
         },
         LPCM_F64_BE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], *sample);
+            BigEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
           }
         }
       }
