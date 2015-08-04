@@ -13,8 +13,8 @@ use error::*;
 /// AIFC compression type tags and strings.
 const NONE: (&'static [u8; 4], &'static str) = (b"NONE", "not compressed");
 const RAW : (&'static [u8; 4], &'static str) = (b"raw ", "");
-// const ULAW: (&'static [u8; 4], &'static str) = (b"ulaw", "µLaw 2:1");
-// const ALAW: (&'static [u8; 4], &'static str) = (b"alaw", "ALaw 2:1");
+const ULAW: (&'static [u8; 4], &'static str) = (b"ulaw", "µLaw 2:1");
+const ALAW: (&'static [u8; 4], &'static str) = (b"alaw", "ALaw 2:1");
 const FL32: (&'static [u8; 4], &'static str) = (b"fl32", "IEEE 32-bit float");
 const FL64: (&'static [u8; 4], &'static str) = (b"fl64", "IEEE 64-bit float");
 
@@ -33,8 +33,8 @@ pub enum AiffChunk {
 pub enum CompressionType {
   Pcm,
   Raw,
-  // ALaw,
-  // MuLaw,
+  ALaw,
+  MuLaw,
   Float32,
   Float64
 }
@@ -48,7 +48,10 @@ impl fmt::Display for CompressionType {
 /// The AIFF Common Chunk.
 ///
 /// This chunk provides most of the information required to decode the sampled
-/// data.
+/// data. In AIFC files, bit_rate represents the number of samples used in the
+/// uncompressed audio data. For example, although uLaw and aLaw codecs compress
+/// 16-bit audio to 8-bits, the bit_rate should be set to 16 since the original
+/// data uses 16-bits.
 #[derive(Debug, Clone, Copy)]
 pub struct CommonChunk {
   pub num_channels:     i16,
@@ -63,6 +66,8 @@ pub struct CommonChunk {
 pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
   match codec {
     LPCM_U8     |
+    LPCM_ALAW   |
+    LPCM_ULAW   |
     LPCM_F32_BE |
     LPCM_F64_BE => Ok(true),
     LPCM_I8     |
@@ -81,6 +86,8 @@ impl CommonChunk {
   pub fn calculate_size(codec: Codec) -> AudioResult<i32> {
     match codec {
       LPCM_U8      => Ok(24),
+      LPCM_ALAW    |
+      LPCM_ULAW    => Ok(32),
       LPCM_F32_BE  |
       LPCM_F64_BE  => Ok(40),
       LPCM_I8      |
@@ -107,6 +114,8 @@ impl CommonChunk {
       let compression =
         match codec {
           LPCM_U8 => RAW,
+          LPCM_ALAW => ALAW,
+          LPCM_ULAW => ULAW,
           LPCM_F32_BE => FL32,
           LPCM_F64_BE => FL64,
           fmt @ _   =>
@@ -141,8 +150,8 @@ impl Chunk for CommonChunk {
           tag if tag == RAW.0  => Raw,
           tag if tag == FL32.0 => Float32,
           tag if tag == FL64.0 => Float64,
-          // tag if tag == ALAW.0 => ALaw,
-          // tag if tag == ULAW.0 => MuLaw,
+          tag if tag == ALAW.0 => ALaw,
+          tag if tag == ULAW.0 => MuLaw,
           _ => {
             // Add a better error message
             return Err(AudioError::UnsupportedError(

@@ -3,6 +3,7 @@ use buffer::*;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use codecs::{AudioCodec, Codec};
 use codecs::Codec::*;
+use codecs::g711::*;
 use error::AudioResult;
 
 // TODO: Create and use macros for lpcm encoding and decoding based on these
@@ -42,6 +43,7 @@ use error::AudioResult;
 //         dst += size / 8;                                                \
 //     }
 
+// TODO: Write macro for clipping samples based on number of bits
 
 #[allow(dead_code)]
 pub struct LPCM;
@@ -52,6 +54,7 @@ impl AudioCodec for LPCM {
       match codec {
         LPCM_U8     |
         LPCM_I8     |
+        // ALaw and ULaw are decompressed to 16 bits per sample
         LPCM_ALAW   |
         LPCM_ULAW   => 8,
         LPCM_I16_LE |
@@ -79,8 +82,16 @@ impl AudioCodec for LPCM {
             *sample = (bytes[i] as i8).to_sample();
           }
         },
-        LPCM_ALAW   => unimplemented!(),
-        LPCM_ULAW   => unimplemented!(),
+        LPCM_ALAW   => {
+          for (i, sample) in samples.iter_mut().enumerate() {
+            *sample = alaw_to_linear(bytes[i]).to_sample();
+          }
+        },
+        LPCM_ULAW   => {
+          for (i, sample) in samples.iter_mut().enumerate() {
+            *sample = ulaw_to_linear(bytes[i]).to_sample();
+          }
+        },
         LPCM_I16_LE => {
           for (i, sample) in samples.iter_mut().enumerate() {
             *sample = LittleEndian::read_i16(&bytes[2 * i .. 2 * i + 2]).to_sample();
@@ -171,8 +182,16 @@ impl AudioCodec for LPCM {
             bytes[i] = unsafe { mem::transmute_copy(&(i8::from_sample(*sample))) };
           }
         },
-        LPCM_ALAW   => unimplemented!(),
-        LPCM_ULAW   => unimplemented!(),
+        LPCM_ALAW   => {
+          for (i, sample) in audio.samples.iter().enumerate() {
+            bytes[i] = linear_to_alaw(i16::from_sample(*sample));
+          }
+        },
+        LPCM_ULAW   => {
+          for (i, sample) in audio.samples.iter().enumerate() {
+            bytes[i] = linear_to_ulaw(i16::from_sample(*sample));
+          }
+        },
         LPCM_I16_LE => {
           for (i, sample) in audio.samples.iter().enumerate() {
             LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));

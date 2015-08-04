@@ -89,6 +89,8 @@ impl Container for AiffContainer {
             match (comm_chunk.compression_type, comm_chunk.bit_rate) {
               // AIFC supports:
               (Raw,     8 ) => LPCM_U8,
+              (ALaw,    16) => LPCM_ALAW,
+              (MuLaw,   16) => LPCM_ULAW,
               (Float32, 32) => LPCM_F32_BE,
               (Float64, 64) => LPCM_F64_BE,
               // AIFF supports:

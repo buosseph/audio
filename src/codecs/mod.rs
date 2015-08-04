@@ -3,6 +3,7 @@ use buffer::*;
 use error::AudioResult;
 
 pub mod lpcm;
+pub mod g711;
 pub use codecs::lpcm::LPCM as LPCM;
 
 /// All supported audio codecs. Any codec where endianess and type influence
