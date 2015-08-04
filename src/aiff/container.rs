@@ -1,5 +1,5 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
-use aiff::{AIFF, AIFC, AIFC_VERSION1, FORM, FVER, COMM, SSND};
+use aiff::{AIFF, AIFC, AIFC_VERSION_1, FORM, FVER, COMM, SSND};
 use aiff::chunks::*;
 use aiff::chunks::AiffChunk::*;
 use aiff::chunks::CompressionType::*;
@@ -184,7 +184,7 @@ impl Container for AiffContainer {
       // Write form version chunk to writer. Requried by aiff-c.
       try!(writer.write(FVER));
       try!(writer.write_u32::<BigEndian>(4));
-      try!(writer.write_u32::<BigEndian>(AIFC_VERSION1));
+      try!(writer.write_u32::<BigEndian>(AIFC_VERSION_1));
     }
     else {
       try!(writer.write(AIFF));
