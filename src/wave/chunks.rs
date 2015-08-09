@@ -6,8 +6,8 @@ use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
-use self::CompressionType::*;
 use self::FormatChunkVariant::*;
+use self::FormatTag::*;
 use traits::Chunk;
 use wave::{FACT, FMT};
 
@@ -16,7 +16,7 @@ use wave::{FACT, FMT};
 const WAVE_FORMAT_EXTENSIBLE_TAG: u16 = 0xFFFE;
 
 /// GUID suffix for extensible format. All GUIDs are simply the
-/// file's `CompressionType` followed by this suffix.
+/// file's `FormatTag` followed by this suffix.
 const GUID_SUFFIX: [u8; 14] = [
   0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80,
   0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71
@@ -37,15 +37,15 @@ pub enum WaveChunk {
 /// Supported compression codes in the WAVE format chunk. These also correspond
 /// to wave format tags.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CompressionType {
-  Unknown   = 0x0000,
-  Pcm       = 0x0001,
-  IEEEFloat = 0x0003,
-  ALaw      = 0x0006,
-  MuLaw     = 0x0007
+pub enum FormatTag {
+  Unknown = 0x0000,
+  Pcm     = 0x0001,
+  Float   = 0x0003,
+  ALaw    = 0x0006,
+  MuLaw   = 0x0007
 }
 
-impl fmt::Display for CompressionType {
+impl fmt::Display for FormatTag {
   fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     write!(fmt, "{}", self)
   }
@@ -67,7 +67,7 @@ impl fmt::Display for CompressionType {
 /// information later in the chunk. Extensible format data is included 
 #[derive(Debug, Clone, Copy)]
 pub struct FormatChunk {
-  pub compression_type: CompressionType,
+  pub format_tag: FormatTag,
   pub num_channels:     u16,
   pub sample_rate:      u32,
   pub data_rate:        u32,
@@ -81,9 +81,9 @@ pub struct FormatChunk {
 /// The variants of the format chunk with their respective chunk sizes.
 #[derive(Debug, Clone, Copy)]
 pub enum FormatChunkVariant {
-  WaveFormatPcm         = 16,
-  WaveFormatNonPcm      = 18,
-  WaveFormatExtensible  = 40
+  WaveFormatPcm        = 16,
+  WaveFormatNonPcm     = 18,
+  WaveFormatExtensible = 40
 }
 
 impl FormatChunk {
@@ -119,7 +119,7 @@ impl FormatChunk {
 
   pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
     try!(writer.write(FMT));
-    let compression_type = try!(determine_compression_type(codec));
+    let format_tag = try!(determine_format_tag(codec));
     match FormatChunk::determine_variant(audio, codec) {
       WaveFormatPcm        => {
         try!(writer.write_u32::<LittleEndian>(WaveFormatPcm as u32));
@@ -134,7 +134,7 @@ impl FormatChunk {
       },
       WaveFormatNonPcm     => {
         try!(writer.write_u32::<LittleEndian>(WaveFormatNonPcm as u32));
-        try!(writer.write_u16::<LittleEndian>(compression_type as u16));
+        try!(writer.write_u16::<LittleEndian>(format_tag as u16));
         try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
         try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
         try!(writer.write_u32::<LittleEndian>(
@@ -165,7 +165,7 @@ impl FormatChunk {
           _ => try!(writer.write_u32::<LittleEndian>(0x0)),
         }
         // GUID
-        try!(writer.write_u16::<LittleEndian>(compression_type as u16));
+        try!(writer.write_u16::<LittleEndian>(format_tag as u16));
         try!(writer.write(&GUID_SUFFIX));
       }
     }
@@ -173,7 +173,7 @@ impl FormatChunk {
   }
 }
 
-fn determine_compression_type(codec: Codec) -> AudioResult<CompressionType> {
+fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
   match codec {
     LPCM_U8      |
     LPCM_I16_LE  |
@@ -182,7 +182,7 @@ fn determine_compression_type(codec: Codec) -> AudioResult<CompressionType> {
     LPCM_ALAW    => Ok(ALaw),
     LPCM_ULAW    => Ok(MuLaw),
     LPCM_F32_LE  |
-    LPCM_F64_LE  => Ok(IEEEFloat),
+    LPCM_F64_LE  => Ok(Float),
     c @ _ =>
       return Err(AudioError::UnsupportedError(
         format!("Wave does not support the {:?} codec", c)
@@ -193,21 +193,21 @@ fn determine_compression_type(codec: Codec) -> AudioResult<CompressionType> {
 impl Chunk for FormatChunk {
   #[inline]
   fn read(buffer: &[u8]) -> AudioResult<FormatChunk> {
-    let mut format_tag: u16 = LittleEndian::read_u16(&buffer[0..2]);
-    if format_tag == WAVE_FORMAT_EXTENSIBLE_TAG {
-      format_tag = LittleEndian::read_u16(&buffer[24..26])
+    let mut format_value: u16 = LittleEndian::read_u16(&buffer[0..2]);
+    if format_value == WAVE_FORMAT_EXTENSIBLE_TAG {
+      format_value = LittleEndian::read_u16(&buffer[24..26])
     }
-    let compression_type : CompressionType = 
-      match format_tag {
+    let format_tag : FormatTag = 
+      match format_value {
         0x0001 => Pcm,
-        0x0003 => IEEEFloat,
+        0x0003 => Float,
         0x0006 => ALaw,
         0x0007 => MuLaw,
         _ => Unknown,
       };
     Ok(
       FormatChunk {
-        compression_type: compression_type,
+        format_tag:       format_tag,
         num_channels:     LittleEndian::read_u16(&buffer[2..4]),
         sample_rate:      LittleEndian::read_u32(&buffer[4..8]),
         data_rate:        LittleEndian::read_u32(&buffer[8..12]),

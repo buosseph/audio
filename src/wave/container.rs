@@ -8,14 +8,12 @@ use error::*;
 use traits::{Chunk, Container};
 use wave::{RIFF, WAVE, FMT, FACT, DATA};
 use wave::chunks::*;
-use wave::chunks::FormatChunkVariant::*;
 use wave::chunks::WaveChunk::*;
 
 /// Struct containing all necessary information for encoding and decoding
 /// bytes to an `AudioBuffer`.
 pub struct WaveContainer {
   codec:            Codec,
-  compression:      CompressionType,
   pub bit_rate:     u32,
   pub sample_rate:  u32,
   pub channels:     u32,
@@ -41,8 +39,8 @@ impl Container for WaveContainer {
     // Read all supported chunks
     let mut container =
       WaveContainer {
-        codec:          Codec::LPCM_I16_LE,     // Default codec
-        compression:    CompressionType::Pcm,
+        // Default codec
+        codec:          Codec::LPCM_I16_LE,
         bit_rate:       0u32,
         sample_rate:    0u32,
         channels:       1u32,
@@ -63,7 +61,6 @@ impl Container for WaveContainer {
         Some(Format) => {
           let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
           let fmt_chunk = try!(FormatChunk::read(&chunk_bytes));
-          container.compression     = fmt_chunk.compression_type;
           container.bit_rate        = fmt_chunk.bit_rate      as u32;
           container.sample_rate     = fmt_chunk.sample_rate;
           container.channels        = fmt_chunk.num_channels  as u32;
@@ -74,25 +71,18 @@ impl Container for WaveContainer {
             } else {
               SampleOrder::INTERLEAVED
             };
-          container.codec           =
-            match (fmt_chunk.compression_type, fmt_chunk.bit_rate) {
-              (CompressionType::Pcm, 8 ) => LPCM_U8,
-              (CompressionType::Pcm, 16) => LPCM_I16_LE,
-              (CompressionType::Pcm, 24) => LPCM_I24_LE,
-              (CompressionType::Pcm, 32) => LPCM_I32_LE,
-              (CompressionType::ALaw, 8) => LPCM_ALAW,
-              (CompressionType::MuLaw, 8) => LPCM_ULAW,
-              (CompressionType::IEEEFloat, 32) => LPCM_F32_LE,
-              (CompressionType::IEEEFloat, 64) => LPCM_F64_LE,
-              (_, _ ) =>
-                return Err(AudioError::UnsupportedError(
-                  "Audio encoded with unsupported codec".to_string()
-                ))
-            };
+          container.codec           = 
+            try!(determine_codec(fmt_chunk.format_tag,
+                                 fmt_chunk.bit_rate));
           read_fmt_chunk            = true;
+          if fmt_chunk.format_tag == FormatTag::Pcm {
+            // Don't need to check for fact chunk if PCM
+            read_fact_chunk = true;
+          }
         },
         Some(Fact) => {
-          let chunk_bytes   = &(buffer.get_ref()[pos .. pos + chunk_size]);
+          // Don't actually use it, but we do need to check if it exists.
+          // let chunk_bytes   = &(buffer.get_ref()[pos .. pos + chunk_size]);
           // let num_samples_per_channel = LittleEndian::read_u32(&chunk_bytes[0..4]);
           read_fact_chunk   = true;
         }
@@ -104,7 +94,6 @@ impl Container for WaveContainer {
             ))
           }
           let chunk_bytes   = &(buffer.get_ref()[pos .. pos + chunk_size]);
-          // println!("{:?}", &chunk_bytes[0..40]);
           container.samples = try!(read_codec(chunk_bytes, container.codec));
           read_data_chunk   = true;
         },
@@ -118,7 +107,7 @@ impl Container for WaveContainer {
         "File is not valid WAVE (Missing required Format chunk)".to_string()
       ))
     }
-    else if container.compression != CompressionType::Pcm && !read_fact_chunk {
+    else if !read_fact_chunk {
       return Err(AudioError::FormatError(
         "File is not valid WAVE \
         (Missing Fact chunk for non-PCM data)".to_string()
@@ -196,7 +185,6 @@ fn identify(bytes: &[u8]) -> AudioResult<WaveChunk> {
   }
 }
 
-// TODO: Add function to Container trait.
 /// Determines if codec is supported by container. Since WAVE encoding also
 /// depends on whether the codec is integer-based PCM, the return value
 /// represeents if the codec as such.
@@ -213,6 +201,24 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
     c @ _ =>
       return Err(AudioError::UnsupportedError(
         format!("Wave does not support the {:?} codec", c)
+      ))
+  }
+}
+
+// Returns the `Codec` used by the read audio attributes.
+fn determine_codec(format_tag: FormatTag, bit_rate: u16) -> AudioResult<Codec> {
+  match (format_tag, bit_rate) {
+    (FormatTag::Pcm,    8) => Ok(LPCM_U8),
+    (FormatTag::Pcm,   16) => Ok(LPCM_I16_LE),
+    (FormatTag::Pcm,   24) => Ok(LPCM_I24_LE),
+    (FormatTag::Pcm,   32) => Ok(LPCM_I32_LE),
+    (FormatTag::ALaw,   8) => Ok(LPCM_ALAW),
+    (FormatTag::MuLaw,  8) => Ok(LPCM_ULAW),
+    (FormatTag::Float, 32) => Ok(LPCM_F32_LE),
+    (FormatTag::Float, 64) => Ok(LPCM_F64_LE),
+    (_, _) =>
+      return Err(AudioError::UnsupportedError(
+        "Audio encoded with unsupported codec".to_string()
       ))
   }
 }
