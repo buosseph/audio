@@ -15,6 +15,14 @@ use wave::{FACT, FMT};
 /// this is read as little endian data since it is within the chunk.
 const WAVE_FORMAT_EXTENSIBLE_TAG: u16 = 0xFFFE;
 
+/// GUID suffix for extensible format. All GUIDs are simply the
+/// file's `CompressionType` followed by this suffix.
+const GUID_SUFFIX: [u8; 14] = [
+  0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80,
+  0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71
+];
+
+
 /// Supported WAVE chunks
 ///
 /// Some chunks may only contain one item with a size specified by the chunk
@@ -68,7 +76,6 @@ pub struct FormatChunk {
   // pub cb_size:                Some(u16),
   // pub valid_bits_per_sample:  Some(u16),
   // pub speaker_position_mask:  Some(u32),  // Requires `extern crate bitflags`
-  // pub guid:                   Some([u8; 16])
 }
 
 /// The variants of the format chunk with their respective chunk sizes.
@@ -80,11 +87,21 @@ pub enum FormatChunkVariant {
 }
 
 impl FormatChunk {
-  pub fn determine_variant(audio: &AudioBuffer, codec: Codec) -> FormatChunkVariant {
+  // Cases:
+  // is WAVE_FORMAT_EXTENSIBLE if:
+  //  - LPCM data is more than 16-bits per sample
+  //  - Data has more than two channels
+  //  - Actual number of bits per sample is not equal to container size???
+  //  - A mapping of channels to speakers is provided
+  // else WAVE_FORMAT_PCM if:
+  //  - Data is LPCM (16 or 8 bit, mono or stereo)
+  // else WAVE_FORMAT_NON_PCM
+  fn determine_variant(audio: &AudioBuffer, codec: Codec) -> FormatChunkVariant {
     // When fmt is extensible
     // (ch, _) if ch >= 3  => true,
     // if bit_rate % 8 != 0 => true,
     // speaker_positions != 0 => true
+    // else 
     match (audio.channels, codec) {
       (ch, _) if ch > 2 => WaveFormatExtensible,
       (_ , LPCM_U8)     => WaveFormatPcm,
@@ -99,17 +116,10 @@ impl FormatChunk {
   pub fn calculate_size(audio: &AudioBuffer, codec: Codec) -> u32 {
     FormatChunk::determine_variant(audio, codec) as u32
   }
-  // Cases:
-  // is WAVE_FORMAT_EXTENSIBLE if:
-  //  - LPCM data is more than 16-bits per sample
-  //  - Data has more than two channels
-  //  - Actual number of bits per sample is not equal to container size???
-  //  - A mapping of channels to speakers is provided
-  // else WAVE_FORMAT_PCM if:
-  //  - Data is LPCM (16 or 8 bit, mono or stereo)
-  // else WAVE_FORMAT_NON_PCM
+
   pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
     try!(writer.write(FMT));
+    let compression_type = try!(determine_compression_type(codec));
     match FormatChunk::determine_variant(audio, codec) {
       WaveFormatPcm        => {
         try!(writer.write_u32::<LittleEndian>(WaveFormatPcm as u32));
@@ -124,7 +134,7 @@ impl FormatChunk {
       },
       WaveFormatNonPcm     => {
         try!(writer.write_u32::<LittleEndian>(WaveFormatNonPcm as u32));
-        try!(writer.write_u16::<LittleEndian>(IEEEFloat as u16));
+        try!(writer.write_u16::<LittleEndian>(compression_type as u16));
         try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
         try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
         try!(writer.write_u32::<LittleEndian>(
@@ -135,10 +145,48 @@ impl FormatChunk {
         try!(writer.write_u16::<LittleEndian>(0));
       },
       WaveFormatExtensible => {
-        unimplemented!()
+        try!(writer.write_u32::<LittleEndian>(WaveFormatExtensible as u32));
+        try!(writer.write_u16::<LittleEndian>(WAVE_FORMAT_EXTENSIBLE_TAG));
+        try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
+        try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
+        try!(writer.write_u32::<LittleEndian>(
+          audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
+        try!(writer.write_u16::<LittleEndian>(
+          (audio.channels * audio.bit_rate / 8u32) as u16));
+        // Note this is suppose to be the actual bitrate of the data,
+        // not the container type of the encoded data.
+        try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
+        try!(writer.write_u16::<LittleEndian>(22));
+        try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
+        // Speaker position mask
+        match audio.channels {
+          1 => try!(writer.write_u32::<LittleEndian>(0x4)),
+          2 => try!(writer.write_u32::<LittleEndian>(0x2 | 0x1)),
+          _ => try!(writer.write_u32::<LittleEndian>(0x0)),
+        }
+        // GUID
+        try!(writer.write_u16::<LittleEndian>(compression_type as u16));
+        try!(writer.write(&GUID_SUFFIX));
       }
     }
     Ok(())
+  }
+}
+
+fn determine_compression_type(codec: Codec) -> AudioResult<CompressionType> {
+  match codec {
+    LPCM_U8      |
+    LPCM_I16_LE  |
+    LPCM_I24_LE  |
+    LPCM_I32_LE  => Ok(Pcm),
+    LPCM_ALAW    => Ok(ALaw),
+    LPCM_ULAW    => Ok(MuLaw),
+    LPCM_F32_LE  |
+    LPCM_F64_LE  => Ok(IEEEFloat),
+    c @ _ =>
+      return Err(AudioError::UnsupportedError(
+        format!("Wave does not support the {:?} codec", c)
+      ))
   }
 }
 
@@ -172,15 +220,10 @@ impl Chunk for FormatChunk {
 
 pub struct FactChunk;
 impl FactChunk {
-  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, fmt_variant: FormatChunkVariant) -> AudioResult<()> {
-    match fmt_variant {
-      WaveFormatNonPcm => {
-        try!(writer.write(FACT));
-        try!(writer.write_u32::<LittleEndian>(4));
-        try!(writer.write_u32::<LittleEndian>(audio.samples.len() as u32 / audio.channels));
-      },
-      _ => {}
-    }
+  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer) -> AudioResult<()> {
+    try!(writer.write(FACT));
+    try!(writer.write_u32::<LittleEndian>(4));
+    try!(writer.write_u32::<LittleEndian>(audio.samples.len() as u32 / audio.channels));
     Ok(())
   }
 }

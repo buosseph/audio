@@ -263,10 +263,7 @@ mod io {
       assert_eq!(wave.sample_rate,   verify.sample_rate);
       assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
-      let mut i = 0;
       for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
-        println!("{:?}", i);
-        i += 1;
         assert_eq!(inital_sample, written_sample);
       }
       println!("Read new file");
@@ -306,10 +303,7 @@ mod io {
       assert_eq!(wave.sample_rate,   verify.sample_rate);
       assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
-      let mut i = 0;
       for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
-        println!("{:?}", i);
-        i += 1;
         assert_eq!(inital_sample, written_sample);
       }
       println!("Read new file");
@@ -318,6 +312,94 @@ mod io {
       let written_file  = File::open(&write_path).unwrap();
       // Assert every byte, excluding metadata, is the same between the two files.
       for (inital_byte, written_byte) in read_file.bytes().skip(12).take(875934).zip(written_file.bytes().skip(12).take(875934)) {
+        assert_eq!(inital_byte.ok(), written_byte.ok());
+      }
+    }
+
+    #[test]
+    fn alaw_wave_eq() {
+      let mut path = PathBuf::from("tests");
+      path.push("wav");
+      path.push("empty.wav");
+      path.set_file_name("M1F1-Alaw-AFsp.wav");
+      println!("{:?}", path.as_path());
+      let wave =
+        match audio::open(path.as_path()) {
+          Ok(a) => a,
+          Err(e) => panic!(format!("Error: {:?}", e))
+        };
+      println!("Read file");
+      // Write to file.
+      let write_path = Path::new("tests/results/tmp_alaw.wav");
+      match audio::save_as(&write_path, &wave, LPCM_ALAW) {
+        Ok(a) => a,
+        Err(e) => panic!(format!("Error: {:?}", e))
+      }
+      println!("File written");
+      // Read written file and verify read audio is the same.
+      let verify: AudioBuffer =
+        match audio::open(&write_path) {
+          Ok(a) => a,
+          Err(e) => panic!(format!("Error: {:?}", e))
+        };
+      assert_eq!(wave.channels,      verify.channels);
+      assert_eq!(wave.bit_rate,      verify.bit_rate);
+      assert_eq!(wave.sample_rate,   verify.sample_rate);
+      assert_eq!(wave.order,         verify.order);
+      assert_eq!(wave.samples.len(), verify.samples.len());
+      for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
+        assert_eq!(inital_sample, written_sample);
+      }
+      println!("Read new file");
+      // File sizes are not the same.
+      let read_file     = File::open(path.as_path()).unwrap();
+      let written_file  = File::open(&write_path).unwrap();
+      // Assert every byte, excluding metadata, is the same between the two files.
+      for (inital_byte, written_byte) in read_file.bytes().skip(50).take(46994).zip(written_file.bytes().skip(50).take(46994)) {
+        assert_eq!(inital_byte.ok(), written_byte.ok());
+      }
+    }
+
+    #[test]
+    fn ulaw_wave_eq() {
+      let mut path = PathBuf::from("tests");
+      path.push("wav");
+      path.push("empty.wav");
+      path.set_file_name("M1F1-mulaw-AFsp.wav");
+      println!("{:?}", path.as_path());
+      let wave =
+        match audio::open(path.as_path()) {
+          Ok(a) => a,
+          Err(e) => panic!(format!("Error: {:?}", e))
+        };
+      println!("Read file");
+      // Write to file.
+      let write_path = Path::new("tests/results/tmp_ulaw.wav");
+      match audio::save_as(&write_path, &wave, LPCM_ULAW) {
+        Ok(a) => a,
+        Err(e) => panic!(format!("Error: {:?}", e))
+      }
+      println!("File written");
+      // Read written file and verify read audio is the same.
+      let verify: AudioBuffer =
+        match audio::open(&write_path) {
+          Ok(a) => a,
+          Err(e) => panic!(format!("Error: {:?}", e))
+        };
+      assert_eq!(wave.channels,      verify.channels);
+      assert_eq!(wave.bit_rate,      verify.bit_rate);
+      assert_eq!(wave.sample_rate,   verify.sample_rate);
+      assert_eq!(wave.order,         verify.order);
+      assert_eq!(wave.samples.len(), verify.samples.len());
+      for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
+        assert_eq!(inital_sample, written_sample);
+      }
+      println!("Read new file");
+      // File sizes are not the same.
+      let read_file     = File::open(path.as_path()).unwrap();
+      let written_file  = File::open(&write_path).unwrap();
+      // Assert every byte, excluding metadata, is the same between the two files.
+      for (inital_byte, written_byte) in read_file.bytes().skip(50).take(46994).zip(written_file.bytes().skip(50).take(46994)) {
         assert_eq!(inital_byte.ok(), written_byte.ok());
       }
     }
@@ -364,12 +446,12 @@ mod io {
     }*/
   }
   mod wavex {
-    use std::fs::File;
-    use std::io::Read;
-    use std::path::{Path, PathBuf};
+    // use std::fs::File;
+    // use std::io::Read;
+    use std::path::{Path, /*PathBuf*/};
     use ::audio;
-    use ::buffer::AudioBuffer;
-    use ::codecs::Codec::*;
+    // use ::buffer::AudioBuffer;
+    // use ::codecs::Codec::*;
 
     #[test]
     fn read_wave_format_extensible() {

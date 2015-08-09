@@ -80,6 +80,8 @@ impl Container for WaveContainer {
               (CompressionType::Pcm, 16) => LPCM_I16_LE,
               (CompressionType::Pcm, 24) => LPCM_I24_LE,
               (CompressionType::Pcm, 32) => LPCM_I32_LE,
+              (CompressionType::ALaw, 8) => LPCM_ALAW,
+              (CompressionType::MuLaw, 8) => LPCM_ULAW,
               (CompressionType::IEEEFloat, 32) => LPCM_F32_LE,
               (CompressionType::IEEEFloat, 64) => LPCM_F64_LE,
               (_, _ ) =>
@@ -140,15 +142,13 @@ impl Container for WaveContainer {
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
-    // Determine if codec is supported by container and if extensible format
-    // must be used.
-    // let extensible      : bool    = try!(is_extensible(audio, codec));
-
+    // Determine if codec is supported by container and if data is non-PCM.
+    let data_non_pcm: bool = try!(is_supported(codec));
     // Convert the audio samples to the format of the corresponding codec.
-    let data            : Vec<u8> = try!(write_codec(audio, codec));
+    let data: Vec<u8> = try!(write_codec(audio, codec));
     // Wave files created by this library do not support compression, so the
     // format chunk will always be the same size: 16 bytes.
-    let fmt_variant = FormatChunk::determine_variant(audio, codec);
+    let fmt_chunk_size = FormatChunk::calculate_size(audio, codec);
     // Total number of bytes is determined by chunk sizes and the RIFF header,
     // which is always 12 bytes. Every chunk specifies their size but doesn't
     // include the chunk header, the first 8 bytes which contain the chunk
@@ -157,16 +157,11 @@ impl Container for WaveContainer {
     // Currently, wave files created by this library only contains the necessary
     // chunks for audio playback with no option for adding additional chunks for
     // metadata.
-    let mut total_bytes : u32 = 12 + (8 + fmt_variant as u32) + (8 + data.len() as u32);
-    match fmt_variant {
-      WaveFormatPcm        => {},
-      WaveFormatNonPcm     => {
-        // Must include fact chunk size
-        total_bytes += 12;
-      },
-      WaveFormatExtensible => {
-        unimplemented!()
-      }
+    let mut total_bytes: u32 = 12 + (8 + fmt_chunk_size)
+                                  + (8 + data.len() as u32);
+    if data_non_pcm {
+      // Must include fact chunk size
+      total_bytes += 12;
     }
     // Write the riff header to the writer.
     try!(writer.write(RIFF));
@@ -174,9 +169,10 @@ impl Container for WaveContainer {
     try!(writer.write(WAVE));
     // Write fmt chunk to the writer.
     try!(FormatChunk::write(writer, audio, codec));
-    // Write fact chunk to writer. If codec doesn't require it, then function
-    // doesn't write chunk.
-    try!(FactChunk::write(writer, audio, fmt_variant));
+    // Write fact chunk to writer if data is non-PCM
+    if data_non_pcm {
+      try!(FactChunk::write(writer, audio));
+    }
     // Write data chunk to the writer.
     try!(writer.write(DATA));
     try!(writer.write_u32::<LittleEndian>(
@@ -201,17 +197,19 @@ fn identify(bytes: &[u8]) -> AudioResult<WaveChunk> {
 }
 
 // TODO: Add function to Container trait.
-/// Determines if codec is supported by container.
-fn is_supported(codec: Codec) -> AudioResult<()> {
+/// Determines if codec is supported by container. Since WAVE encoding also
+/// depends on whether the codec is integer-based PCM, the return value
+/// represeents if the codec as such.
+fn is_supported(codec: Codec) -> AudioResult<bool> {
   match codec {
     LPCM_U8      |
-    LPCM_ALAW    |
-    LPCM_ULAW    |
     LPCM_I16_LE  |
     LPCM_I24_LE  |
-    LPCM_I32_LE  |
+    LPCM_I32_LE  => Ok(false),
+    LPCM_ALAW    |
+    LPCM_ULAW    |
     LPCM_F32_LE  |
-    LPCM_F64_LE  => Ok(()),
+    LPCM_F64_LE  => Ok(true),
     c @ _ =>
       return Err(AudioError::UnsupportedError(
         format!("Wave does not support the {:?} codec", c)
@@ -224,7 +222,7 @@ fn is_supported(codec: Codec) -> AudioResult<()> {
 #[inline]
 fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
   match is_supported(codec) {
-    Ok(()) => LPCM::read(bytes, codec),
+    Ok(_) => LPCM::read(bytes, codec),
     Err(e)   => Err(e)
   }
 }
@@ -234,7 +232,7 @@ fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
 #[inline]
 fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
   match is_supported(codec) {
-    Ok(()) => LPCM::create(audio, codec),
+    Ok(_) => LPCM::create(audio, codec),
     Err(e) => Err(e)
   }
 }
