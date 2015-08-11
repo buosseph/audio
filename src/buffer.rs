@@ -7,14 +7,14 @@ pub enum SampleOrder { MONO, INTERLEAVED, REVERSED, PLANAR }
 /// Holds all samples and necessary audio data for processing and encoding.
 #[derive(Clone, Debug)]
 pub struct AudioBuffer {
-  pub bit_rate: u32,
+  pub bit_rate:    u32,
   pub sample_rate: u32,
-  pub channels: u32,
-  pub order: SampleOrder,
-  pub samples: Vec<Sample>
+  pub channels:    u32,
+  pub order:       SampleOrder,
+  pub samples:     Vec<Sample>
 }
 
-pub type Sample = f64;
+pub type Sample = f32;
 
 /// Converts object to a `Sample` value.
 ///
@@ -27,7 +27,7 @@ impl ToSample for u8 {
   #[inline]
   fn to_sample(self) -> Sample {
     let result = self as Sample;
-    (result - 128f64) / 128f64
+    (result - 128f32) / 128f32
   }
 }
 
@@ -35,7 +35,7 @@ impl ToSample for i8 {
   #[inline]
   fn to_sample(self) -> Sample {
     let result = self as Sample;
-    result / 128f64
+    result / 128f32
   }
 }
 
@@ -43,30 +43,32 @@ impl ToSample for i16 {
   #[inline]
   fn to_sample(self) -> Sample {
     let result = self as Sample;
-    result / 32_768f64
+    result / 32_768f32
   }
 }
 
+// Headroom is needed for `i32` values due to resolution errors that occur
+// during conversions between `f32` and `i32`.
 impl ToSample for i32 {
   #[inline]
   fn to_sample(self) -> Sample {
     let result = self as Sample;
-    result / 2_147_483_648f64
-  }
-}
-
-impl ToSample for f32 {
-  #[inline]
-  fn to_sample(self) -> Sample {
-    self as Sample
+    result / (2_147_483_648f32 - 128f32)
   }
 }
 
 // To be consistent
-impl ToSample for f64 {
+impl ToSample for f32 {
   #[inline]
   fn to_sample(self) -> Sample {
     self
+  }
+}
+
+impl ToSample for f64 {
+  #[inline]
+  fn to_sample(self) -> Sample {
+    self as Sample
   }
 }
 
@@ -81,8 +83,8 @@ pub trait FromSample {
 impl FromSample for u8 {
   #[inline]
   fn from_sample(sample: Sample) -> Self {
-    let result = sample * 128f64 + 128f64;
-    if result > 255f64 {
+    let result = sample * 128f32 + 128f32;
+    if result > 255f32 {
       u8::max_value()
     }
     else {
@@ -94,8 +96,8 @@ impl FromSample for u8 {
 impl FromSample for i8 {
   #[inline]
   fn from_sample(sample: Sample) -> Self {
-    let result = sample * 128f64;
-    if result > 128f64 - 1f64 {
+    let result = sample * 128f32;
+    if result > 128f32 - 1f32 {
       i8::max_value()
     }
     else {
@@ -107,8 +109,8 @@ impl FromSample for i8 {
 impl FromSample for i16 {
   #[inline]
   fn from_sample(sample: Sample) -> Self {
-    let result = sample * 32_768f64;
-    if result > 32_768f64 - 1f64 {
+    let result = sample * 32_768f32;
+    if result > 32_768f32 - 1f32 {
       i16::max_value()
     }
     else {
@@ -117,11 +119,13 @@ impl FromSample for i16 {
   }
 }
 
+// Headroom is needed for `i32` values due to resolution errors that occur
+// during conversions between `f32` and `i32`.
 impl FromSample for i32 {
   #[inline]
   fn from_sample(sample: Sample) -> Self {
-    let result = sample * 2_147_483_648f64;
-    if result > 2_147_483_648f64 - 1f64 {
+    let result = sample * (2_147_483_648f32 - 128f32);
+    if result > (2_147_483_648f32 - 128f32) - 1f32 {
       i32::max_value()
     }
     else {
@@ -130,17 +134,17 @@ impl FromSample for i32 {
   }
 }
 
+// To be consistent
 impl FromSample for f32 {
   #[inline]
   fn from_sample(sample: Sample) -> Self {
-    sample as f32
+    sample
   }
 }
 
-// To be consistent
 impl FromSample for f64 {
   #[inline]
   fn from_sample(sample: Sample) -> Self {
-    sample
+    sample as f64
   }
 }

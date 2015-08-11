@@ -69,7 +69,7 @@ impl AudioCodec for LPCM {
         LPCM_F64_BE => 64
       };
     let num_samples : usize     = bytes.len() / (bit_rate / 8);
-    let mut samples : Vec<f64>  = vec![0f64; num_samples];
+    let mut samples : Vec<Sample>  = vec![0f32; num_samples];
     if num_samples != 0 {
       match codec {
         LPCM_U8     => {
@@ -105,15 +105,15 @@ impl AudioCodec for LPCM {
         LPCM_I24_LE => {
           for (i, sample) in samples.iter_mut().enumerate() {
             *sample =
-              (((bytes[3 * i + 2] as i32) << 16) | ((bytes[3 * i + 1] as i32) << 8) | (bytes[3 * i] as i32)) as f64
-              / 16_777_216f64;
+              (((bytes[3 * i + 2] as i32) << 16) | ((bytes[3 * i + 1] as i32) << 8) | (bytes[3 * i] as i32)) as Sample
+              / 16_777_216f32;
           }
         },
         LPCM_I24_BE => {
           for (i, sample) in samples.iter_mut().enumerate() {
             *sample =
-              (((bytes[3 * i] as i32) << 16) | ((bytes[3 * i + 1] as i32) << 8) | (bytes[3 * i + 2] as i32)) as f64
-              / 16_777_216f64;
+              (((bytes[3 * i] as i32) << 16) | ((bytes[3 * i + 1] as i32) << 8) | (bytes[3 * i + 2] as i32)) as Sample
+              / 16_777_216f32;
           }
         },
         LPCM_I32_LE => {
@@ -204,7 +204,7 @@ impl AudioCodec for LPCM {
         },
         LPCM_I24_LE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            let tmp = (sample * 16_777_216f64) as i32;
+            let tmp = (sample * 16_777_216f32) as i32;
             bytes[3 * i + 2] = (tmp >> 16) as u8;
             bytes[3 * i + 1] = (tmp >> 8)  as u8;
             bytes[3 * i]     =  tmp        as u8;
@@ -212,7 +212,7 @@ impl AudioCodec for LPCM {
         },
         LPCM_I24_BE => {
           for (i, sample) in audio.samples.iter().enumerate() {
-            let tmp = (sample * 16_777_216f64) as i32;
+            let tmp = (sample * 16_777_216f32) as i32;
             bytes[3 * i]     = (tmp >> 16) as u8;
             bytes[3 * i + 1] = (tmp >> 8)  as u8;
             bytes[3 * i + 2] =  tmp        as u8;
