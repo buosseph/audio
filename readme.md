@@ -4,6 +4,8 @@ A Rust audio coding library.
 ## TODO
 - Better support for alternative WAVE sample formats
   - When exactly should the encoder write using `WAVE_FORMAT_EXTENSIBLE`? Should the user be able to specify this using a separate codec (like in Audacity)?
+- Refactor aiff and wave
+  - Recent commits have made code messy and difficult to follow
 - Better support for RIFF and IFF metadata tags
 - Integrate `crate rust-id3` for handling ID3 metadata
 - Better integration tests

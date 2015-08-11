@@ -148,8 +148,8 @@ impl Chunk for CommonChunk {
         match &buffer[18..22] {
           tag if tag == NONE.0 => Pcm,
           tag if tag == RAW.0  => Raw,
-          tag if tag == FL32.0 => Float32,
-          tag if tag == FL64.0 => Float64,
+          tag if tag == FL32.0 || tag == b"FL32" => Float32,
+          tag if tag == FL64.0 || tag == b"FL64" => Float64,
           tag if tag == ALAW.0 => ALaw,
           tag if tag == ULAW.0 => MuLaw,
           _ => {
