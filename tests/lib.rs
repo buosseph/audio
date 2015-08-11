@@ -24,14 +24,14 @@ fn save() {
   // Important cases
   // - Directory (path) doesn't exist
   let path = Path::new("tests/results/empty.wav");
-  let samples: Vec<f64> = Vec::with_capacity(0);
-  let audio
-    = AudioBuffer {
-      bit_rate: 16u32,
+  let samples: Vec<f32> = Vec::with_capacity(0);
+  let audio =
+    AudioBuffer {
+      bit_rate:    16u32,
       sample_rate: 44100u32,
-      channels: 2u32,
-      order: SampleOrder::INTERLEAVED,
-      samples: samples,
+      channels:    2u32,
+      order:       SampleOrder::INTERLEAVED,
+      samples:     samples,
     };
   let result: AudioResult<()> = audio::save(path, &audio);
   assert!(result.is_ok());

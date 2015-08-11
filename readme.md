@@ -4,7 +4,6 @@ A Rust audio coding library.
 ## TODO
 - Better support for alternative WAVE sample formats
   - When exactly should the encoder write using `WAVE_FORMAT_EXTENSIBLE`? Should the user be able to specify this using a separate codec (like in Audacity)?
-- Research conversion of Sample to `f32` (Precision issues come up with converstion to `i32`)
 - Better support for RIFF and IFF metadata tags
 - Integrate `crate rust-id3` for handling ID3 metadata
 - Better integration tests
