@@ -452,7 +452,7 @@ mod io {
 
     #[test]
     fn read_wave_format_extensible() {
-      let wavex_path = Path::new("tests/wav/extensible/M1F1-int16WE-AFsp.wav");
+      let wavex_path = Path::new("tests/wav/M1F1-int16WE-AFsp.wav");
       let wave_path = Path::new("tests/wav/M1F1-int16-AFsp.wav");
       // Read wavex file.
       let wavex =
