@@ -7,13 +7,15 @@
 extern crate byteorder;
 
 mod audio;
-mod buffer;
+pub mod buffer;
 
 pub mod error;
 pub use buffer::{
+  AudioBuffer,
+  FromSample,
   Sample,
   SampleOrder,
-  AudioBuffer
+  ToSample
 };
 
 mod traits;
@@ -31,3 +33,5 @@ pub use audio::{
   write,
   write_as
 };
+
+pub use codecs::Codec as Codec;

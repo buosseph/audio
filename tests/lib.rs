@@ -36,3 +36,40 @@ fn save() {
   let result: AudioResult<()> = audio::save(path, &audio);
   assert!(result.is_ok());
 }
+
+#[test]
+#[should_panic]
+fn transcoding() {
+  use std::path::{Path, PathBuf};
+  use audio::AudioBuffer;
+  use audio::buffer::FromSample;
+  use audio::Sample;
+
+  // let mut buffers: Vec<AudioBuffer> = Vec::new();
+  let mut samples: Vec<Sample> = Vec::new();
+  let mut path_buf = PathBuf::from("tests");
+  path_buf.push("wav");
+  path_buf.push("empty.wav");
+  let files = vec![
+    "M1F1-uint8-AFsp.wav",
+    "M1F1-int16-AFsp.wav",
+    "M1F1-int24-AFsp.wav",
+    "M1F1-int32-AFsp.wav",
+    "M1F1-float32-AFsp.wav",
+    "M1F1-float64-AFsp.wav",
+    "M1F1-Alaw-AFsp.wav",
+    "M1F1-mulaw-AFsp.wav"
+  ];
+  for file in files.iter() {
+    path_buf.set_file_name(file);
+    if let Ok(audio) = audio::open(path_buf.as_path()) {
+      samples.push(audio.samples[100]);
+    }
+  }
+  for s in samples.iter() {
+    println!("{:?}", u8::from_sample(*s));
+    // assert!((0.016448975f32 - *s).abs() < 1e6f32;
+    // assert_eq!(0.016448975f32, *s);
+  }
+  panic!();
+}

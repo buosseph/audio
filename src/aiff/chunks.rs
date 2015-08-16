@@ -50,7 +50,7 @@ impl fmt::Display for CompressionType {
 /// This chunk provides most of the information required to decode the sampled
 /// data. In AIFC files, bit_rate represents the number of samples used in the
 /// uncompressed audio data. For example, although uLaw and aLaw codecs compress
-/// 16-bit audio to 8-bits, the bit_rate should be set to 16 since the original
+/// 16-bit audio to 8-bits, the bit_rate is be set to 16 since the original
 /// data uses 16-bits.
 #[derive(Debug, Clone, Copy)]
 pub struct CommonChunk {
@@ -81,6 +81,24 @@ pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
   }
 }
 
+fn get_bit_rate(codec: Codec) -> AudioResult<i16> {
+  match codec {
+    LPCM_U8      |
+    LPCM_I8      => Ok(8),
+    LPCM_ALAW    |
+    LPCM_ULAW    |
+    LPCM_I16_BE  => Ok(16),
+    LPCM_I24_BE  => Ok(24),
+    LPCM_I32_BE  |
+    LPCM_F32_BE  => Ok(32),
+    LPCM_F64_BE  => Ok(64),
+    c @ _ =>
+      return Err(AudioError::UnsupportedError(
+        format!("Aiff does not support the {:?} codec", c)
+      ))
+  }
+}
+
 impl CommonChunk {
   #[inline]
   pub fn calculate_size(codec: Codec) -> AudioResult<i32> {
@@ -106,7 +124,7 @@ impl CommonChunk {
     try!(writer.write_i32::<BigEndian>(chunk_size));
     try!(writer.write_i16::<BigEndian>(audio.channels as i16));
     try!(writer.write_u32::<BigEndian>(audio.samples.len() as u32 / audio.channels));
-    try!(writer.write_i16::<BigEndian>(audio.bit_rate as i16));
+    try!(writer.write_i16::<BigEndian>(try!(get_bit_rate(codec))));
     try!(writer.write(&convert_to_ieee_extended(audio.sample_rate as f64)));
     // Write additional information if aifc
     if try!(is_aifc(codec)) {
@@ -306,7 +324,7 @@ pub fn convert_to_ieee_extended(sample_rate: f64) -> Vec<u8>{
 }
 
 #[cfg(test)]
-mod tests {
+mod sample_rate_conversion {
   use super::convert_from_ieee_extended;
   use super::convert_to_ieee_extended;
 

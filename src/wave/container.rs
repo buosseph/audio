@@ -163,10 +163,7 @@ impl Container for WaveContainer {
       try!(FactChunk::write(writer, audio));
     }
     // Write data chunk to the writer.
-    try!(writer.write(DATA));
-    try!(writer.write_u32::<LittleEndian>(
-      (audio.samples.len() * ((audio.bit_rate) as usize / 8)) as u32));
-    try!(writer.write_all(&data));
+    try!(DataChunk::write(writer, &data));
     Ok(())
   }
 }

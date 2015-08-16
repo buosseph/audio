@@ -9,7 +9,7 @@ use error::*;
 use self::FormatChunkVariant::*;
 use self::FormatTag::*;
 use traits::Chunk;
-use wave::{FACT, FMT};
+use wave::{FACT, FMT, DATA};
 
 /// Format tag for the wave extensible format. Unlike chunk identifiers,
 /// this is read as little endian data since it is within the chunk.
@@ -21,7 +21,6 @@ const GUID_SUFFIX: [u8; 14] = [
   0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80,
   0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71
 ];
-
 
 /// Supported WAVE chunks
 ///
@@ -120,43 +119,29 @@ impl FormatChunk {
   pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
     try!(writer.write(FMT));
     let format_tag = try!(determine_format_tag(codec));
-    match FormatChunk::determine_variant(audio, codec) {
-      WaveFormatPcm        => {
-        try!(writer.write_u32::<LittleEndian>(WaveFormatPcm as u32));
-        try!(writer.write_u16::<LittleEndian>(Pcm as u16));
-        try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
-        try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
-        try!(writer.write_u32::<LittleEndian>(
-          audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
-        try!(writer.write_u16::<LittleEndian>(
-          (audio.channels * audio.bit_rate / 8u32) as u16));
-        try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
-      },
-      WaveFormatNonPcm     => {
-        try!(writer.write_u32::<LittleEndian>(WaveFormatNonPcm as u32));
-        try!(writer.write_u16::<LittleEndian>(format_tag as u16));
-        try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
-        try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
-        try!(writer.write_u32::<LittleEndian>(
-          audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
-        try!(writer.write_u16::<LittleEndian>(
-          (audio.channels * audio.bit_rate / 8u32) as u16));
-        try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
-        try!(writer.write_u16::<LittleEndian>(0));
-      },
+    let bit_rate   = try!(get_bit_rate(codec));
+    let data_rate  = audio.sample_rate * audio.channels * (bit_rate / 8) as u32;
+    let block_size = audio.channels as u16 * bit_rate / 8;
+    let variant = FormatChunk::determine_variant(audio, codec);
+    try!(writer.write_u32::<LittleEndian>(variant as u32));
+    match variant {
+      WaveFormatExtensible =>
+        try!(writer.write_u16::<LittleEndian>(WAVE_FORMAT_EXTENSIBLE_TAG)),
+      _ => try!(writer.write_u16::<LittleEndian>(format_tag as u16))
+    }
+    try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
+    try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
+    try!(writer.write_u32::<LittleEndian>(data_rate));
+    try!(writer.write_u16::<LittleEndian>(block_size));
+    try!(writer.write_u16::<LittleEndian>(bit_rate));
+    match variant {
+      WaveFormatPcm => {},
+      WaveFormatNonPcm => try!(writer.write_u16::<LittleEndian>(0)),
       WaveFormatExtensible => {
-        try!(writer.write_u32::<LittleEndian>(WaveFormatExtensible as u32));
-        try!(writer.write_u16::<LittleEndian>(WAVE_FORMAT_EXTENSIBLE_TAG));
-        try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
-        try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
-        try!(writer.write_u32::<LittleEndian>(
-          audio.sample_rate * audio.channels * audio.bit_rate / 8u32));
-        try!(writer.write_u16::<LittleEndian>(
-          (audio.channels * audio.bit_rate / 8u32) as u16));
-        // Note this is suppose to be the actual bitrate of the data,
-        // not the container type of the encoded data.
-        try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
         try!(writer.write_u16::<LittleEndian>(22));
+        // Note this is suppose to be the actual bitrate of the data,
+        // the number of bits that may be non-zero, not the container
+        // type of the encoded data. Ranges is [1, bit_rate].
         try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
         // Speaker position mask
         match audio.channels {
@@ -190,6 +175,23 @@ fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
   }
 }
 
+fn get_bit_rate(codec: Codec) -> AudioResult<u16> {
+  match codec {
+    LPCM_U8      |
+    LPCM_ALAW    |
+    LPCM_ULAW    => Ok(8),
+    LPCM_I16_LE  => Ok(16),
+    LPCM_I24_LE  => Ok(24),
+    LPCM_I32_LE  |
+    LPCM_F32_LE  => Ok(32),
+    LPCM_F64_LE  => Ok(64),
+    c @ _ =>
+      return Err(AudioError::UnsupportedError(
+        format!("Wave does not support the {:?} codec", c)
+      ))
+  }
+}
+
 impl Chunk for FormatChunk {
   #[inline]
   fn read(buffer: &[u8]) -> AudioResult<FormatChunk> {
@@ -215,6 +217,16 @@ impl Chunk for FormatChunk {
         bit_rate:         LittleEndian::read_u16(&buffer[14..16]),
       }
     )
+  }
+}
+
+pub struct DataChunk;
+impl DataChunk {
+  pub fn write<W: Write>(writer: &mut W, encoded_data: &[u8]) -> AudioResult<()> {
+    try!(writer.write(DATA));
+    try!(writer.write_u32::<LittleEndian>(encoded_data.len() as u32));
+    try!(writer.write_all(encoded_data));
+    Ok(())
   }
 }
 
