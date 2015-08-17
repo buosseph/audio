@@ -4,7 +4,7 @@
 /tests/results/*
 /tests/results/!empty
 
-examples/audio/my-break.wav
+examples/audio/my-break.*
 
 tmp*
 *.DS_Store
