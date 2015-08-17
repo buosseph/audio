@@ -404,47 +404,6 @@ mod io {
         assert_eq!(inital_byte.ok(), written_byte.ok());
       }
     }
-
-    #[test]
-    fn wave_with_metadata() {
-      let path  = Path::new("tests/wav/Warrior Concerto.wav");
-      let audio =
-        match audio::open(&path) {
-          Ok(a) => a,
-          Err(e) => panic!(format!("Error: {:?}", e))
-        };
-      let total_samples = audio.samples.len();
-      let channels      = audio.channels;
-      let bit_rate      = audio.bit_rate;
-      let sample_rate   = audio.sample_rate;
-      let sample_order  = audio.order;
-      println!("Read file");
-      // Write to file.
-      let write_path  = Path::new("tests/results/tmp_i16.wav");
-      let written     = audio::save(&write_path, &audio);
-      assert!(written.is_ok());
-      println!("File written");
-      // Read written file and verify read audio is the same.
-      let verify: AudioBuffer = audio::open(&write_path).unwrap();
-      assert_eq!(channels,      verify.channels);
-      assert_eq!(bit_rate,      verify.bit_rate);
-      assert_eq!(sample_rate,   verify.sample_rate);
-      assert_eq!(sample_order,  verify.order);
-      assert_eq!(total_samples, verify.samples.len());
-      for (inital_sample, written_sample) in
-        audio.samples.iter().zip(&verify.samples) {
-        assert_eq!(inital_sample, written_sample);
-      }
-      println!("Read new file");
-      // Check if bytes are the same, but file sizes won't be in this case.
-      let read_file     = File::open(&path).unwrap();
-      let written_file  = File::open(&write_path).unwrap();
-      // Assert every data byte is the same between the two files.
-      for (inital_byte, written_byte) in
-        read_file.bytes().skip(8).zip(written_file.bytes().skip(8)) {
-        assert_eq!(inital_byte.ok(), written_byte.ok());
-      }
-    }
   }
   mod wavex {
     use std::path::Path;

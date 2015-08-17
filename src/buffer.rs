@@ -26,24 +26,21 @@ pub trait ToSample {
 impl ToSample for u8 {
   #[inline]
   fn to_sample(self) -> Sample {
-    let result = self as Sample;
-    (result - 128f32) / 128f32
+    (self as Sample - 128f32) / 128f32
   }
 }
 
 impl ToSample for i8 {
   #[inline]
   fn to_sample(self) -> Sample {
-    let result = self as Sample;
-    result / 128f32
+    self as Sample / 128f32
   }
 }
 
 impl ToSample for i16 {
   #[inline]
   fn to_sample(self) -> Sample {
-    let result = self as Sample;
-    result / 32_768f32
+    self as Sample / 32_768f32
   }
 }
 
@@ -52,8 +49,7 @@ impl ToSample for i16 {
 impl ToSample for i32 {
   #[inline]
   fn to_sample(self) -> Sample {
-    let result = self as Sample;
-    result / (2_147_483_648f32 - 128f32)
+    self as Sample / (2_147_483_648f32 - 128f32)
   }
 }
 
@@ -61,14 +57,30 @@ impl ToSample for i32 {
 impl ToSample for f32 {
   #[inline]
   fn to_sample(self) -> Sample {
-    self
+    if self > 1f32 {
+      1f32
+    }
+    else if self < -1f32 {
+      -1f32
+    }
+    else {
+      self
+    }
   }
 }
 
 impl ToSample for f64 {
   #[inline]
   fn to_sample(self) -> Sample {
-    self as Sample
+    if self > 1f64 {
+      1f32
+    }
+    else if self < -1f64 {
+      -1f32
+    }
+    else {
+      self as Sample
+    }
   }
 }
 
@@ -87,6 +99,9 @@ impl FromSample for u8 {
     if result > 255f32 {
       u8::max_value()
     }
+    else if result < 0f32 {
+      u8::min_value()
+    }
     else {
       result as u8
     }
@@ -100,6 +115,9 @@ impl FromSample for i8 {
     if result > 128f32 - 1f32 {
       i8::max_value()
     }
+    else if result < -128f32 {
+      i8::min_value()
+    }
     else {
       result as i8
     }
@@ -112,6 +130,9 @@ impl FromSample for i16 {
     let result = sample * 32_768f32;
     if result > 32_768f32 - 1f32 {
       i16::max_value()
+    }
+    else if result < -32_768f32 {
+      i16::min_value()
     }
     else {
       result as i16
@@ -127,6 +148,9 @@ impl FromSample for i32 {
     let result = sample * (2_147_483_648f32 - 128f32);
     if result > (2_147_483_648f32 - 128f32) - 1f32 {
       i32::max_value()
+    }
+    else if result < -(2_147_483_648f32 - 128f32) {
+      i32::min_value()
     }
     else {
       result as i32
