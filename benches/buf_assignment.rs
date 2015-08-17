@@ -1,8 +1,5 @@
 // This benchmark is for testing implementation approaches,
-// not the library itself. For that reason, it's not linked
-// to benches/lib.rs and is not tested using `cargo bench`
-//
-// Use `rustc -C opt-level=3 buf_assignment.rs --test -o bench && ./bench --bench`
+// not the library itself.
 
 #![feature(test)]
 extern crate test;
