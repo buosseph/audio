@@ -95,16 +95,7 @@ pub trait FromSample {
 impl FromSample for u8 {
   #[inline]
   fn from_sample(sample: Sample) -> Self {
-    let result = sample * 128f32 + 128f32;
-    if result > 255f32 {
-      u8::max_value()
-    }
-    else if result < 0f32 {
-      u8::min_value()
-    }
-    else {
-      result as u8
-    }
+    (i8::from_sample(sample) as i16 + 128) as u8
   }
 }
 

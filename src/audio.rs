@@ -28,24 +28,23 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
       let format = match file_format {
         "wav"|"wave"        => AudioFormat::WAVE,
         "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
-        _                   => return
+        f_ext @ _           => return
           Err(AudioError::FormatError(
-            format!("Did not recognize `.{:?}` as an audio file format", ext)
+            format!("Did not recognize audio file format .{}", f_ext)
           ))
-      };
-      // TODO: Test path, see if it's valid and return a useful error message
+      };      
       let mut file = try!(File::open(path));
       load(&mut file, format)
     }
     else {
       Err(AudioError::FormatError(
-        "Did not recognize file format".to_string()
+        format!("Did not recognize file format {}", ext.to_str().unwrap())
       ))
     }
   }
   else {
     Err(AudioError::FormatError(
-      "Did not recognize file format".to_string()
+      format!("Did not recognize file {}", path.display())
     ))
   }
 }
@@ -72,9 +71,9 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
       let format = match file_format {
         "wav"|"wave"        => AudioFormat::WAVE,
         "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
-        _                   => return
+        f_ext @ _           => return
           Err(AudioError::FormatError(
-            format!("Did not recognize `.{:?}` as an audio file format", ext)
+            format!("Did not recognize audio file format .{}", f_ext)
           ))
       };
       let mut file = try!(File::create(path));
@@ -82,13 +81,13 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
     }
     else {
       Err(AudioError::FormatError(
-        "Did not recognize file format".to_string()
+        format!("Did not recognize file format {}", ext.to_str().unwrap())
       ))
     }
   }
   else {
     Err(AudioError::FormatError(
-      "Did not recognize file format".to_string()
+      format!("Did not recognize file {}", path.display())
     ))
   }
 }
@@ -99,9 +98,9 @@ pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()
       let format = match file_format {
         "wav"|"wave"        => AudioFormat::WAVE,
         "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
-        _                   => return
+        f_ext @ _           => return
           Err(AudioError::FormatError(
-            format!("Did not recognize `.{:?}` as an audio file format", ext)
+            format!("Did not recognize audio file format .{}", f_ext)
           ))
       };
       let mut file = try!(File::create(path));
@@ -109,13 +108,13 @@ pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()
     }
     else {
       Err(AudioError::FormatError(
-        "Did not recognize file format".to_string()
+        format!("Did not recognize file format {}", ext.to_str().unwrap())
       ))
     }
   }
   else {
     Err(AudioError::FormatError(
-      "Did not recognize file format".to_string()
+      format!("Did not recognize file {}", path.display())
     ))
   }
 }
