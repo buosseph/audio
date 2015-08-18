@@ -36,10 +36,10 @@ impl Container for WaveContainer {
     let file_size : u32 = LittleEndian::read_u32(&riff_header[4..8]) - 4;
     let mut buffer: Cursor<Vec<u8>> = Cursor::new(vec![0u8; file_size as usize]);
     try!(reader.read(buffer.get_mut()));
+
     // Read all supported chunks
     let mut container =
       WaveContainer {
-        // Default codec
         codec:          Codec::LPCM_I16_LE,
         bit_rate:       0u32,
         sample_rate:    0u32,
@@ -54,9 +54,9 @@ impl Container for WaveContainer {
     let mut read_data_chunk   : bool    = false;
     while buffer.position() < file_size as u64 {
       try!(buffer.read(&mut chunk_header));
-      let chunk_size  : usize = 
+      let chunk_size: usize = 
         LittleEndian::read_u32(&chunk_header[4..8]) as usize;
-      let pos         : usize = buffer.position() as usize;
+      let pos: usize = buffer.position() as usize;
       match identify(&chunk_header[0..4]).ok() {
         Some(Format) => {
           let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
@@ -101,19 +101,20 @@ impl Container for WaveContainer {
       }
       try!(buffer.seek(SeekFrom::Current(chunk_size as i64)));
     }
+
     // Check if required chunks were read
     if !read_fmt_chunk {
       return Err(AudioError::FormatError(
         "File is not valid WAVE (Missing required Format chunk)".to_string()
       ))
     }
-    else if !read_fact_chunk {
+    if !read_fact_chunk {
       return Err(AudioError::FormatError(
         "File is not valid WAVE \
         (Missing Fact chunk for non-PCM data)".to_string()
       ))
     }
-    else if !read_data_chunk {
+    if !read_data_chunk {
       return Err(AudioError::FormatError(
         "File is not valid WAVE (Missing required Data chunk)".to_string()
       ))
@@ -131,27 +132,19 @@ impl Container for WaveContainer {
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
+
     // Determine if codec is supported by container and if data is non-PCM.
     let data_non_pcm: bool = try!(is_supported(codec));
-    // Convert the audio samples to the format of the corresponding codec.
+    // Encode audio samples using codec.
     let data: Vec<u8> = try!(write_codec(audio, codec));
-    // Wave files created by this library do not support compression, so the
-    // format chunk will always be the same size: 16 bytes.
     let fmt_chunk_size = FormatChunk::calculate_size(audio, codec);
-    // Total number of bytes is determined by chunk sizes and the RIFF header,
-    // which is always 12 bytes. Every chunk specifies their size but doesn't
-    // include the chunk header, the first 8 bytes which contain the chunk
-    // identifier and chunk size.
-    //
-    // Currently, wave files created by this library only contains the necessary
-    // chunks for audio playback with no option for adding additional chunks for
-    // metadata.
     let mut total_bytes: u32 = 12 + (8 + fmt_chunk_size)
                                   + (8 + data.len() as u32);
+    // Files encoded with non-PCM data must include a fact chunk.
     if data_non_pcm {
-      // Must include fact chunk size
       total_bytes += 12;
     }
+
     // Write the riff header to the writer.
     try!(writer.write(RIFF));
     try!(writer.write_u32::<LittleEndian>(total_bytes - 8));
@@ -167,6 +160,8 @@ impl Container for WaveContainer {
     Ok(())
   }
 }
+
+// Private functions
 
 /// This function reads the four byte identifier for each WAVE chunk.
 #[inline]

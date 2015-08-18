@@ -15,7 +15,6 @@ use traits::{Chunk, Container};
 /// bytes to an `AudioBuffer`.
 pub struct AiffContainer {
   codec:            Codec,
-  compression:      CompressionType,
   pub bit_rate:     u32,
   pub sample_rate:  u32,
   pub channels:     u32,
@@ -43,11 +42,11 @@ impl Container for AiffContainer {
     let file_size: i32 = BigEndian::read_i32(&iff_header[4..8]) - 4;
     let mut buffer: Cursor<Vec<u8>> = Cursor::new(vec![0u8; file_size as usize]);
     try!(reader.read(buffer.get_mut()));
+
     // Read all supported chunks
     let mut container = 
       AiffContainer {
         codec:          LPCM_I16_BE,
-        compression:    CompressionType::Pcm,
         bit_rate:       0u32,
         sample_rate:    0u32,
         channels:       1u32,
@@ -56,11 +55,12 @@ impl Container for AiffContainer {
         samples:        Vec::with_capacity(1024)
       };
     let mut chunk_header    : [u8; 8] = [0u8; 8];
+    let mut read_fver_chunk : bool    = false;
     let mut read_comm_chunk : bool    = false;
     let mut read_ssnd_chunk : bool    = false;
     while buffer.position() < file_size as u64 {
       try!(buffer.read(&mut chunk_header));
-      let mut chunk_size  : usize =
+      let mut chunk_size: usize =
         BigEndian::read_i32(&chunk_header[4..8]) as usize;
       // AIFF chunk sizes must always be even and may not specify the trailing
       // byte in the read chunk_size. This can occur in the sound data chunk,
@@ -69,12 +69,14 @@ impl Container for AiffContainer {
       if chunk_size % 2 != 0 {
         chunk_size += 1;
       }
-      let pos         : usize = buffer.position() as usize;
+      let pos: usize = buffer.position() as usize;
       match identify(&chunk_header[0..4]).ok() {
+        Some(FormatVersion) => {
+          read_fver_chunk = true;
+        }
         Some(Common) => {
           let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
           let comm_chunk  = try!(CommonChunk::read(&chunk_bytes));
-          container.compression     = comm_chunk.compression_type;
           container.bit_rate        = comm_chunk.bit_rate      as u32;
           container.sample_rate     = comm_chunk.sample_rate   as u32;
           container.channels        = comm_chunk.num_channels  as u32;
@@ -86,23 +88,8 @@ impl Container for AiffContainer {
               SampleOrder::INTERLEAVED
             };
           container.codec           =
-            match (comm_chunk.compression_type, comm_chunk.bit_rate) {
-              // AIFC supports:
-              (Raw,     8 ) => LPCM_U8,
-              (ALaw,    16) => LPCM_ALAW,
-              (MuLaw,   16) => LPCM_ULAW,
-              (Float32, 32) => LPCM_F32_BE,
-              (Float64, 64) => LPCM_F64_BE,
-              // AIFF supports:
-              (Pcm, 8 ) => LPCM_I8,
-              (Pcm, 16) => LPCM_I16_BE,
-              (Pcm, 24) => LPCM_I24_BE,
-              (Pcm, 32) => LPCM_I32_BE,
-              ( _ , _ ) => return
-                Err(AudioError::UnsupportedError(
-                  "Audio encoded with unsupported codec".to_string()
-                ))
-            };
+            try!(determine_codec(comm_chunk.compression_type,
+                                 comm_chunk.bit_rate));
           read_comm_chunk           = true;
         },
         Some(SoundData) => {
@@ -122,14 +109,21 @@ impl Container for AiffContainer {
       }
       try!(buffer.seek(SeekFrom::Current(chunk_size as i64)));
     }
+
     // Check if required chunks were read
+    if try!(is_aifc(container.codec)) && !read_fver_chunk {
+      return Err(AudioError::FormatError(
+        "File is not valid AIFC \
+        (Missing required FormatVersion chunk)".to_string()
+      ))      
+    }
     if !read_comm_chunk {
       return Err(AudioError::FormatError(
         "File is not valid AIFF \
         (Missing required Common chunk)".to_string()
       ))
     }
-    else if !read_ssnd_chunk {
+    if !read_ssnd_chunk {
       return Err(AudioError::FormatError(
         "File is not valid AIFF \
         (Missing required SoundData chunk)".to_string()
@@ -148,34 +142,22 @@ impl Container for AiffContainer {
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
+
     // Determine if codec is supported by container and if it's supported by
     // aiff or aiff-c.
-    let aifc            : bool    = try!(is_aifc(codec));
-    // Convert the audio samples to the format of the corresponding codec.
-    let data            : Vec<u8> = try!(write_codec(audio, codec));
-    // Aiff files created by this library do not support compression, so the
-    // comm chunk will always be the same size: 18 bytes.
-    let comm_chunk_size : i32     = try!(CommonChunk::calculate_size(codec));
-    // The ssnd chunk contains additional information besides the audio data.
-    let ssnd_chunk_size : i32     = 8 
-                                  + data.len() as i32;
-    // Total number of bytes is determined by chunk sizes and the IFF header,
-    // which is always 12 bytes. Every chunk specifies their size but doesn't
-    // include the chunk header, the first 8 bytes which contain the chunk
-    // identifier and chunk size.
-    //
-    // Currently, wave files created by this library only contains the necessary
-    // chunks for audio playback with no option for adding additional chunks for
-    // metadata.
-    let mut total_bytes : u32     = 12 
-                                  + (8 + comm_chunk_size as u32)
-                                  + (8 + ssnd_chunk_size as u32);
-    // The format version chunk is required only in aiff-c files, but it isn't
-    // accounted in `total_bytes` yet.
+    let aifc: bool    = try!(is_aifc(codec));
+    // Encode audio samples using codec.
+    let data: Vec<u8> = try!(write_codec(audio, codec));
+    let comm_chunk_size: u32 = try!(CommonChunk::calculate_size(codec)) as u32;
+    // The ssnd chunk contains 8 additional bytes besides the audio data.
+    let ssnd_chunk_size: u32 = 8 + data.len() as u32;
+    let mut total_bytes: u32  = 12 + (8 + comm_chunk_size)
+                                   + (8 + ssnd_chunk_size);
+    // Aiff-c files must include a format version chunk.
     if aifc {
-      // Add form version chunk size
       total_bytes += 12;
     }
+
     // Write the iff header to the writer.
     try!(writer.write(FORM));
     try!(writer.write_u32::<BigEndian>(total_bytes - 8));
@@ -192,23 +174,18 @@ impl Container for AiffContainer {
     // Write comm chunk to the writer.
     try!(CommonChunk::write(writer, audio, codec));
     // Write ssnd chunk to the writer.
-    try!(writer.write(SSND));
-    try!(writer.write_i32::<BigEndian>(ssnd_chunk_size));
-    try!(writer.write_u32::<BigEndian>(0u32));   // offset. For now, always 0
-    try!(writer.write_u32::<BigEndian>(0u32));   // block_size. For now, always 0
-    try!(writer.write_all(&data));
-    // Add trailing byte if data size is odd, all chunks must be of even size.
-    if data.len() % 2 != 0 {
-      try!(writer.write_u8(0));
-    }
+    try!(SoundDataChunk::write(writer, &data));
     Ok(())
   }
 }
+
+// Private functions
 
 /// This function reads the four byte identifier for each AIFF chunk.
 #[inline]
 fn identify(bytes: &[u8]) -> AudioResult<AiffChunk> {
   match &[bytes[0], bytes[1], bytes[2], bytes[3]] {
+    FVER => Ok(FormatVersion),
     COMM => Ok(Common),
     SSND => Ok(SoundData),
     err @ _ => 
@@ -218,7 +195,6 @@ fn identify(bytes: &[u8]) -> AudioResult<AiffChunk> {
   }
 }
 
-// TODO: Add function to Container trait.
 /// Determines if codec is supported by container.
 fn is_supported(codec: Codec) -> AudioResult<bool> {
   match codec {
@@ -238,7 +214,27 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
   }
 }
 
-// TODO: Add function to Container trait.
+// Returns the `Codec` used by the read audio attributes.
+fn determine_codec(compression_type: CompressionType, bit_rate: i16) -> AudioResult<Codec> {
+  match (compression_type, bit_rate) {
+    // AIFC supports:
+    (Raw,     8 ) => Ok(LPCM_U8),
+    (ALaw,    16) => Ok(LPCM_ALAW),
+    (MuLaw,   16) => Ok(LPCM_ULAW),
+    (Float32, 32) => Ok(LPCM_F32_BE),
+    (Float64, 64) => Ok(LPCM_F64_BE),
+    // AIFF supports:
+    (Pcm, 8 ) => Ok(LPCM_I8),
+    (Pcm, 16) => Ok(LPCM_I16_BE),
+    (Pcm, 24) => Ok(LPCM_I24_BE),
+    (Pcm, 32) => Ok(LPCM_I32_BE),
+    ( _ , _ ) => return
+      Err(AudioError::UnsupportedError(
+        "Audio encoded with unsupported codec".to_string()
+      ))
+  }
+}
+
 /// Returns samples read using the given codec. If the container does not
 /// support a codec, an error is returned.
 fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
@@ -252,7 +248,6 @@ fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
   }
 }
 
-// TODO: Add function to Container trait.
 /// Returns samples as bytes created using the given codec. If the container
 /// does not support a codec, an error is returned.
 fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {

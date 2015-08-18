@@ -6,4 +6,3 @@ authors = ["Brian Uosseph <brian.uosseph@gmail.com>"]
 
 [dependencies]
 byteorder = "*"
-bitflags  = "*"

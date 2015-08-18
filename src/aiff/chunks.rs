@@ -1,7 +1,7 @@
 //! AIFF Chunks
 use std::fmt;
 use std::io::Write;
-use aiff::COMM;
+use aiff::{COMM, SSND};
 use buffer::AudioBuffer;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use codecs::Codec;
@@ -20,6 +20,7 @@ const FL64: (&'static [u8; 4], &'static str) = (b"fl64", "IEEE 64-bit float");
 
 /// Supported AIFF chunks.
 pub enum AiffChunk {
+  FormatVersion,
   Common,
   SoundData
 }
@@ -164,14 +165,15 @@ impl Chunk for CommonChunk {
     let compression_type =
       if buffer.len() > 18 {
         match &buffer[18..22] {
-          tag if tag == NONE.0 => Pcm,
-          tag if tag == RAW.0  => Raw,
-          tag if tag == FL32.0 || tag == b"FL32" => Float32,
-          tag if tag == FL64.0 || tag == b"FL64" => Float64,
-          tag if tag == ALAW.0 => ALaw,
-          tag if tag == ULAW.0 => MuLaw,
+          tag if tag == NONE.0  => Pcm,
+          tag if tag ==  RAW.0  => Raw,
+          tag if tag == FL32.0
+              || tag == b"FL32" => Float32,
+          tag if tag == FL64.0
+              || tag == b"FL64" => Float64,
+          tag if tag == ALAW.0  => ALaw,
+          tag if tag == ULAW.0  => MuLaw,
           _ => {
-            // Add a better error message
             return Err(AudioError::UnsupportedError(
               "Unknown compression type".to_string()
             ))
@@ -192,6 +194,22 @@ impl Chunk for CommonChunk {
     )
   }
 }
+
+pub struct SoundDataChunk;
+impl SoundDataChunk {
+  pub fn write<W: Write>(writer: &mut W, encoded_data: &[u8]) -> AudioResult<()> {
+    try!(writer.write(SSND));
+    try!(writer.write_i32::<BigEndian>((encoded_data.len() + 8) as i32));
+    try!(writer.write_u32::<BigEndian>(0u32));   // offset. For now, always 0
+    try!(writer.write_u32::<BigEndian>(0u32));   // block_size. For now, always 0
+    try!(writer.write_all(encoded_data));
+    // Add trailing byte if data size is odd, all chunks must be of even size.
+    if encoded_data.len() % 2 != 0 {
+      try!(writer.write_u8(0));
+    }
+    Ok(())
+  }
+} 
 
 /// Breaks number into a normalized fraction and a base-2 exponent, satisfying:
 /// > - `self = x * 2^exp`

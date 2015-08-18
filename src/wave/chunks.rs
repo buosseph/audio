@@ -72,7 +72,6 @@ pub struct FormatChunk {
   pub data_rate:        u32,
   pub block_size:       u16,
   pub bit_rate:         u16,
-  // pub cb_size:                Some(u16),
   // pub valid_bits_per_sample:  Some(u16),
   // pub speaker_position_mask:  Some(u32),  // Requires `extern crate bitflags`
 }
@@ -83,6 +82,40 @@ pub enum FormatChunkVariant {
   WaveFormatPcm        = 16,
   WaveFormatNonPcm     = 18,
   WaveFormatExtensible = 40
+}
+
+fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
+  match codec {
+    LPCM_U8      |
+    LPCM_I16_LE  |
+    LPCM_I24_LE  |
+    LPCM_I32_LE  => Ok(Pcm),
+    LPCM_ALAW    => Ok(ALaw),
+    LPCM_ULAW    => Ok(MuLaw),
+    LPCM_F32_LE  |
+    LPCM_F64_LE  => Ok(Float),
+    c @ _ =>
+      return Err(AudioError::UnsupportedError(
+        format!("Wave does not support the {:?} codec", c)
+      ))
+  }
+}
+
+fn get_bit_rate(codec: Codec) -> AudioResult<u16> {
+  match codec {
+    LPCM_U8      |
+    LPCM_ALAW    |
+    LPCM_ULAW    => Ok(8),
+    LPCM_I16_LE  => Ok(16),
+    LPCM_I24_LE  => Ok(24),
+    LPCM_I32_LE  |
+    LPCM_F32_LE  => Ok(32),
+    LPCM_F64_LE  => Ok(64),
+    c @ _ =>
+      return Err(AudioError::UnsupportedError(
+        format!("Wave does not support the {:?} codec", c)
+      ))
+  }
 }
 
 impl FormatChunk {
@@ -143,7 +176,7 @@ impl FormatChunk {
         // the number of bits that may be non-zero, not the container
         // type of the encoded data. Ranges is [1, bit_rate].
         try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
-        // Speaker position mask
+        // Speaker position mask, for now only support mono and stereo
         match audio.channels {
           1 => try!(writer.write_u32::<LittleEndian>(0x4)),
           2 => try!(writer.write_u32::<LittleEndian>(0x2 | 0x1)),
@@ -158,42 +191,7 @@ impl FormatChunk {
   }
 }
 
-fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
-  match codec {
-    LPCM_U8      |
-    LPCM_I16_LE  |
-    LPCM_I24_LE  |
-    LPCM_I32_LE  => Ok(Pcm),
-    LPCM_ALAW    => Ok(ALaw),
-    LPCM_ULAW    => Ok(MuLaw),
-    LPCM_F32_LE  |
-    LPCM_F64_LE  => Ok(Float),
-    c @ _ =>
-      return Err(AudioError::UnsupportedError(
-        format!("Wave does not support the {:?} codec", c)
-      ))
-  }
-}
-
-fn get_bit_rate(codec: Codec) -> AudioResult<u16> {
-  match codec {
-    LPCM_U8      |
-    LPCM_ALAW    |
-    LPCM_ULAW    => Ok(8),
-    LPCM_I16_LE  => Ok(16),
-    LPCM_I24_LE  => Ok(24),
-    LPCM_I32_LE  |
-    LPCM_F32_LE  => Ok(32),
-    LPCM_F64_LE  => Ok(64),
-    c @ _ =>
-      return Err(AudioError::UnsupportedError(
-        format!("Wave does not support the {:?} codec", c)
-      ))
-  }
-}
-
 impl Chunk for FormatChunk {
-  #[inline]
   fn read(buffer: &[u8]) -> AudioResult<FormatChunk> {
     let mut format_value: u16 = LittleEndian::read_u16(&buffer[0..2]);
     if format_value == WAVE_FORMAT_EXTENSIBLE_TAG {
@@ -240,66 +238,66 @@ impl FactChunk {
   }
 }
 
-
-
-  // /// Speaker positions supported by wave extensible format.
-  // bitflags! {
-  //   speaker_positions SpeakerPosition: u32 {
-  //     const SPEAKER_FRONT_LEFT            = 0x1,
-  //     const SPEAKER_FRONT_RIGHT           = 0x2,
-  //     const SPEAKER_FRONT_CENTER          = 0x4,
-  //     const SPEAKER_LOW_FREQUENCY         = 0x8,
-  //     const SPEAKER_BACK_LEFT             = 0x10,
-  //     const SPEAKER_BACK_RIGHT            = 0x20,
-  //     const SPEAKER_FRONT_LEFT_OF_CENTER  = 0x40,
-  //     const SPEAKER_FRONT_RIGHT_OF_CENTER = 0x80,
-  //     const SPEAKER_BACK_CENTER           = 0x100,
-  //     const SPEAKER_SIDE_LEFT             = 0x200,
-  //     const SPEAKER_SIDE_RIGHT            = 0x400,
-  //     const SPEAKER_TOP_CENTER            = 0x800,
-  //     const SPEAKER_TOP_FRONT_LEFT        = 0x1000,
-  //     const SPEAKER_TOP_FRONT_CENTER      = 0x2000,
-  //     const SPEAKER_TOP_FRONT_RIGHT       = 0x4000,
-  //     const SPEAKER_TOP_BACK_LEFT         = 0x8000,
-  //     const SPEAKER_TOP_BACK_CENTER       = 0x10000,
-  //     const SPEAKER_TOP_BACK_RIGHT        = 0x20000,
-  //     const SPEAKER_RESERVED              = 0x7FFC0000,
-  //     const SPEAKER_ALL                   = 0x80000000,  // Any possible speaker configuration
-  //     // DVD Speaker Positions mapping
-  //     const SPEAKER_GROUND_FRONT_LEFT   = SPEAKER_FRONT_LEFT,
-  //     const SPEAKER_GROUND_FRONT_CENTER = SPEAKER_FRONT_CENTER,
-  //     const SPEAKER_GROUND_FRONT_RIGHT  = SPEAKER_FRONT_RIGHT,
-  //     const SPEAKER_GROUND_REAR_LEFT    = SPEAKER_BACK_LEFT,
-  //     const SPEAKER_GROUND_REAR_RIGHT   = SPEAKER_BACK_RIGHT,
-  //     const SPEAKER_TOP_MIDDLE          = SPEAKER_TOP_CENTER,
-  //     const SPEAKER_SUPER_WOOFER        = SPEAKER_LOW_FREQUENCY,
-  //     // Predefined configurations
-  //     // DirectSound Speaker Configurations
-  //     const SPEAKER_MONO      = SPEAKER_FRONT_CENTER,
-  //     const SPEAKER_STEREO    = SPEAKER_FRONT_LEFT.bits
-  //                             | SPEAKER_FRONT_RIGHT.bits,
-  //     const SPEAKER_QUAD      = SPEAKER_FRONT_LEFT.bits
-  //                             | SPEAKER_FRONT_RIGHT.bits
-  //                             | SPEAKER_BACK_LEFT.bits
-  //                             | SPEAKER_BACK_RIGHT.bits,
-  //     const SPEAKER_SURROUND  = SPEAKER_FRONT_LEFT.bits
-  //                             | SPEAKER_FRONT_RIGHT.bits
-  //                             | SPEAKER_FRONT_CENTER.bits
-  //                             | SPEAKER_BACK_CENTER.bits,
-  //     const SPEAKER_5_1       = SPEAKER_FRONT_LEFT.bits
-  //                             | SPEAKER_FRONT_RIGHT.bits
-  //                             | SPEAKER_FRONT_CENTER.bits
-  //                             | SPEAKER_LOW_FREQUENCY.bits
-  //                             | SPEAKER_BACK_LEFT.bits
-  //                             | SPEAKER_BACK_RIGHT.bits,
-  //     const SPEAKER_7_1       = SPEAKER_FRONT_LEFT.bits
-  //                             | SPEAKER_FRONT_RIGHT.bits
-  //                             | SPEAKER_FRONT_CENTER.bits
-  //                             | SPEAKER_LOW_FREQUENCY.bits
-  //                             | SPEAKER_BACK_LEFT.bits
-  //                             | SPEAKER_BACK_RIGHT.bits
-  //                             | SPEAKER_FRONT_LEFT_OF_CENTER.bits
-  //                             | SPEAKER_FRONT_RIGHT_OF_CENTER.bits
-  //   }
-  // }
-
+// Crate generates too many warnings for dead code, no need to include it if
+// a full speaker_position implementation hasn't been created yet.
+//
+// /// Speaker positions supported by wave extensible format.
+// bitflags! {
+//   flags SpeakerPosition: u32 {
+//     const SPEAKER_FRONT_LEFT            = 0x1,
+//     const SPEAKER_FRONT_RIGHT           = 0x2,
+//     const SPEAKER_FRONT_CENTER          = 0x4,
+//     const SPEAKER_LOW_FREQUENCY         = 0x8,
+//     const SPEAKER_BACK_LEFT             = 0x10,
+//     const SPEAKER_BACK_RIGHT            = 0x20,
+//     const SPEAKER_FRONT_LEFT_OF_CENTER  = 0x40,
+//     const SPEAKER_FRONT_RIGHT_OF_CENTER = 0x80,
+//     const SPEAKER_BACK_CENTER           = 0x100,
+//     const SPEAKER_SIDE_LEFT             = 0x200,
+//     const SPEAKER_SIDE_RIGHT            = 0x400,
+//     const SPEAKER_TOP_CENTER            = 0x800,
+//     const SPEAKER_TOP_FRONT_LEFT        = 0x1000,
+//     const SPEAKER_TOP_FRONT_CENTER      = 0x2000,
+//     const SPEAKER_TOP_FRONT_RIGHT       = 0x4000,
+//     const SPEAKER_TOP_BACK_LEFT         = 0x8000,
+//     const SPEAKER_TOP_BACK_CENTER       = 0x10000,
+//     const SPEAKER_TOP_BACK_RIGHT        = 0x20000,
+//     const SPEAKER_RESERVED              = 0x7FFC0000,
+//     const SPEAKER_ALL                   = 0x80000000,  // Any possible speaker configuration
+//     // DVD Speaker Positions mapping
+//     const SPEAKER_GROUND_FRONT_LEFT   = SPEAKER_FRONT_LEFT.bits,
+//     const SPEAKER_GROUND_FRONT_CENTER = SPEAKER_FRONT_CENTER.bits,
+//     const SPEAKER_GROUND_FRONT_RIGHT  = SPEAKER_FRONT_RIGHT.bits,
+//     const SPEAKER_GROUND_REAR_LEFT    = SPEAKER_BACK_LEFT.bits,
+//     const SPEAKER_GROUND_REAR_RIGHT   = SPEAKER_BACK_RIGHT.bits,
+//     const SPEAKER_TOP_MIDDLE          = SPEAKER_TOP_CENTER.bits,
+//     const SPEAKER_SUPER_WOOFER        = SPEAKER_LOW_FREQUENCY.bits,
+//     // Predefined configurations
+//     // DirectSound Speaker Configurations
+//     const SPEAKER_MONO      = SPEAKER_FRONT_CENTER.bits,
+//     const SPEAKER_STEREO    = SPEAKER_FRONT_LEFT.bits
+//                             | SPEAKER_FRONT_RIGHT.bits,
+//     const SPEAKER_QUAD      = SPEAKER_FRONT_LEFT.bits
+//                             | SPEAKER_FRONT_RIGHT.bits
+//                             | SPEAKER_BACK_LEFT.bits
+//                             | SPEAKER_BACK_RIGHT.bits,
+//     const SPEAKER_SURROUND  = SPEAKER_FRONT_LEFT.bits
+//                             | SPEAKER_FRONT_RIGHT.bits
+//                             | SPEAKER_FRONT_CENTER.bits
+//                             | SPEAKER_BACK_CENTER.bits,
+//     const SPEAKER_5_1       = SPEAKER_FRONT_LEFT.bits
+//                             | SPEAKER_FRONT_RIGHT.bits
+//                             | SPEAKER_FRONT_CENTER.bits
+//                             | SPEAKER_LOW_FREQUENCY.bits
+//                             | SPEAKER_BACK_LEFT.bits
+//                             | SPEAKER_BACK_RIGHT.bits,
+//     const SPEAKER_7_1       = SPEAKER_FRONT_LEFT.bits
+//                             | SPEAKER_FRONT_RIGHT.bits
+//                             | SPEAKER_FRONT_CENTER.bits
+//                             | SPEAKER_LOW_FREQUENCY.bits
+//                             | SPEAKER_BACK_LEFT.bits
+//                             | SPEAKER_BACK_RIGHT.bits
+//                             | SPEAKER_FRONT_LEFT_OF_CENTER.bits
+//                             | SPEAKER_FRONT_RIGHT_OF_CENTER.bits
+//   }
+// }
