@@ -15,7 +15,7 @@ use traits::{Chunk, Container};
 /// bytes to an `AudioBuffer`.
 pub struct AiffContainer {
   codec:            Codec,
-  pub bit_rate:     u32,
+  pub bit_depth:    u32,
   pub sample_rate:  u32,
   pub channels:     u32,
   pub num_frames:   u32,
@@ -47,7 +47,7 @@ impl Container for AiffContainer {
     let mut container = 
       AiffContainer {
         codec:          LPCM_I16_BE,
-        bit_rate:       0u32,
+        bit_depth:      0u32,
         sample_rate:    0u32,
         channels:       1u32,
         num_frames:     0u32,
@@ -77,9 +77,9 @@ impl Container for AiffContainer {
         Some(Common) => {
           let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
           let comm_chunk  = try!(CommonChunk::read(&chunk_bytes));
-          container.bit_rate        = comm_chunk.bit_rate      as u32;
-          container.sample_rate     = comm_chunk.sample_rate   as u32;
-          container.channels        = comm_chunk.num_channels  as u32;
+          container.bit_depth       = comm_chunk.bit_depth    as u32;
+          container.sample_rate     = comm_chunk.sample_rate  as u32;
+          container.channels        = comm_chunk.num_channels as u32;
           container.num_frames      = comm_chunk.num_frames;
           container.order           =
             if container.channels == 1 {
@@ -89,7 +89,7 @@ impl Container for AiffContainer {
             };
           container.codec           =
             try!(determine_codec(comm_chunk.compression_type,
-                                 comm_chunk.bit_rate));
+                                 comm_chunk.bit_depth));
           read_comm_chunk           = true;
         },
         Some(SoundData) => {
@@ -215,8 +215,8 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
 }
 
 // Returns the `Codec` used by the read audio attributes.
-fn determine_codec(compression_type: CompressionType, bit_rate: i16) -> AudioResult<Codec> {
-  match (compression_type, bit_rate) {
+fn determine_codec(compression_type: CompressionType, bit_depth: i16) -> AudioResult<Codec> {
+  match (compression_type, bit_depth) {
     // AIFC supports:
     (Raw,     8 ) => Ok(LPCM_U8),
     (ALaw,    16) => Ok(LPCM_ALAW),

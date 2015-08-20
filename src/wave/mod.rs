@@ -51,7 +51,7 @@ mod io {
         let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
         let total_samples = audio.samples.len();
         let channels = audio.channels;
-        let bit_rate = audio.bit_rate;
+        let bit_depth = audio.bit_depth;
         let sample_rate = audio.sample_rate;
         let sample_order = audio.order;
 
@@ -62,7 +62,7 @@ mod io {
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
         assert_eq!(total_samples, verify.samples.len());
         assert_eq!(channels, verify.channels);
-        assert_eq!(bit_rate, verify.bit_rate);
+        assert_eq!(bit_depth, verify.bit_depth);
         assert_eq!(sample_rate, verify.sample_rate);
         assert_eq!(sample_order, verify.order);
 
@@ -104,7 +104,7 @@ mod io {
           };
         let total_samples = audio.samples.len();
         let channels = audio.channels;
-        let bit_rate = audio.bit_rate;
+        let bit_depth = audio.bit_depth;
         let sample_rate = audio.sample_rate;
         let sample_order = audio.order;
 
@@ -115,7 +115,7 @@ mod io {
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
         assert_eq!(total_samples, verify.samples.len());
         assert_eq!(channels, verify.channels);
-        assert_eq!(bit_rate, verify.bit_rate);
+        assert_eq!(bit_depth, verify.bit_depth);
         assert_eq!(sample_rate, verify.sample_rate);
         assert_eq!(sample_order, verify.order);
 
@@ -153,7 +153,7 @@ mod io {
         let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
         let total_samples = audio.samples.len();
         let channels = audio.channels;
-        let bit_rate = audio.bit_rate;
+        let bit_depth = audio.bit_depth;
         let sample_rate = audio.sample_rate;
         let sample_order = audio.order;
 
@@ -165,7 +165,7 @@ mod io {
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
         assert_eq!(total_samples, verify.samples.len());
         assert_eq!(channels, verify.channels);
-        assert_eq!(bit_rate, verify.bit_rate);
+        assert_eq!(bit_depth, verify.bit_depth);
         assert_eq!(sample_rate, verify.sample_rate);
         assert_eq!(sample_order, verify.order);
 
@@ -204,7 +204,7 @@ mod io {
         let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
         let total_samples = audio.samples.len();
         let channels = audio.channels;
-        let bit_rate = audio.bit_rate;
+        let bit_depth = audio.bit_depth;
         let sample_rate = audio.sample_rate;
         let sample_order = audio.order;
 
@@ -215,7 +215,7 @@ mod io {
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
         assert_eq!(total_samples, verify.samples.len());
         assert_eq!(channels, verify.channels);
-        assert_eq!(bit_rate, verify.bit_rate);
+        assert_eq!(bit_depth, verify.bit_depth);
         assert_eq!(sample_rate, verify.sample_rate);
         assert_eq!(sample_order, verify.order);
 
@@ -260,7 +260,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_rate,      verify.bit_rate);
+      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
       assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
@@ -300,7 +300,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_rate,      verify.bit_rate);
+      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
       assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
@@ -344,7 +344,7 @@ mod io {
           Err(e) => panic!(format!("Error: {:?}", e))
         };
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_rate,      verify.bit_rate);
+      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
       assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
@@ -388,7 +388,7 @@ mod io {
           Err(e) => panic!(format!("Error: {:?}", e))
         };
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_rate,      verify.bit_rate);
+      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
       assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
@@ -426,7 +426,7 @@ mod io {
           Err(e) => panic!(format!("Error: {:?}", e))
         };
       assert_eq!(wave.channels,      wavex.channels);
-      assert_eq!(wave.bit_rate,      wavex.bit_rate);
+      assert_eq!(wave.bit_depth,      wavex.bit_depth);
       assert_eq!(wave.sample_rate,   wavex.sample_rate);
       assert_eq!(wave.order,         wavex.order);
       assert_eq!(wave.samples.len(), wavex.samples.len());

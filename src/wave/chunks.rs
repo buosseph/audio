@@ -71,7 +71,7 @@ pub struct FormatChunk {
   pub sample_rate:      u32,
   pub data_rate:        u32,
   pub block_size:       u16,
-  pub bit_rate:         u16,
+  pub bit_depth:        u16,
   // pub valid_bits_per_sample:  Some(u16),
   // pub speaker_position_mask:  Some(u32),  // Requires `extern crate bitflags`
 }
@@ -101,7 +101,7 @@ fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
   }
 }
 
-fn get_bit_rate(codec: Codec) -> AudioResult<u16> {
+fn get_bit_depth(codec: Codec) -> AudioResult<u16> {
   match codec {
     LPCM_U8      |
     LPCM_ALAW    |
@@ -131,7 +131,7 @@ impl FormatChunk {
   fn determine_variant(audio: &AudioBuffer, codec: Codec) -> FormatChunkVariant {
     // When fmt is extensible
     // (ch, _) if ch >= 3  => true,
-    // if bit_rate % 8 != 0 => true,
+    // if bit_depth % 8 != 0 => true,
     // speaker_positions != 0 => true
     // else 
     match (audio.channels, codec) {
@@ -152,9 +152,9 @@ impl FormatChunk {
   pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
     try!(writer.write(FMT));
     let format_tag = try!(determine_format_tag(codec));
-    let bit_rate   = try!(get_bit_rate(codec));
-    let data_rate  = audio.sample_rate * audio.channels * (bit_rate / 8) as u32;
-    let block_size = audio.channels as u16 * bit_rate / 8;
+    let bit_depth  = try!(get_bit_depth(codec));
+    let data_rate  = audio.sample_rate * audio.channels * (bit_depth / 8) as u32;
+    let block_size = audio.channels as u16 * bit_depth / 8;
     let variant = FormatChunk::determine_variant(audio, codec);
     try!(writer.write_u32::<LittleEndian>(variant as u32));
     match variant {
@@ -166,16 +166,16 @@ impl FormatChunk {
     try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
     try!(writer.write_u32::<LittleEndian>(data_rate));
     try!(writer.write_u16::<LittleEndian>(block_size));
-    try!(writer.write_u16::<LittleEndian>(bit_rate));
+    try!(writer.write_u16::<LittleEndian>(bit_depth));
     match variant {
       WaveFormatPcm => {},
       WaveFormatNonPcm => try!(writer.write_u16::<LittleEndian>(0)),
       WaveFormatExtensible => {
         try!(writer.write_u16::<LittleEndian>(22));
-        // Note this is suppose to be the actual bitrate of the data,
+        // Note this is suppose to be the actual bit depth of the data,
         // the number of bits that may be non-zero, not the container
-        // type of the encoded data. Ranges is [1, bit_rate].
-        try!(writer.write_u16::<LittleEndian>(audio.bit_rate as u16));
+        // type of the encoded data. Ranges is [1, bit_depth].
+        try!(writer.write_u16::<LittleEndian>(audio.bit_depth as u16));
         // Speaker position mask, for now only support mono and stereo
         match audio.channels {
           1 => try!(writer.write_u32::<LittleEndian>(0x4)),
@@ -212,7 +212,7 @@ impl Chunk for FormatChunk {
         sample_rate:      LittleEndian::read_u32(&buffer[4..8]),
         data_rate:        LittleEndian::read_u32(&buffer[8..12]),
         block_size:       LittleEndian::read_u16(&buffer[12..14]),
-        bit_rate:         LittleEndian::read_u16(&buffer[14..16]),
+        bit_depth:        LittleEndian::read_u16(&buffer[14..16]),
       }
     )
   }

@@ -29,7 +29,7 @@ impl<'r, R> AudioDecoder for Decoder<'r, R> where R: Read + Seek {
     let container = try!(WaveContainer::open(self.reader));
     Ok(
       AudioBuffer {
-        bit_rate:     container.bit_rate,
+        bit_depth:    container.bit_depth,
         sample_rate:  container.sample_rate,
         channels:     container.channels,
         order:        container.order,

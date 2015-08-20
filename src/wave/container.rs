@@ -14,7 +14,7 @@ use wave::chunks::WaveChunk::*;
 /// bytes to an `AudioBuffer`.
 pub struct WaveContainer {
   codec:            Codec,
-  pub bit_rate:     u32,
+  pub bit_depth:    u32,
   pub sample_rate:  u32,
   pub channels:     u32,
   pub block_size:   u32,
@@ -41,7 +41,7 @@ impl Container for WaveContainer {
     let mut container =
       WaveContainer {
         codec:          Codec::LPCM_I16_LE,
-        bit_rate:       0u32,
+        bit_depth:      0u32,
         sample_rate:    0u32,
         channels:       1u32,
         block_size:     0u32,
@@ -61,10 +61,10 @@ impl Container for WaveContainer {
         Some(Format) => {
           let chunk_bytes = &(buffer.get_ref()[pos .. pos + chunk_size]);
           let fmt_chunk = try!(FormatChunk::read(&chunk_bytes));
-          container.bit_rate        = fmt_chunk.bit_rate      as u32;
+          container.bit_depth       = fmt_chunk.bit_depth    as u32;
           container.sample_rate     = fmt_chunk.sample_rate;
-          container.channels        = fmt_chunk.num_channels  as u32;
-          container.block_size      = fmt_chunk.block_size    as u32;
+          container.channels        = fmt_chunk.num_channels as u32;
+          container.block_size      = fmt_chunk.block_size   as u32;
           container.order           =
             if container.channels == 1 {
               SampleOrder::MONO
@@ -73,7 +73,7 @@ impl Container for WaveContainer {
             };
           container.codec           = 
             try!(determine_codec(fmt_chunk.format_tag,
-                                 fmt_chunk.bit_rate));
+                                 fmt_chunk.bit_depth));
           read_fmt_chunk            = true;
           if fmt_chunk.format_tag == FormatTag::Pcm {
             // Don't need to check for fact chunk if PCM
@@ -198,8 +198,8 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
 }
 
 // Returns the `Codec` used by the read audio attributes.
-fn determine_codec(format_tag: FormatTag, bit_rate: u16) -> AudioResult<Codec> {
-  match (format_tag, bit_rate) {
+fn determine_codec(format_tag: FormatTag, bit_depth: u16) -> AudioResult<Codec> {
+  match (format_tag, bit_depth) {
     (FormatTag::Pcm,    8) => Ok(LPCM_U8),
     (FormatTag::Pcm,   16) => Ok(LPCM_I16_LE),
     (FormatTag::Pcm,   24) => Ok(LPCM_I24_LE),

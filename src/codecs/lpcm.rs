@@ -249,7 +249,7 @@ mod coding {
     fn to_u8() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,
@@ -267,7 +267,7 @@ mod coding {
     fn to_i8() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,
@@ -284,7 +284,7 @@ mod coding {
     fn to_i16_le() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,
@@ -301,7 +301,7 @@ mod coding {
     fn to_i16_be() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,
@@ -318,7 +318,7 @@ mod coding {
     fn to_i24_le() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,
@@ -341,7 +341,7 @@ mod coding {
     fn to_i24_be() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,
@@ -365,7 +365,7 @@ mod coding {
     fn to_i32_le() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,
@@ -384,7 +384,7 @@ mod coding {
       println!("i32::max with headroom {:?}", 2_147_483_647i32 - 128);
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer {
-        bit_rate: 8,
+        bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
         order: SampleOrder::MONO,

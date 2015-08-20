@@ -41,7 +41,7 @@ mod api {
     let samples: Vec<f32> = Vec::with_capacity(0);
     let audio =
       AudioBuffer {
-        bit_rate:    16u32,
+        bit_depth:   16u32,
         sample_rate: 44100u32,
         channels:    2u32,
         order:       SampleOrder::INTERLEAVED,

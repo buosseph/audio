@@ -14,7 +14,7 @@ fn main() {
     sine.push(sample);
   }
   let audio = AudioBuffer {
-    bit_rate: 16,
+    bit_depth: 16,
     sample_rate: sample_rate,
     channels: 1,
     order: SampleOrder::MONO,
