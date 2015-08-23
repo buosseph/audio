@@ -11,12 +11,18 @@ use traits::Chunk;
 use error::*;
 
 /// AIFC compression type tags and strings.
-const NONE: (&'static [u8; 4], &'static str) = (b"NONE", "not compressed");
-const RAW : (&'static [u8; 4], &'static str) = (b"raw ", "");
-const ULAW: (&'static [u8; 4], &'static str) = (b"ulaw", "µLaw 2:1");
-const ALAW: (&'static [u8; 4], &'static str) = (b"alaw", "ALaw 2:1");
-const FL32: (&'static [u8; 4], &'static str) = (b"fl32", "IEEE 32-bit float");
-const FL64: (&'static [u8; 4], &'static str) = (b"fl64", "IEEE 64-bit float");
+const NONE: (&'static [u8; 4], &'static [u8]) =
+  (b"NONE", b"not compressed");
+const RAW : (&'static [u8; 4], &'static [u8]) =
+  (b"raw ", b"");
+const ULAW: (&'static [u8; 4], &'static [u8]) =
+  (b"ulaw", &[0xB5, 0x6C, 0x61, 0x77, 0x20, 0x32, 0x3A, 0x31]); // µLaw 2:1
+const ALAW: (&'static [u8; 4], &'static [u8]) =
+  (b"alaw", b"ALaw 2:1");
+const FL32: (&'static [u8; 4], &'static [u8]) =
+  (b"fl32", b"IEEE 32-bit float");
+const FL64: (&'static [u8; 4], &'static [u8]) =
+  (b"fl64", b"IEEE 64-bit float");
 
 /// Supported AIFF chunks.
 pub enum AiffChunk {
@@ -149,7 +155,7 @@ impl CommonChunk {
       // It's only here where the chunk size can become odd.
       else {
         try!(writer.write_u8(compression.1.len() as u8));
-        try!(writer.write(compression.1.as_bytes()));
+        try!(writer.write(compression.1));
         // Add trailing byte if string length + 1 is odd.
         if (compression.1.len() + 1) % 2 == 1 {
           try!(writer.write_u8(0));
