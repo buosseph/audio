@@ -72,9 +72,9 @@ pub struct CommonChunk {
 #[inline]
 pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
   match codec {
+    G711_ALAW   |
+    G711_ULAW   |
     LPCM_U8     |
-    LPCM_ALAW   |
-    LPCM_ULAW   |
     LPCM_F32_BE |
     LPCM_F64_BE => Ok(true),
     LPCM_I8     |
@@ -92,8 +92,8 @@ fn get_bit_depth(codec: Codec) -> AudioResult<i16> {
   match codec {
     LPCM_U8      |
     LPCM_I8      => Ok(8),
-    LPCM_ALAW    |
-    LPCM_ULAW    |
+    G711_ALAW    |
+    G711_ULAW    |
     LPCM_I16_BE  => Ok(16),
     LPCM_I24_BE  => Ok(24),
     LPCM_I32_BE  |
@@ -111,8 +111,8 @@ impl CommonChunk {
   pub fn calculate_size(codec: Codec) -> AudioResult<i32> {
     match codec {
       LPCM_U8      => Ok(24),
-      LPCM_ALAW    |
-      LPCM_ULAW    => Ok(32),
+      G711_ALAW    |
+      G711_ULAW    => Ok(32),
       LPCM_F32_BE  |
       LPCM_F64_BE  => Ok(40),
       LPCM_I8      |
@@ -139,8 +139,8 @@ impl CommonChunk {
       let compression =
         match codec {
           LPCM_U8 => RAW,
-          LPCM_ALAW => ALAW,
-          LPCM_ULAW => ULAW,
+          G711_ALAW => ALAW,
+          G711_ULAW => ULAW,
           LPCM_F32_BE => FL32,
           LPCM_F64_BE => FL64,
           fmt @ _   =>

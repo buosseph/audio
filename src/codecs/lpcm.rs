@@ -1,239 +1,230 @@
+//! LPCM
+//!
+//! Linear pulse code modulation
+
 use std::mem;
 use buffer::*;
 use byteorder::*;
-use codecs::{AudioCodec, Codec};
+use codecs::Codec;
 use codecs::Codec::*;
-use codecs::g711::*;
-use error::AudioResult;
+use error::*;
 
-#[allow(dead_code)]
-pub struct LPCM;
-
-fn get_bit_depth(codec: Codec) -> usize {
+fn get_bit_depth(codec: Codec) -> AudioResult<usize> {
   match codec {
     LPCM_U8     |
-    LPCM_I8     |
-    // ALaw and ULaw are decompressed to 16 bits per sample
-    LPCM_ALAW   |
-    LPCM_ULAW   => 8,
+    LPCM_I8     => Ok(8),
     LPCM_I16_LE |
-    LPCM_I16_BE => 16,
+    LPCM_I16_BE => Ok(16),
     LPCM_I24_LE |
-    LPCM_I24_BE => 24,
+    LPCM_I24_BE => Ok(24),
     LPCM_I32_LE |
     LPCM_I32_BE |
     LPCM_F32_LE |
-    LPCM_F32_BE => 32,
+    LPCM_F32_BE => Ok(32),
     LPCM_F64_LE |
-    LPCM_F64_BE => 64
+    LPCM_F64_BE => Ok(64),
+    c => {
+      return Err(AudioError::UnsupportedError(
+        format!("Unsupported codec {} was passed into the LPCM decoder", c)
+      ))
+    }
   }
 }
 
-impl AudioCodec for LPCM {
-  fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
-    let bit_depth   = get_bit_depth(codec);
-    let num_samples = bytes.len() / (bit_depth / 8);
-    let mut samples = vec![0f32; num_samples];
-    if num_samples != 0 {
-      match codec {
-        LPCM_U8     => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = bytes[i].to_sample();
-          }
-        },
-        LPCM_I8     => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = (bytes[i] as i8).to_sample();
-          }
-        },
-        LPCM_ALAW   => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = alaw_to_linear(bytes[i]).to_sample();
-          }
-        },
-        LPCM_ULAW   => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = ulaw_to_linear(bytes[i]).to_sample();
-          }
-        },
-        LPCM_I16_LE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = LittleEndian::read_i16(&bytes[2 * i .. 2 * i + 2]).to_sample();
-          }
-        },
-        LPCM_I16_BE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = BigEndian::read_i16(&bytes[2 * i .. 2 * i + 2]).to_sample();
-          }
-        },
-        LPCM_I24_LE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            let mut tmp_i32 = 0;
-            tmp_i32 |= (bytes[3 * i + 2] as i32) << 16;
-            tmp_i32 |= (bytes[3 * i + 1] as i32) << 8;
-            tmp_i32 |=  bytes[3 * i]     as i32;
-            // Handle for sign
-            if (tmp_i32 & 0x800000) >> 23 == 1 {
-              tmp_i32 |= !0xffffff;
-            }
-            *sample = tmp_i32 as Sample / 8_388_608f32;
-          }
-        },
-        LPCM_I24_BE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            let mut tmp_i32 = 0;
-            tmp_i32 |= (bytes[3 * i]     as i32) << 16;
-            tmp_i32 |= (bytes[3 * i + 1] as i32) << 8;
-            tmp_i32 |=  bytes[3 * i + 2] as i32;
-            // Handle for sign
-            if (tmp_i32 & 0x800000) >> 23 == 1 {
-              tmp_i32 |= !0xffffff;
-            }
-            *sample = tmp_i32 as Sample / 8_388_608f32;
-          }
-        },
-        LPCM_I32_LE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = LittleEndian::read_i32(&bytes[4 * i .. 4 * i + 4]).to_sample();
-          }
-        },
-        LPCM_I32_BE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = BigEndian::read_i32(&bytes[4 * i .. 4 * i + 4]).to_sample();
-          }
-        },
-        LPCM_F32_LE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = LittleEndian::read_f32(&bytes[4 * i .. 4 * i + 4]).to_sample();
-          }
-        },
-        LPCM_F32_BE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = BigEndian::read_f32(&bytes[4 * i .. 4 * i + 4]).to_sample();
-          }
-        },
-        LPCM_F64_LE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = LittleEndian::read_f64(&bytes[8 * i .. 8 * i + 8]).to_sample();
-          }
-        },
-        LPCM_F64_BE => {
-          for (i, sample) in samples.iter_mut().enumerate() {
-            *sample = BigEndian::read_f64(&bytes[8 * i .. 8 * i + 8]).to_sample();
-          }
+pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
+  let bit_depth   = try!(get_bit_depth(codec));
+  let num_samples = bytes.len() / (bit_depth / 8);
+  let mut samples = vec![0f32; num_samples];
+  if num_samples != 0 {
+    match codec {
+      LPCM_U8     => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = bytes[i].to_sample();
         }
+      },
+      LPCM_I8     => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = (bytes[i] as i8).to_sample();
+        }
+      },
+      LPCM_I16_LE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = LittleEndian::read_i16(&bytes[2 * i .. 2 * i + 2]).to_sample();
+        }
+      },
+      LPCM_I16_BE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = BigEndian::read_i16(&bytes[2 * i .. 2 * i + 2]).to_sample();
+        }
+      },
+      LPCM_I24_LE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          let mut tmp_i32 = 0;
+          tmp_i32 |= (bytes[3 * i + 2] as i32) << 16;
+          tmp_i32 |= (bytes[3 * i + 1] as i32) << 8;
+          tmp_i32 |=  bytes[3 * i]     as i32;
+          // Handle for sign
+          if (tmp_i32 & 0x800000) >> 23 == 1 {
+            tmp_i32 |= !0xffffff;
+          }
+          *sample = tmp_i32 as Sample / 8_388_608f32;
+        }
+      },
+      LPCM_I24_BE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          let mut tmp_i32 = 0;
+          tmp_i32 |= (bytes[3 * i]     as i32) << 16;
+          tmp_i32 |= (bytes[3 * i + 1] as i32) << 8;
+          tmp_i32 |=  bytes[3 * i + 2] as i32;
+          // Handle for sign
+          if (tmp_i32 & 0x800000) >> 23 == 1 {
+            tmp_i32 |= !0xffffff;
+          }
+          *sample = tmp_i32 as Sample / 8_388_608f32;
+        }
+      },
+      LPCM_I32_LE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = LittleEndian::read_i32(&bytes[4 * i .. 4 * i + 4]).to_sample();
+        }
+      },
+      LPCM_I32_BE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = BigEndian::read_i32(&bytes[4 * i .. 4 * i + 4]).to_sample();
+        }
+      },
+      LPCM_F32_LE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = LittleEndian::read_f32(&bytes[4 * i .. 4 * i + 4]).to_sample();
+        }
+      },
+      LPCM_F32_BE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = BigEndian::read_f32(&bytes[4 * i .. 4 * i + 4]).to_sample();
+        }
+      },
+      LPCM_F64_LE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = LittleEndian::read_f64(&bytes[8 * i .. 8 * i + 8]).to_sample();
+        }
+      },
+      LPCM_F64_BE => {
+        for (i, sample) in samples.iter_mut().enumerate() {
+          *sample = BigEndian::read_f64(&bytes[8 * i .. 8 * i + 8]).to_sample();
+        }
+      },
+      c => {
+        return Err(AudioError::UnsupportedError(
+          format!("Unsupported codec {} was passed into the LPCM decoder", c)
+        ))
       }
     }
-    Ok(samples)
   }
-  fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
-    let bit_depth = get_bit_depth(codec);
-    let num_bytes = audio.samples.len() * (bit_depth / 8);
-    let mut bytes = vec![0u8; num_bytes];
-    if num_bytes != 0 {
-      match codec {
-        LPCM_U8     => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            bytes[i] = u8::from_sample(*sample);
-          }
-        },
-        LPCM_I8     => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            bytes[i] = unsafe { mem::transmute_copy(&(i8::from_sample(*sample))) };
-          }
-        },
-        LPCM_ALAW   => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            bytes[i] = linear_to_alaw(i16::from_sample(*sample));
-          }
-        },
-        LPCM_ULAW   => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            bytes[i] = linear_to_ulaw(i16::from_sample(*sample));
-          }
-        },
-        LPCM_I16_LE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
-          }
-        },
-        LPCM_I16_BE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
-          }
-        },
-        LPCM_I24_LE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            let tmp_f32 = sample * 8_388_608f32;
-            let mut integer = tmp_f32 as i32;
-            if tmp_f32 > 8_388_607f32 {
-              integer = 8_388_607i32
-            }
-            else if tmp_f32 < -8_388_608f32 {
-              integer = -8_388_608i32
-            }
-            // Handle for sign
-            if integer & 0x800000 != 0 {
-              integer |= !0xffffff;
-            }
-            bytes[3 * i + 2] = (integer >> 16) as u8;
-            bytes[3 * i + 1] = (integer >> 8)  as u8;
-            bytes[3 * i]     =  integer        as u8;
-          }
-        },
-        LPCM_I24_BE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            let tmp_f32 = sample * 8_388_608f32;
-            let mut integer = tmp_f32 as i32;
-            if tmp_f32 > 8_388_607f32 {
-              integer = 8_388_607i32
-            }
-            else if tmp_f32 < -8_388_608f32 {
-              integer = -8_388_608i32
-            }
-            // Handle for sign
-            if (integer & 0x800000) >> 23 == 1 {
-              integer |= !0xffffff;
-            }
-            bytes[3 * i]     = (integer >> 16) as u8;
-            bytes[3 * i + 1] = (integer >> 8)  as u8;
-            bytes[3 * i + 2] =  integer        as u8;
-          }
-        },
-        LPCM_I32_LE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
-          }
-        },
-        LPCM_I32_BE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
-          }
-        },
-        LPCM_F32_LE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
-          }
-        },
-        LPCM_F32_BE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
-          }
-        },
-        LPCM_F64_LE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            LittleEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
-          }
-        },
-        LPCM_F64_BE => {
-          for (i, sample) in audio.samples.iter().enumerate() {
-            BigEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
-          }
+  Ok(samples)
+}
+
+pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
+  let bit_depth = try!(get_bit_depth(codec));
+  let num_bytes = audio.samples.len() * (bit_depth / 8);
+  let mut bytes = vec![0u8; num_bytes];
+  if num_bytes != 0 {
+    match codec {
+      LPCM_U8     => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          bytes[i] = u8::from_sample(*sample);
         }
+      },
+      LPCM_I8     => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          bytes[i] = unsafe { mem::transmute_copy(&(i8::from_sample(*sample))) };
+        }
+      },
+      LPCM_I16_LE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
+        }
+      },
+      LPCM_I16_BE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
+        }
+      },
+      LPCM_I24_LE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          let tmp_f32 = sample * 8_388_608f32;
+          let mut integer = tmp_f32 as i32;
+          if tmp_f32 > 8_388_607f32 {
+            integer = 8_388_607i32
+          }
+          else if tmp_f32 < -8_388_608f32 {
+            integer = -8_388_608i32
+          }
+          // Handle for sign
+          if integer & 0x800000 != 0 {
+            integer |= !0xffffff;
+          }
+          bytes[3 * i + 2] = (integer >> 16) as u8;
+          bytes[3 * i + 1] = (integer >> 8)  as u8;
+          bytes[3 * i]     =  integer        as u8;
+        }
+      },
+      LPCM_I24_BE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          let tmp_f32 = sample * 8_388_608f32;
+          let mut integer = tmp_f32 as i32;
+          if tmp_f32 > 8_388_607f32 {
+            integer = 8_388_607i32
+          }
+          else if tmp_f32 < -8_388_608f32 {
+            integer = -8_388_608i32
+          }
+          // Handle for sign
+          if (integer & 0x800000) >> 23 == 1 {
+            integer |= !0xffffff;
+          }
+          bytes[3 * i]     = (integer >> 16) as u8;
+          bytes[3 * i + 1] = (integer >> 8)  as u8;
+          bytes[3 * i + 2] =  integer        as u8;
+        }
+      },
+      LPCM_I32_LE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
+        }
+      },
+      LPCM_I32_BE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
+        }
+      },
+      LPCM_F32_LE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          LittleEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
+        }
+      },
+      LPCM_F32_BE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          BigEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
+        }
+      },
+      LPCM_F64_LE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          LittleEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
+        }
+      },
+      LPCM_F64_BE => {
+        for (i, sample) in audio.samples.iter().enumerate() {
+          BigEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
+        }
+      },
+      c => {
+        return Err(AudioError::UnsupportedError(
+          format!("Unsupported codec {} was passed into the LPCM decoder", c)
+        ))
       }
     }
-    Ok(bytes)
   }
+  Ok(bytes)
 }
 
 #[cfg(test)]
@@ -241,9 +232,8 @@ mod coding {
   mod encode {
     use ::buffer::*;
     use byteorder::*;
-    use ::codecs::AudioCodec;
     use ::codecs::Codec::*;
-    use ::codecs::LPCM;
+    use ::codecs::lpcm;
 
     #[test]
     fn to_u8() {
@@ -255,7 +245,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_U8) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_U8) {
         assert_eq!(128, bytes[0]);
         // 1.0 is mapped to 254
         assert_eq!(u8::max_value(), bytes[1]);
@@ -273,7 +263,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_I8) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_I8) {
         assert_eq!(0, bytes[0] as i8);
         assert_eq!(i8::max_value(), bytes[1] as i8);
         assert_eq!(i8::min_value(), bytes[2] as i8);
@@ -290,7 +280,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_I16_LE) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_I16_LE) {
         assert_eq!(0, LittleEndian::read_i16(&bytes[0..2]));
         assert_eq!(i16::max_value(), LittleEndian::read_i16(&bytes[2..4]));
         assert_eq!(i16::min_value(), LittleEndian::read_i16(&bytes[4..6]));
@@ -307,7 +297,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_I16_BE) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_I16_BE) {
         assert_eq!(0, BigEndian::read_i16(&bytes[0..2]));
         assert_eq!(i16::max_value(), BigEndian::read_i16(&bytes[2..4]));
         assert_eq!(i16::min_value(), BigEndian::read_i16(&bytes[4..6]));
@@ -324,7 +314,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_I24_LE) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_I24_LE) {
         assert_eq!(0, bytes[0]);
         assert_eq!(0, bytes[1]);
         assert_eq!(0, bytes[2]);
@@ -347,7 +337,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_I24_BE) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_I24_BE) {
         assert_eq!(0, bytes[0]);
         assert_eq!(0, bytes[1]);
         assert_eq!(0, bytes[2]);
@@ -371,7 +361,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_I32_LE) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_I32_LE) {
         assert_eq!(0, LittleEndian::read_i32(&bytes[0..4]));
         assert_eq!((i32::min_value() + 128).abs(), LittleEndian::read_i32(&bytes[4..8]) );
         assert_eq!(i32::min_value() + 128, LittleEndian::read_i32(&bytes[8..12]) );
@@ -390,7 +380,7 @@ mod coding {
         order: SampleOrder::MONO,
         samples: samples
       };
-      if let Ok(bytes) = LPCM::create(&audio, LPCM_I32_BE) {
+      if let Ok(bytes) = lpcm::create(&audio, LPCM_I32_BE) {
         assert_eq!(0, BigEndian::read_i32(&bytes[0..4]));
         assert_eq!((i32::min_value() + 128).abs(), BigEndian::read_i32(&bytes[4..8]) );
         assert_eq!(i32::min_value() + 128, BigEndian::read_i32(&bytes[8..12]) );
@@ -398,14 +388,13 @@ mod coding {
     }
   }
   mod decode {
-    use ::codecs::AudioCodec;
     use ::codecs::Codec::*;
-    use ::codecs::LPCM;
+    use ::codecs::lpcm;
 
     #[test]
     fn from_u8() {
       let bytes = vec![128u8, u8::max_value(), u8::min_value()];
-      if let Ok(samples) = LPCM::read(&bytes, LPCM_U8) {
+      if let Ok(samples) = lpcm::read(&bytes, LPCM_U8) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);
@@ -415,7 +404,7 @@ mod coding {
     #[test]
     fn from_i8() {
       let bytes = vec![0u8, i8::max_value() as u8, i8::min_value() as u8];
-      if let Ok(samples) = LPCM::read(&bytes[..], LPCM_I8) {
+      if let Ok(samples) = lpcm::read(&bytes[..], LPCM_I8) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);
@@ -430,7 +419,7 @@ mod coding {
           0xff, 0x7f,
           0x00, 0x80
         ];
-      if let Ok(samples) = LPCM::read(&bytes[..], LPCM_I16_LE) {
+      if let Ok(samples) = lpcm::read(&bytes[..], LPCM_I16_LE) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);
@@ -445,7 +434,7 @@ mod coding {
           0x7f, 0xff,
           0x80, 0x00
         ];
-      if let Ok(samples) = LPCM::read(&bytes[..], LPCM_I16_BE) {
+      if let Ok(samples) = lpcm::read(&bytes[..], LPCM_I16_BE) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);
@@ -460,7 +449,7 @@ mod coding {
           0xff, 0xff, 0x7f,
           0x00, 0x00, 0x80
         ];
-      if let Ok(samples) = LPCM::read(&bytes[..], LPCM_I24_LE) {
+      if let Ok(samples) = lpcm::read(&bytes[..], LPCM_I24_LE) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);
@@ -475,7 +464,7 @@ mod coding {
           0x7f, 0xff, 0xff,
           0x80, 0x00, 0x00
         ];
-      if let Ok(samples) = LPCM::read(&bytes[..], LPCM_I24_BE) {
+      if let Ok(samples) = lpcm::read(&bytes[..], LPCM_I24_BE) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);
@@ -490,7 +479,7 @@ mod coding {
           0xff, 0xff, 0xff, 0x7f,
           0x00, 0x00, 0x00, 0x80
         ];
-      if let Ok(samples) = LPCM::read(&bytes[..], LPCM_I32_LE) {
+      if let Ok(samples) = lpcm::read(&bytes[..], LPCM_I32_LE) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);
@@ -505,7 +494,7 @@ mod coding {
           0x7f, 0xff, 0xff, 0xff,
           0x80, 0x00, 0x00, 0x00
         ];
-      if let Ok(samples) = LPCM::read(&bytes[..], LPCM_I32_BE) {
+      if let Ok(samples) = lpcm::read(&bytes[..], LPCM_I32_BE) {
         assert_eq!(0f32, samples[0]);
         assert!((1f32 - samples[1]).abs() < 1e-2f32);
         assert!((-1f32 - samples[2]).abs() < 1e-2f32);

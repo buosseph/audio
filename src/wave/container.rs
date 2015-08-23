@@ -2,7 +2,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use buffer::*;
 use buffer::SampleOrder::*;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
-use codecs::{AudioCodec, Codec, LPCM};
+use codecs::{AudioCodec, Codec};
 use codecs::Codec::*;
 use error::*;
 use traits::{Chunk, Container};
@@ -186,10 +186,10 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
     LPCM_I16_LE  |
     LPCM_I24_LE  |
     LPCM_I32_LE  => Ok(false),
-    LPCM_ALAW    |
-    LPCM_ULAW    |
     LPCM_F32_LE  |
-    LPCM_F64_LE  => Ok(true),
+    LPCM_F64_LE  |
+    G711_ALAW    |
+    G711_ULAW    => Ok(true),
     c @ _ =>
       return Err(AudioError::UnsupportedError(
         format!("Wave does not support the {:?} codec", c)
@@ -197,15 +197,15 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
   }
 }
 
-// Returns the `Codec` used by the read audio attributes.
+/// Returns the `Codec` used by the read audio attributes.
 fn determine_codec(format_tag: FormatTag, bit_depth: u16) -> AudioResult<Codec> {
   match (format_tag, bit_depth) {
     (FormatTag::Pcm,    8) => Ok(LPCM_U8),
     (FormatTag::Pcm,   16) => Ok(LPCM_I16_LE),
     (FormatTag::Pcm,   24) => Ok(LPCM_I24_LE),
     (FormatTag::Pcm,   32) => Ok(LPCM_I32_LE),
-    (FormatTag::ALaw,   8) => Ok(LPCM_ALAW),
-    (FormatTag::MuLaw,  8) => Ok(LPCM_ULAW),
+    (FormatTag::ALaw,   8) => Ok(G711_ALAW),
+    (FormatTag::MuLaw,  8) => Ok(G711_ULAW),
     (FormatTag::Float, 32) => Ok(LPCM_F32_LE),
     (FormatTag::Float, 64) => Ok(LPCM_F64_LE),
     (_, _) =>
@@ -220,8 +220,8 @@ fn determine_codec(format_tag: FormatTag, bit_depth: u16) -> AudioResult<Codec> 
 #[inline]
 fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
   match is_supported(codec) {
-    Ok(_) => LPCM::read(bytes, codec),
-    Err(e)   => Err(e)
+    Ok(_)  => ::codecs::decode(bytes, codec),
+    Err(e) => Err(e)
   }
 }
 
@@ -230,7 +230,7 @@ fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
 #[inline]
 fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
   match is_supported(codec) {
-    Ok(_) => LPCM::create(audio, codec),
+    Ok(_)  => ::codecs::encode(audio, codec),
     Err(e) => Err(e)
   }
 }

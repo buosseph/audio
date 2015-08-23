@@ -5,6 +5,11 @@
 //! - [hazelware](http://hazelware.luggle.com/tutorials/mulawcompression.html)
 //! - [g711.c](http://www.opensource.apple.com/source/tcl/tcl-20/tcl_ext/snack/snack/generic/g711.c)
 
+use buffer::*;
+use codecs::Codec;
+use codecs::Codec::*;
+use error::*;
+
 /// ULaw to ALaw conversion look-up table.
 ///
 /// Copied from CCITT G.711 specifications.
@@ -27,6 +32,7 @@ const ULAW_TO_ALAW: [u8; 128] = [
   113,  114,  115,  116,  117,  118,  119,  120,
   121,  122,  123,  124,  125,  126,  127,  128
 ];
+
 /// ALaw to ULaw conversion look-up table.
 ///
 /// Copied from CCITT G.711 specifications.
@@ -126,7 +132,7 @@ pub fn alaw_to_linear(alaw_value: u8) -> i16 {
   ALAW_TO_LINEAR[(alaw_value) as usize]
 }
 
-/// Convert an 8-bit ULaw value to a 16-bit LPCM sample.
+/// Convert an 8-bit µLaw value to a 16-bit LPCM sample.
 #[inline]
 pub fn ulaw_to_linear(ulaw_value: u8) -> i16 {
   ULAW_TO_LINEAR[ulaw_value as usize]
@@ -161,7 +167,7 @@ pub fn linear_to_alaw(sample: i16) -> u8 {
   (alaw_value ^ 0xd5) as u8
 }
 
-/// Convert a 16-bit LPCM sample to an 8-bit ULaw value
+/// Convert a 16-bit LPCM sample to an 8-bit µLaw value
 pub fn linear_to_ulaw(sample: i16) -> u8 {
   let mut pcm_value = sample;
   let sign = (pcm_value >> 8) & 0x80;
@@ -183,34 +189,85 @@ pub fn linear_to_ulaw(sample: i16) -> u8 {
   (!ulaw_value) as u8
 }
 
+pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
+  let num_samples = bytes.len();
+  let mut samples = vec![0f32; num_samples];
+  match codec {
+    G711_ALAW => {
+      for (i, sample) in samples.iter_mut().enumerate() {
+        *sample = alaw_to_linear(bytes[i]).to_sample();
+      }
+    },
+    G711_ULAW => {
+      for (i, sample) in samples.iter_mut().enumerate() {
+        *sample = ulaw_to_linear(bytes[i]).to_sample();
+      }
+    },
+    c => {
+      return Err(AudioError::UnsupportedError(
+        format!("Unsupported codec {} was passed into the G711 decoder", c)
+      ))
+    }
+  }
+  Ok(samples)
+}
+
+pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
+  let num_bytes = audio.samples.len();
+  let mut bytes = vec![0u8; num_bytes];
+  match codec {
+    G711_ALAW => {
+      for (i, sample) in audio.samples.iter().enumerate() {
+        bytes[i] = linear_to_alaw(i16::from_sample(*sample));
+      }
+    },
+    G711_ULAW => {
+      for (i, sample) in audio.samples.iter().enumerate() {
+        bytes[i] = linear_to_ulaw(i16::from_sample(*sample));
+      }
+    },
+    c => {
+      return Err(AudioError::UnsupportedError(
+        format!("Unsupported codec {} was passed into the G711 decoder", c)
+      ))
+    }
+  }
+  Ok(bytes)
+}
+
 #[cfg(test)]
-mod tests {
-  use super::*;
+mod coding {
+  mod encode {
+    use ::codecs::g711::*;
 
-  #[test]
-  fn i16_to_alaw() {
-    assert_eq!(213, linear_to_alaw(0));
-    assert_eq!(213, linear_to_alaw(1));
-    assert_eq!(213, linear_to_alaw(2));
-    assert_eq!(85,  linear_to_alaw(-3));
-    assert_eq!(85,  linear_to_alaw(-4));
+    #[test]
+    fn i16_to_alaw() {
+      assert_eq!(213, linear_to_alaw(0));
+      assert_eq!(213, linear_to_alaw(1));
+      assert_eq!(213, linear_to_alaw(2));
+      assert_eq!(85,  linear_to_alaw(-3));
+      assert_eq!(85,  linear_to_alaw(-4));
+    }
+
+    #[test]
+    fn i16_to_ulaw() {
+      assert_eq!(0xff, linear_to_ulaw(0));
+      assert_eq!(0x7f, linear_to_ulaw(-1));
+    }
   }
+  mod decode {
+    use ::codecs::g711::*;
 
-  #[test]
-  fn alaw_to_i16() {
-    assert_eq!(8,  alaw_to_linear(213));
-    assert_eq!(-8, alaw_to_linear(85));
-  }
+    #[test]
+    fn alaw_to_i16() {
+      assert_eq!(8,  alaw_to_linear(213));
+      assert_eq!(-8, alaw_to_linear(85));
+    }
 
-  #[test]
-  fn i16_to_ulaw() {
-    assert_eq!(0xff, linear_to_ulaw(0));
-    assert_eq!(0x7f, linear_to_ulaw(-1));
-  }
-
-  #[test]
-  fn ulaw_to_i16() {
-    assert_eq!(0, ulaw_to_linear(0xff));
-    assert_eq!(-1, ulaw_to_linear(0x7f));
+    #[test]
+    fn ulaw_to_i16() {
+      assert_eq!(0, ulaw_to_linear(0xff));
+      assert_eq!(-1, ulaw_to_linear(0x7f));
+    }
   }
 }

@@ -6,7 +6,7 @@ use aiff::chunks::CompressionType::*;
 use buffer::*;
 use buffer::SampleOrder::*;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use codecs::{AudioCodec, Codec, LPCM};
+use codecs::{AudioCodec, Codec};
 use codecs::Codec::*;
 use error::*;
 use traits::{Chunk, Container};
@@ -200,13 +200,13 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
   match codec {
     LPCM_U8      |
     LPCM_I8      |
-    LPCM_ALAW    |
-    LPCM_ULAW    |
     LPCM_I16_BE  |
     LPCM_I24_BE  |
     LPCM_I32_BE  |
     LPCM_F32_BE  |
-    LPCM_F64_BE  => Ok(true),
+    LPCM_F64_BE  |
+    G711_ALAW    |
+    G711_ULAW    => Ok(true),
     c @ _ =>
       return Err(AudioError::UnsupportedError(
         format!("Aiff does not support the {:?} codec", c)
@@ -214,13 +214,13 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
   }
 }
 
-// Returns the `Codec` used by the read audio attributes.
+/// Returns the `Codec` used by the read audio attributes.
 fn determine_codec(compression_type: CompressionType, bit_depth: i16) -> AudioResult<Codec> {
   match (compression_type, bit_depth) {
     // AIFC supports:
     (Raw,     8 ) => Ok(LPCM_U8),
-    (ALaw,    16) => Ok(LPCM_ALAW),
-    (MuLaw,   16) => Ok(LPCM_ULAW),
+    (ALaw,    16) => Ok(G711_ALAW),
+    (MuLaw,   16) => Ok(G711_ULAW),
     (Float32, 32) => Ok(LPCM_F32_BE),
     (Float64, 64) => Ok(LPCM_F64_BE),
     // AIFF supports:
@@ -238,25 +238,17 @@ fn determine_codec(compression_type: CompressionType, bit_depth: i16) -> AudioRe
 /// Returns samples read using the given codec. If the container does not
 /// support a codec, an error is returned.
 fn read_codec(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
-  if try!(is_supported(codec)) {
-    LPCM::read(bytes, codec)
-  }
-  else {
-    return Err(AudioError::UnsupportedError(
-      format!("Cannot read bytes using {:?} codec", codec)
-    ))
+  match is_supported(codec) {
+    Ok(_)  => ::codecs::decode(bytes, codec),
+    Err(e) => Err(e)
   }
 }
 
 /// Returns samples as bytes created using the given codec. If the container
 /// does not support a codec, an error is returned.
 fn write_codec(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
-  if try!(is_supported(codec)) {
-    LPCM::create(audio, codec)
-  }
-  else {
-    return Err(AudioError::UnsupportedError(
-      format!("Cannot create bytes using {:?} codec", codec)
-    ))
+  match is_supported(codec) {
+    Ok(_)  => ::codecs::encode(audio, codec),
+    Err(e) => Err(e)
   }
 }

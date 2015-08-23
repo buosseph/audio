@@ -90,10 +90,10 @@ fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
     LPCM_I16_LE  |
     LPCM_I24_LE  |
     LPCM_I32_LE  => Ok(Pcm),
-    LPCM_ALAW    => Ok(ALaw),
-    LPCM_ULAW    => Ok(MuLaw),
     LPCM_F32_LE  |
     LPCM_F64_LE  => Ok(Float),
+    G711_ALAW    => Ok(ALaw),
+    G711_ULAW    => Ok(MuLaw),
     c @ _ =>
       return Err(AudioError::UnsupportedError(
         format!("Wave does not support the {:?} codec", c)
@@ -104,8 +104,8 @@ fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
 fn get_bit_depth(codec: Codec) -> AudioResult<u16> {
   match codec {
     LPCM_U8      |
-    LPCM_ALAW    |
-    LPCM_ULAW    => Ok(8),
+    G711_ALAW    |
+    G711_ULAW    => Ok(8),
     LPCM_I16_LE  => Ok(16),
     LPCM_I24_LE  => Ok(24),
     LPCM_I32_LE  |

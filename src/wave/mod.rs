@@ -332,7 +332,7 @@ mod io {
       println!("Read file");
       // Write to file.
       let write_path = Path::new("tests/results/tmp_alaw.wav");
-      match audio::save_as(&write_path, &wave, LPCM_ALAW) {
+      match audio::save_as(&write_path, &wave, G711_ALAW) {
         Ok(a) => a,
         Err(e) => panic!(format!("Error: {:?}", e))
       }
@@ -376,7 +376,7 @@ mod io {
       println!("Read file");
       // Write to file.
       let write_path = Path::new("tests/results/tmp_ulaw.wav");
-      match audio::save_as(&write_path, &wave, LPCM_ULAW) {
+      match audio::save_as(&write_path, &wave, G711_ULAW) {
         Ok(a) => a,
         Err(e) => panic!(format!("Error: {:?}", e))
       }
