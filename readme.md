@@ -1,5 +1,10 @@
-# audio [![Build Status](https://travis-ci.org/brianuosseph/audio.svg?branch=master)](https://travis-ci.org/brianuosseph/audio)
+# audio
+[![Build Status](https://travis-ci.org/brianuosseph/audio.svg?branch=master)](https://travis-ci.org/brianuosseph/audio)
+[![Coverage Status](https://coveralls.io/repos/brianuosseph/audio/badge.svg?branch=master&service=github)](https://coveralls.io/github/brianuosseph/audio?branch=master)
+
 A Rust audio coding library.
+
+[Documentation](http://brianuosseph.github.io/audio)
 
 ## Decoding
 

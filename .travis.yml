@@ -1,44 +1,45 @@
 language: rust
 
 rust:
-  - 1.0.0
+  - stable
   - beta
   - nightly
+  - 1.0.0
 
 sudo: false
 
 cache:
   apt: true
   directories:
-    - target/debug/deps
-    - target/debug/build
+  - target/debug/deps
+  - target/debug/build
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+
+before_script:
+  - |
+    pip install 'travis-cargo<0.2' --user &&
+    export PATH=$HOME/.local/bin:$PATH
 
 script:
-  - cargo build --verbose
-  - cargo test --verbose
+  - |
+    travis-cargo build &&
+    travis-cargo test &&
+    travis-cargo --only stable doc
 
-# Using kcov for code coverage with coveralls.io.
-# See hyper repo for a great example of using .travis.yml
-# and for how to instruct TravisCI to compile and push docs
-after_success: |
-    [ $TRAVIS_RUST_VERSION = stable ] &&
-    wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-    tar xzf master.tar.gz &&
-    mkdir kcov-master/build &&
-    cd kcov-master/build &&
-    cmake .. &&
-    make &&
-    make install DESTDIR=../tmp && cd ../.. &&
-    ls target/debug &&
-    ./kcov-master/tmp/usr/local/bin/kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/kcov target/debug/audio-* &&
-    [ $TRAVIS_BRANCH = master ] &&
-    [ $TRAVIS_PULL_REQUEST = false ] &&
-    [ $TRAVIS_RUST_VERSION = stable ] &&
-    cargo doc --no-deps &&
-    echo '<meta http-equiv=refresh content=0;url=audio/index.html>' > target/doc/index.html &&
-    pip install ghp-import --user $USER &&
-    $HOME/.local/bin/ghp-import -n target/doc &&
-    git push -fq https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
+after_success:
+  - travis-cargo --only stable doc-upload
+  - travis-cargo coveralls --no-sudo  
+
+env:
+  global:
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+    - secure: EYIl6GRYimlWC6vpjmBmMbtWMv0rjIhv9mFgg3ODLdFxSTIip26ehbAE5P35sgVwChZITVqA/T4tgWxeBUmYPhXkAtpnLri43FAFwc89vX4yUKHKD0Lfiqj5uen+YDfWLPtcLfjo2ox+yRq6Qxy0EvFP5U7gYGOnDpQibCvhtL4=
 
 notifications:
   email: false
