@@ -1,22 +1,38 @@
-/// An enumeration for keeping track of how samples are organized in the loaded audio.
-/// Multichannel samples are usually interleaved, but other orderings are included if they
-/// are needed in the future.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum SampleOrder { MONO, INTERLEAVED, REVERSED, PLANAR }
+/// Audio sample.
+pub type Sample = f32;
 
-/// Holds all samples and necessary audio data for processing and encoding.
+/// The channel ordering of audio `Sample`s.
+///
+/// Multichannel samples are usually interleaved, but other orderings are
+/// included if they are needed in the future.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum SampleOrder {
+  /// Only one channel, no ordering
+  Mono,
+  /// [L, C, R, L, C, R]
+  Interleaved,
+  /// [R, C, L, R, C, L]
+  Reversed,
+  /// [L, L, C, C, R, R]
+  Planar
+}
+
+/// A container for audio samples and important attributes.
 #[derive(Clone, Debug)]
 pub struct AudioBuffer {
-  pub bit_depth:    u32,
+  /// Number of quantization levels
+  pub bit_depth:   u32,
+  /// Number of samples per second
   pub sample_rate: u32,
+  /// Number of channels
   pub channels:    u32,
+  /// Organization of samples
   pub order:       SampleOrder,
+  /// Decoded audio samples
   pub samples:     Vec<Sample>
 }
 
-pub type Sample = f32;
-
-/// Converts object to a `Sample` value.
+/// Converts a type to a `Sample`.
 ///
 /// For integer types, the maximum value will be mapped to a value less than 1.
 pub trait ToSample {
@@ -84,7 +100,7 @@ impl ToSample for f64 {
   }
 }
 
-/// Converts a `Sample` to an object.
+/// Converts a `Sample` to another type.
 ///
 /// For integer types, mapping the maximum value of a `Sample` are clipped to
 /// prevent arithmetic overflow in the result.

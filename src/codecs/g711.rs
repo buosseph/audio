@@ -10,7 +10,7 @@ use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
 
-/// ULaw to ALaw conversion look-up table.
+/// µ-law to A-law conversion look-up table.
 ///
 /// Copied from CCITT G.711 specifications.
 #[allow(dead_code)]
@@ -33,7 +33,7 @@ const ULAW_TO_ALAW: [u8; 128] = [
   121,  122,  123,  124,  125,  126,  127,  128
 ];
 
-/// ALaw to ULaw conversion look-up table.
+/// A-law to µ-law conversion look-up table.
 ///
 /// Copied from CCITT G.711 specifications.
 #[allow(dead_code)]
@@ -126,19 +126,19 @@ const ULAW_TO_LINEAR: [i16; 256] = [
        56,    48,    40,    32,    24,    16,     8,     0
 ];
 
-/// Convert an 8-bit ALaw value to a 16-bit LPCM sample.
+/// Convert an 8-bit A-law value to a 16-bit LPCM sample.
 #[inline]
 pub fn alaw_to_linear(alaw_value: u8) -> i16 {
   ALAW_TO_LINEAR[(alaw_value) as usize]
 }
 
-/// Convert an 8-bit µLaw value to a 16-bit LPCM sample.
+/// Convert an 8-bit µ-law value to a 16-bit LPCM sample.
 #[inline]
 pub fn ulaw_to_linear(ulaw_value: u8) -> i16 {
   ULAW_TO_LINEAR[ulaw_value as usize]
 }
 
-/// Convert a 16-bit LPCM sample to an 8-bit ALaw value
+/// Convert a 16-bit LPCM sample to an 8-bit A-law value.
 #[allow(overflowing_literals, unused_comparisons)]
 pub fn linear_to_alaw(sample: i16) -> u8 {
   let mut pcm_value = sample;
@@ -167,7 +167,7 @@ pub fn linear_to_alaw(sample: i16) -> u8 {
   (alaw_value ^ 0xd5) as u8
 }
 
-/// Convert a 16-bit LPCM sample to an 8-bit µLaw value
+/// Convert a 16-bit LPCM sample to an 8-bit µ-law value.
 pub fn linear_to_ulaw(sample: i16) -> u8 {
   let mut pcm_value = sample;
   let sign = (pcm_value >> 8) & 0x80;

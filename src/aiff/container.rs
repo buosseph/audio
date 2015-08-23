@@ -6,7 +6,7 @@ use aiff::chunks::CompressionType::*;
 use buffer::*;
 use buffer::SampleOrder::*;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
-use codecs::{AudioCodec, Codec};
+use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
 use traits::{Chunk, Container};
@@ -51,7 +51,7 @@ impl Container for AiffContainer {
         sample_rate:    0u32,
         channels:       1u32,
         num_frames:     0u32,
-        order:          SampleOrder::MONO,
+        order:          SampleOrder::Mono,
         samples:        Vec::with_capacity(1024)
       };
     let mut chunk_header    : [u8; 8] = [0u8; 8];
@@ -83,9 +83,9 @@ impl Container for AiffContainer {
           container.num_frames      = comm_chunk.num_frames;
           container.order           =
             if container.channels == 1 {
-              SampleOrder::MONO
+              SampleOrder::Mono
             } else {
-              SampleOrder::INTERLEAVED
+              SampleOrder::Interleaved
             };
           container.codec           =
             try!(determine_codec(comm_chunk.compression_type,
@@ -135,8 +135,8 @@ impl Container for AiffContainer {
     // Determine if the sample order of the AudioBuffer is supported by the 
     // aiff format.
     match audio.order {
-      MONO        => {},
-      INTERLEAVED => {},
+      Mono        => {},
+      Interleaved => {},
       _           => 
         return Err(AudioError::UnsupportedError(
           "Multi-channel audio must be interleaved in RIFF containers".to_string()

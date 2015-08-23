@@ -242,7 +242,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_U8) {
@@ -260,7 +260,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I8) {
@@ -277,7 +277,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I16_LE) {
@@ -294,7 +294,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I16_BE) {
@@ -311,7 +311,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I24_LE) {
@@ -334,7 +334,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I24_BE) {
@@ -358,7 +358,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I32_LE) {
@@ -377,7 +377,7 @@ mod coding {
         bit_depth: 8,
         sample_rate: 44100,
         channels: 1,
-        order: SampleOrder::MONO,
+        order: SampleOrder::Mono,
         samples: samples
       };
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I32_BE) {

@@ -13,15 +13,17 @@ use wave::Encoder as WaveEncoder;
 /// All supported audio formats.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AudioFormat {
-  /// Audio in WAVE format.
+  /// Waveform Audio File Format
   WAVE,
-  /// Audio in AIFF and AIFF-C format.
+  /// Audio Interchange File Format
   AIFF
 }
 
-/// Opens and loads the audio file into memory from a path. The necessary decoder
-/// is determined by the path file extension. An `AudioError` is returned if the
-/// file type is not supported or if an error occurred in the decoding process.
+/// Opens and loads the audio file into memory from a `Path`.
+/// 
+/// The necessary decoder is determined by the `Path` file extension. An
+/// `AudioError` is returned if the file type is not supported or if an error
+/// occurred in the decoding process.
 pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
   if let Some(ext) = path.extension() {
     if let Some(file_format) = ext.to_str() {
@@ -49,10 +51,11 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
   }
 }
 
-/// Loads the audio from a reader into memory. The necessary decoder
-/// is determined by the provided `AudioFormat`. An `AudioError` is 
-/// returned if the format is not supported or if an error occurred
-/// in the decoding process.
+/// Loads the audio from a reader into memory.
+///
+/// The necessary decoder is determined by the provided `AudioFormat`. An
+/// `AudioError` is returned if the format is not supported or if an error
+/// occurred in the decoding process.
 #[inline]
 pub fn load<R: Read+Seek>(reader: &mut R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
@@ -61,10 +64,11 @@ pub fn load<R: Read+Seek>(reader: &mut R, format: AudioFormat) -> AudioResult<Au
   }
 }
 
-/// Writes the audio file to the provided path. The necessary encoder
-/// is determined by the path file extension. An `AudioError` is 
-/// returned if the file type is not supported or if an error occurred
-/// in the encoding process. 
+/// Saves an `AudioBuffer` to a `Path`.
+///
+/// The necessary encoder is determined by the `Path` file extension and uses
+/// the default codec of the `AudioFormat`. An `AudioError` is returned if the
+/// file type is not supported or if an error occurred in the encoding process.
 pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   if let Some(ext) = path.extension() {
     if let Some(file_format) = ext.to_str() {
@@ -92,6 +96,12 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   }
 }
 
+/// Saves an `AudioBuffer` to a `Path` using a specified `Codec`.
+///
+/// The necessary encoder is determined by the `Path` file extension and uses
+/// the given `Codec`. An `AudioError` is returned if the file type is not
+/// supported, the `Codec` is not supported by the `AudioFormat`, or if an error
+/// occurred in the encoding process.
 pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
   if let Some(ext) = path.extension() {
     if let Some(file_format) = ext.to_str() {
@@ -119,10 +129,12 @@ pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()
   }
 }
 
-/// Buffers and writes audio to the provided writer. The necessary decoder
-/// is determined by the provided `AudioFormat`. An `AudioError` is returned
-/// if the format is not supported or if an error occurred in the encoding
-/// process.
+/// Buffers and writes an `AudioBuffer` to a writer using a specified
+/// `AudioFormat`.
+///
+/// The necessary encoder is determined by the given `AudioFormat` and uses
+/// the default codec of the `AudioFormat`. An `AudioError` is returned if an
+/// error occurred in the encoding process.
 #[inline]
 pub fn write<W: Write>(writer: &mut W, 
                        audio: &AudioBuffer, 
@@ -135,6 +147,13 @@ pub fn write<W: Write>(writer: &mut W,
   }
 }
 
+/// Buffers and writes an `AudioBuffer` to a writer using a specified
+/// `AudioFormat` and `Codec`.
+///
+/// The necessary encoder is determined by the given `AudioFormat` and uses
+/// the given `Codec`. An `AudioError` is returned if the `Codec` is not
+/// supported by the `AudioFormat` or if an error occurred in the encoding
+/// process.
 #[inline]
 pub fn write_as<W: Write>(writer: &mut W,
                           audio: &AudioBuffer,

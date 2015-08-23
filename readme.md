@@ -32,7 +32,6 @@ A Rust audio coding library.
   - Should the user specify when to use format variants, as done in Audacity?
     - This would also apply to AIFF-C
 - Add metadata support?
-  - Should
   - Requires additional support for RIFF and IFF textual chunks
   - Requires handling of possible ID3 metadata
     - Using `crate rust-id3`

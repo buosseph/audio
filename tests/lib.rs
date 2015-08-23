@@ -44,7 +44,7 @@ mod api {
         bit_depth:   16u32,
         sample_rate: 44100u32,
         channels:    2u32,
-        order:       SampleOrder::INTERLEAVED,
+        order:       SampleOrder::Interleaved,
         samples:     samples,
       };
     let result: AudioResult<()> = audio::save(path, &audio);

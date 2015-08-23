@@ -17,7 +17,7 @@ fn main() {
     bit_depth: 16,
     sample_rate: sample_rate,
     channels: 1,
-    order: SampleOrder::MONO,
+    order: SampleOrder::Mono,
     samples: sine
   };
   match audio::save(&Path::new("examples/audio/my-sine.wav"), &audio) {
