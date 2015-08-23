@@ -56,7 +56,7 @@ mod api {
 mod transcoding {
   use super::audio;
   use std::path::PathBuf;
-  use audio::buffer::FromSample;
+  use audio::FromSample;
   use audio::Sample;
 
   #[test]
