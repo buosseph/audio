@@ -204,7 +204,7 @@ pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
       }
     },
     c => {
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Unsupported codec {} was passed into the G711 decoder", c)
       ))
     }
@@ -227,7 +227,7 @@ pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
       }
     },
     c => {
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Unsupported codec {} was passed into the G711 decoder", c)
       ))
     }

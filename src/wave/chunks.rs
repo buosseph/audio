@@ -95,7 +95,7 @@ fn determine_format_tag(codec: Codec) -> AudioResult<FormatTag> {
     G711_ALAW    => Ok(ALaw),
     G711_ULAW    => Ok(MuLaw),
     c @ _ =>
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Wave does not support the {:?} codec", c)
       ))
   }
@@ -112,7 +112,7 @@ fn get_bit_depth(codec: Codec) -> AudioResult<u16> {
     LPCM_F32_LE  => Ok(32),
     LPCM_F64_LE  => Ok(64),
     c @ _ =>
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Wave does not support the {:?} codec", c)
       ))
   }

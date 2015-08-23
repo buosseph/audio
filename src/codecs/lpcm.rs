@@ -24,7 +24,7 @@ fn get_bit_depth(codec: Codec) -> AudioResult<usize> {
     LPCM_F64_LE |
     LPCM_F64_BE => Ok(64),
     c => {
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Unsupported codec {} was passed into the LPCM decoder", c)
       ))
     }
@@ -114,7 +114,7 @@ pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
         }
       },
       c => {
-        return Err(AudioError::UnsupportedError(
+        return Err(AudioError::Unsupported(
           format!("Unsupported codec {} was passed into the LPCM decoder", c)
         ))
       }
@@ -218,7 +218,7 @@ pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
         }
       },
       c => {
-        return Err(AudioError::UnsupportedError(
+        return Err(AudioError::Unsupported(
           format!("Unsupported codec {} was passed into the LPCM decoder", c)
         ))
       }

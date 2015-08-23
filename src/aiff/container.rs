@@ -29,13 +29,13 @@ impl Container for AiffContainer {
     let mut iff_header: [u8; 12] = [0u8; 12];
     try!(reader.read(&mut iff_header));
     if &iff_header[0..4] != FORM {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "Not valid IFF".to_string()
       ));
     }
     // Determine if container is AIFF or AIFF-C
     if &iff_header[8..12] != AIFF && &iff_header[8..12] != AIFC {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "Not valid AIFF or AIFF-C".to_string()
       ));
     }
@@ -94,7 +94,7 @@ impl Container for AiffContainer {
         },
         Some(SoundData) => {
           if !read_comm_chunk {
-            return Err(AudioError::FormatError(
+            return Err(AudioError::Format(
               "File is not valid AIFF \
               (Common chunk does not occur before SoundData chunk)".to_string()
             ))
@@ -112,19 +112,19 @@ impl Container for AiffContainer {
 
     // Check if required chunks were read
     if try!(is_aifc(container.codec)) && !read_fver_chunk {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "File is not valid AIFC \
         (Missing required FormatVersion chunk)".to_string()
       ))      
     }
     if !read_comm_chunk {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "File is not valid AIFF \
         (Missing required Common chunk)".to_string()
       ))
     }
     if !read_ssnd_chunk {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "File is not valid AIFF \
         (Missing required SoundData chunk)".to_string()
       ))
@@ -138,7 +138,7 @@ impl Container for AiffContainer {
       Mono        => {},
       Interleaved => {},
       _           => 
-        return Err(AudioError::UnsupportedError(
+        return Err(AudioError::Unsupported(
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
@@ -189,7 +189,7 @@ fn identify(bytes: &[u8]) -> AudioResult<AiffChunk> {
     COMM => Ok(Common),
     SSND => Ok(SoundData),
     err @ _ => 
-      Err(AudioError::FormatError(
+      Err(AudioError::Format(
         format!("Do not recognize AIFF chunk with identifier {:?}", err)
       ))
   }
@@ -208,7 +208,7 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
     G711_ALAW    |
     G711_ULAW    => Ok(true),
     c @ _ =>
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Aiff does not support the {:?} codec", c)
       ))
   }
@@ -229,7 +229,7 @@ fn determine_codec(compression_type: CompressionType, bit_depth: i16) -> AudioRe
     (Pcm, 24) => Ok(LPCM_I24_BE),
     (Pcm, 32) => Ok(LPCM_I32_BE),
     ( _ , _ ) => return
-      Err(AudioError::UnsupportedError(
+      Err(AudioError::Unsupported(
         "Audio encoded with unsupported codec".to_string()
       ))
   }

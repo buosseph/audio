@@ -29,7 +29,7 @@ impl Container for WaveContainer {
     try!(reader.read(&mut riff_header));
     if &riff_header[0..4]  != RIFF
     || &riff_header[8..12] != WAVE {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "Not valid WAVE".to_string()
       ));
     }
@@ -88,7 +88,7 @@ impl Container for WaveContainer {
         }
         Some(Data) => {
           if !read_fmt_chunk {
-            return Err(AudioError::FormatError(
+            return Err(AudioError::Format(
               "File is not valid WAVE \
               (Format chunk does not occur before Data chunk)".to_string()
             ))
@@ -104,18 +104,18 @@ impl Container for WaveContainer {
 
     // Check if required chunks were read
     if !read_fmt_chunk {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "File is not valid WAVE (Missing required Format chunk)".to_string()
       ))
     }
     if !read_fact_chunk {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "File is not valid WAVE \
         (Missing Fact chunk for non-PCM data)".to_string()
       ))
     }
     if !read_data_chunk {
-      return Err(AudioError::FormatError(
+      return Err(AudioError::Format(
         "File is not valid WAVE (Missing required Data chunk)".to_string()
       ))
     }
@@ -128,7 +128,7 @@ impl Container for WaveContainer {
       Mono        => {},
       Interleaved => {},
       _           => 
-        return Err(AudioError::UnsupportedError(
+        return Err(AudioError::Unsupported(
           "Multi-channel audio must be interleaved in RIFF containers".to_string()
         ))
     }
@@ -171,7 +171,7 @@ fn identify(bytes: &[u8]) -> AudioResult<WaveChunk> {
     FACT => Ok(Fact),
     DATA => Ok(Data),
     err @ _ => 
-      Err(AudioError::FormatError(
+      Err(AudioError::Format(
         format!("Do not recognize WAVE chunk with identifier {:?}", err)
       ))
   }
@@ -191,7 +191,7 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
     G711_ALAW    |
     G711_ULAW    => Ok(true),
     c @ _ =>
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Wave does not support the {:?} codec", c)
       ))
   }
@@ -209,7 +209,7 @@ fn determine_codec(format_tag: FormatTag, bit_depth: u16) -> AudioResult<Codec> 
     (FormatTag::Float, 32) => Ok(LPCM_F32_LE),
     (FormatTag::Float, 64) => Ok(LPCM_F64_LE),
     (_, _) =>
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         "Audio encoded with unsupported codec".to_string()
       ))
   }

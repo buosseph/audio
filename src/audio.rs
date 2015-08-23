@@ -31,7 +31,7 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
         "wav"|"wave"        => AudioFormat::WAVE,
         "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
         f_ext @ _           => return
-          Err(AudioError::FormatError(
+          Err(AudioError::Format(
             format!("Did not recognize audio file format .{}", f_ext)
           ))
       };      
@@ -39,13 +39,13 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
       load(&mut file, format)
     }
     else {
-      Err(AudioError::FormatError(
+      Err(AudioError::Format(
         format!("Did not recognize file format {}", ext.to_str().unwrap())
       ))
     }
   }
   else {
-    Err(AudioError::FormatError(
+    Err(AudioError::Format(
       format!("Did not recognize file {}", path.display())
     ))
   }
@@ -76,7 +76,7 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
         "wav"|"wave"        => AudioFormat::WAVE,
         "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
         f_ext @ _           => return
-          Err(AudioError::FormatError(
+          Err(AudioError::Format(
             format!("Did not recognize audio file format .{}", f_ext)
           ))
       };
@@ -84,13 +84,13 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
       write(&mut file, audio, format)
     }
     else {
-      Err(AudioError::FormatError(
+      Err(AudioError::Format(
         format!("Did not recognize file format {}", ext.to_str().unwrap())
       ))
     }
   }
   else {
-    Err(AudioError::FormatError(
+    Err(AudioError::Format(
       format!("Did not recognize file {}", path.display())
     ))
   }
@@ -109,7 +109,7 @@ pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()
         "wav"|"wave"        => AudioFormat::WAVE,
         "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
         f_ext @ _           => return
-          Err(AudioError::FormatError(
+          Err(AudioError::Format(
             format!("Did not recognize audio file format .{}", f_ext)
           ))
       };
@@ -117,13 +117,13 @@ pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()
       write_as(&mut file, audio, format, codec)
     }
     else {
-      Err(AudioError::FormatError(
+      Err(AudioError::Format(
         format!("Did not recognize file format {}", ext.to_str().unwrap())
       ))
     }
   }
   else {
-    Err(AudioError::FormatError(
+    Err(AudioError::Format(
       format!("Did not recognize file {}", path.display())
     ))
   }

@@ -82,7 +82,7 @@ pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
     LPCM_I24_BE |
     LPCM_I32_BE => Ok(false),
     c @ _       =>
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Aiff does not support {:?} codec", c)
       ))
   }
@@ -100,7 +100,7 @@ fn get_bit_depth(codec: Codec) -> AudioResult<i16> {
     LPCM_F32_BE  => Ok(32),
     LPCM_F64_BE  => Ok(64),
     c @ _ =>
-      return Err(AudioError::UnsupportedError(
+      return Err(AudioError::Unsupported(
         format!("Aiff does not support the {:?} codec", c)
       ))
   }
@@ -120,7 +120,7 @@ impl CommonChunk {
       LPCM_I24_BE  |
       LPCM_I32_BE  => Ok(18),
       c @ _       =>
-        return Err(AudioError::UnsupportedError(
+        return Err(AudioError::Unsupported(
           format!("Aiff does not support {:?} codec", c)
         ))
     }
@@ -144,7 +144,7 @@ impl CommonChunk {
           LPCM_F32_BE => FL32,
           LPCM_F64_BE => FL64,
           fmt @ _   =>
-            return Err(AudioError::UnsupportedError(
+            return Err(AudioError::Unsupported(
               format!("Common chunk does not support {:?}", fmt)
             ))
         };
@@ -180,7 +180,7 @@ impl Chunk for CommonChunk {
           tag if tag == ALAW.0  => ALaw,
           tag if tag == ULAW.0  => MuLaw,
           _ => {
-            return Err(AudioError::UnsupportedError(
+            return Err(AudioError::Unsupported(
               "Unknown compression type".to_string()
             ))
           }
