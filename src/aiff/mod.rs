@@ -99,7 +99,7 @@ mod io {
         println!("Read file");
         // Write file
         let write_path = Path::new("tests/results/tmp_i16.aiff");
-        match audio::save_as(&write_path, &aiff, LPCM_I16_BE) {
+        match audio::save(&write_path, &aiff) {
           Ok(a) => a,
           Err(e) => panic!(format!("Error: {:?}", e))
         }

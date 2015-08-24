@@ -109,7 +109,7 @@ mod io {
         let sample_order = audio.order;
 
         let write_loc = Path::new("tests/results/tmp_i16.wav");
-        let written = audio::save_as(&write_loc, &audio, LPCM_I16_LE);
+        let written = audio::save(&write_loc, &audio);
         println!("{:?}", written);
         assert!(written.is_ok());
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();

@@ -36,13 +36,13 @@ A Rust audio coding library.
   - Requires handling of possible ID3 metadata
     - Using `crate rust-id3`
 - Improved error messages
-  - Refactor `AudioError` and revise messages throughout code
+  - Revise messages throughout code
 - Improved testing
   - Improve integration tests
   - Add unit tests for better coverage
 - Improved examples and documentation
   - Inspect generated docs and apply revisions where needed
-  - Add examples in documents
+  - Add examples in documentation
   - Create more example programs
 - Miscellaneous
   - Add a "from_buffer" function?

@@ -43,8 +43,24 @@ pub enum Codec {
 }
 
 impl fmt::Display for Codec {
-  fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    write!(fmt, "{}", self)
+  fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    use Codec::*;
+    match self {
+      &LPCM_U8     => fmt.write_str("Unsigned 8-bit PCM"),
+      &LPCM_I8     => fmt.write_str("Signed 8-bit PCM"),
+      &LPCM_I16_LE => fmt.write_str("Signed 16-bit little endian PCM"),
+      &LPCM_I16_BE => fmt.write_str("Signed 16-bit big endian PCM"),
+      &LPCM_I24_LE => fmt.write_str("Signed 24-bit little endian PCM"),
+      &LPCM_I24_BE => fmt.write_str("Signed 24-bit big endian PCM"),
+      &LPCM_I32_LE => fmt.write_str("Signed 32-bit little endian PCM"),
+      &LPCM_I32_BE => fmt.write_str("Signed 32-bit big endian PCM"),
+      &LPCM_F32_LE => fmt.write_str("32-bit little endian floating-point PCM"),
+      &LPCM_F32_BE => fmt.write_str("32-bit big endian floating-point PCM"),
+      &LPCM_F64_LE => fmt.write_str("64-bit little endian floating-point PCM"),
+      &LPCM_F64_BE => fmt.write_str("64-bit big endian floating-point PCM"),
+      &G711_ALAW   => fmt.write_str("G.711 8-bit A-law"),
+      &G711_ULAW   => fmt.write_str("G.711 8-bit µ-law")
+    }
   }
 }
 
@@ -94,6 +110,94 @@ pub fn encode(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
     G711_ALAW |
     G711_ULAW => {
       g711::create(audio, codec)
+    }
+  }
+}
+
+#[cfg(test)]
+mod formatting {
+  #[test]
+  fn display() {
+    use Codec::*;
+
+    let formatted_strs =
+      vec![
+        "Unsigned 8-bit PCM",
+        "Signed 8-bit PCM",
+        "Signed 16-bit little endian PCM",
+        "Signed 16-bit big endian PCM",
+        "Signed 24-bit little endian PCM",
+        "Signed 24-bit big endian PCM",
+        "Signed 32-bit little endian PCM",
+        "Signed 32-bit big endian PCM",
+        "32-bit little endian floating-point PCM",
+        "32-bit big endian floating-point PCM",
+        "64-bit little endian floating-point PCM",
+        "64-bit big endian floating-point PCM",
+        "G.711 8-bit A-law",
+        "G.711 8-bit µ-law"
+      ];
+    let codecs =
+      vec![
+        LPCM_U8,
+        LPCM_I8,
+        LPCM_I16_LE,
+        LPCM_I16_BE,
+        LPCM_I24_LE,
+        LPCM_I24_BE,
+        LPCM_I32_LE,
+        LPCM_I32_BE,
+        LPCM_F32_LE,
+        LPCM_F32_BE,
+        LPCM_F64_LE,
+        LPCM_F64_BE,
+        G711_ALAW,
+        G711_ULAW
+      ];
+    for (expected_str, codec) in formatted_strs.iter().zip(codecs.iter()) {
+      assert_eq!(*expected_str, format!("{}", codec));
+    }
+  }
+  #[test]
+  fn debug() {
+    use Codec::*;
+
+    let debug_strs =
+      vec![
+        "LPCM_U8",
+        "LPCM_I8",
+        "LPCM_I16_LE",
+        "LPCM_I16_BE",
+        "LPCM_I24_LE",
+        "LPCM_I24_BE",
+        "LPCM_I32_LE",
+        "LPCM_I32_BE",
+        "LPCM_F32_LE",
+        "LPCM_F32_BE",
+        "LPCM_F64_LE",
+        "LPCM_F64_BE",
+        "G711_ALAW",
+        "G711_ULAW"
+      ];
+    let codecs =
+      vec![
+        LPCM_U8,
+        LPCM_I8,
+        LPCM_I16_LE,
+        LPCM_I16_BE,
+        LPCM_I24_LE,
+        LPCM_I24_BE,
+        LPCM_I32_LE,
+        LPCM_I32_BE,
+        LPCM_F32_LE,
+        LPCM_F32_BE,
+        LPCM_F64_LE,
+        LPCM_F64_BE,
+        G711_ALAW,
+        G711_ULAW
+      ];
+    for (expected_str, codec) in debug_strs.iter().zip(codecs.iter()) {
+      assert_eq!(*expected_str, format!("{:?}", codec));
     }
   }
 }
