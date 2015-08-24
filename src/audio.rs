@@ -25,24 +25,18 @@ pub enum AudioFormat {
 /// `AudioError` is returned if the file type is not supported or if an error
 /// occurred in the decoding process.
 pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
-  if let Some(ext) = path.extension() {
-    if let Some(file_format) = ext.to_str() {
-      let format = match file_format {
-        "wav"|"wave"        => AudioFormat::WAVE,
-        "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
-        f_ext @ _           => return
-          Err(AudioError::Format(
-            format!("Did not recognize audio file format .{}", f_ext)
-          ))
-      };      
-      let mut file = try!(File::open(path));
-      load(&mut file, format)
-    }
-    else {
-      Err(AudioError::Format(
-        format!("Did not recognize file format {}", ext.to_str().unwrap())
-      ))
-    }
+  let ext = path.extension().and_then(|s| s.to_str());
+  if let Some(file_format) = ext {
+    let format = match file_format {
+      "wav"|"wave"        => AudioFormat::WAVE,
+      "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
+      f_ext @ _           => return
+        Err(AudioError::Format(
+          format!("Did not recognize audio file format .{}", f_ext)
+        ))
+    };      
+    let mut file = try!(File::open(path));
+    load(&mut file, format)
   }
   else {
     Err(AudioError::Format(
@@ -70,24 +64,18 @@ pub fn load<R: Read+Seek>(reader: &mut R, format: AudioFormat) -> AudioResult<Au
 /// the default codec of the `AudioFormat`. An `AudioError` is returned if the
 /// file type is not supported or if an error occurred in the encoding process.
 pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
-  if let Some(ext) = path.extension() {
-    if let Some(file_format) = ext.to_str() {
-      let format = match file_format {
-        "wav"|"wave"        => AudioFormat::WAVE,
-        "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
-        f_ext @ _           => return
-          Err(AudioError::Format(
-            format!("Did not recognize audio file format .{}", f_ext)
-          ))
-      };
-      let mut file = try!(File::create(path));
-      write(&mut file, audio, format)
-    }
-    else {
-      Err(AudioError::Format(
-        format!("Did not recognize file format {}", ext.to_str().unwrap())
-      ))
-    }
+  let ext = path.extension().and_then(|s| s.to_str());
+  if let Some(file_format) = ext {
+    let format = match file_format {
+      "wav"|"wave"        => AudioFormat::WAVE,
+      "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
+      f_ext @ _           => return
+        Err(AudioError::Format(
+          format!("Did not recognize audio file format .{}", f_ext)
+        ))
+    };
+    let mut file = try!(File::create(path));
+    write(&mut file, audio, format)
   }
   else {
     Err(AudioError::Format(
@@ -103,24 +91,18 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
 /// supported, the `Codec` is not supported by the `AudioFormat`, or if an error
 /// occurred in the encoding process.
 pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
-  if let Some(ext) = path.extension() {
-    if let Some(file_format) = ext.to_str() {
-      let format = match file_format {
-        "wav"|"wave"        => AudioFormat::WAVE,
-        "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
-        f_ext @ _           => return
-          Err(AudioError::Format(
-            format!("Did not recognize audio file format .{}", f_ext)
-          ))
-      };
-      let mut file = try!(File::create(path));
-      write_as(&mut file, audio, format, codec)
-    }
-    else {
-      Err(AudioError::Format(
-        format!("Did not recognize file format {}", ext.to_str().unwrap())
-      ))
-    }
+  let ext = path.extension().and_then(|s| s.to_str());
+  if let Some(file_format) = ext {
+    let format = match file_format {
+      "wav"|"wave"        => AudioFormat::WAVE,
+      "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
+      f_ext @ _           => return
+        Err(AudioError::Format(
+          format!("Did not recognize audio file format .{}", f_ext)
+        ))
+    };
+    let mut file = try!(File::create(path));
+    write_as(&mut file, audio, format, codec)
   }
   else {
     Err(AudioError::Format(
