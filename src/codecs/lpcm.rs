@@ -10,31 +10,8 @@ use codecs::Codec::*;
 use error::*;
 use sample::*;
 
-fn get_bit_depth(codec: Codec) -> AudioResult<usize> {
-  match codec {
-    LPCM_U8     |
-    LPCM_I8     => Ok(8),
-    LPCM_I16_LE |
-    LPCM_I16_BE => Ok(16),
-    LPCM_I24_LE |
-    LPCM_I24_BE => Ok(24),
-    LPCM_I32_LE |
-    LPCM_I32_BE |
-    LPCM_F32_LE |
-    LPCM_F32_BE => Ok(32),
-    LPCM_F64_LE |
-    LPCM_F64_BE => Ok(64),
-    c => {
-      return Err(AudioError::Unsupported(
-        format!("Unsupported codec {} was passed into the LPCM decoder", c)
-      ))
-    }
-  }
-}
-
 pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
-  let bit_depth   = try!(get_bit_depth(codec));
-  let num_samples = bytes.len() / (bit_depth / 8);
+  let num_samples = bytes.len() / (codec.bit_depth() / 8);
   let mut samples = vec![0f32; num_samples];
   if num_samples != 0 {
     match codec {
@@ -125,8 +102,7 @@ pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
 }
 
 pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
-  let bit_depth = try!(get_bit_depth(codec));
-  let num_bytes = audio.samples.len() * (bit_depth / 8);
+  let num_bytes = audio.samples.len() * (codec.bit_depth() / 8);
   let mut bytes = vec![0u8; num_bytes];
   if num_bytes != 0 {
     match codec {

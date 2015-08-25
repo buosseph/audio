@@ -43,6 +43,29 @@ pub enum Codec {
   G711_ULAW
 }
 
+impl Codec {
+  /// Returns the bit depth of the decoded audio from a codec.
+  pub fn bit_depth(&self) -> usize {
+    use Codec::*;
+    match *self {
+      LPCM_U8     |
+      LPCM_I8     => 8,
+      G711_ALAW   |
+      G711_ULAW   |
+      LPCM_I16_LE |
+      LPCM_I16_BE => 16,
+      LPCM_I24_LE |
+      LPCM_I24_BE => 24,
+      LPCM_I32_LE |
+      LPCM_I32_BE |
+      LPCM_F32_LE |
+      LPCM_F32_BE => 32,
+      LPCM_F64_LE |
+      LPCM_F64_BE => 64
+    }
+  }
+}
+
 impl fmt::Display for Codec {
   fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
     use Codec::*;
