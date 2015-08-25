@@ -46,7 +46,7 @@ impl Container for WaveContainer {
         sample_rate:    0u32,
         channels:       1u32,
         block_size:     0u32,
-        order:          SampleOrder::Mono,
+        order:          SampleOrder::Interleaved,
         samples:        Vec::with_capacity(1024)
       };
     let mut chunk_header      : [u8; 8] = [0u8; 8];
@@ -123,17 +123,6 @@ impl Container for WaveContainer {
     Ok(container)
   }
   fn create<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
-    // Determine if the sample order of the AudioBuffer is supported by the 
-    // wave format.
-    match audio.order {
-      Mono        => {},
-      Interleaved => {},
-      _           => 
-        return Err(AudioError::Unsupported(
-          "Multi-channel audio must be interleaved in RIFF containers".to_string()
-        ))
-    }
-
     // Determine if codec is supported by container and if data is non-PCM.
     let data_non_pcm: bool = try!(is_supported(codec));
     // Encode audio samples using codec.

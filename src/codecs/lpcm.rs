@@ -211,18 +211,11 @@ mod coding {
     use byteorder::*;
     use ::codecs::Codec::*;
     use ::codecs::lpcm;
-    use sample::*;
 
     #[test]
     fn to_u8() {
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_U8) {
         assert_eq!(128, bytes[0]);
         // 1.0 is mapped to 254
@@ -234,13 +227,7 @@ mod coding {
     #[test]
     fn to_i8() {
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I8) {
         assert_eq!(0, bytes[0] as i8);
         assert_eq!(i8::max_value(), bytes[1] as i8);
@@ -251,13 +238,7 @@ mod coding {
     #[test]
     fn to_i16_le() {
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I16_LE) {
         assert_eq!(0, LittleEndian::read_i16(&bytes[0..2]));
         assert_eq!(i16::max_value(), LittleEndian::read_i16(&bytes[2..4]));
@@ -268,13 +249,7 @@ mod coding {
     #[test]
     fn to_i16_be() {
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I16_BE) {
         assert_eq!(0, BigEndian::read_i16(&bytes[0..2]));
         assert_eq!(i16::max_value(), BigEndian::read_i16(&bytes[2..4]));
@@ -285,13 +260,7 @@ mod coding {
     #[test]
     fn to_i24_le() {
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I24_LE) {
         assert_eq!(0, bytes[0]);
         assert_eq!(0, bytes[1]);
@@ -308,13 +277,7 @@ mod coding {
     #[test]
     fn to_i24_be() {
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I24_BE) {
         assert_eq!(0, bytes[0]);
         assert_eq!(0, bytes[1]);
@@ -332,13 +295,7 @@ mod coding {
     #[test]
     fn to_i32_le() {
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I32_LE) {
         assert_eq!(0, LittleEndian::read_i32(&bytes[0..4]));
         assert_eq!((i32::min_value() + 128).abs(), LittleEndian::read_i32(&bytes[4..8]) );
@@ -351,13 +308,7 @@ mod coding {
       println!("i32::max {:?}", i32::max_value());
       println!("i32::max with headroom {:?}", 2_147_483_647i32 - 128);
       let samples = vec![0f32, 1f32, -1f32];
-      let audio = AudioBuffer {
-        bit_depth: 8,
-        sample_rate: 44100,
-        channels: 1,
-        order: SampleOrder::Mono,
-        samples: samples
-      };
+      let audio = AudioBuffer::from_samples(44100, 1, samples);
       if let Ok(bytes) = lpcm::create(&audio, LPCM_I32_BE) {
         assert_eq!(0, BigEndian::read_i32(&bytes[0..4]));
         assert_eq!((i32::min_value() + 128).abs(), BigEndian::read_i32(&bytes[4..8]) );

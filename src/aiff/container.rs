@@ -52,7 +52,7 @@ impl Container for AiffContainer {
         sample_rate:    0u32,
         channels:       1u32,
         num_frames:     0u32,
-        order:          SampleOrder::Mono,
+        order:          SampleOrder::Interleaved,
         samples:        Vec::with_capacity(1024)
       };
     let mut chunk_header    : [u8; 8] = [0u8; 8];
@@ -133,17 +133,6 @@ impl Container for AiffContainer {
     Ok(container)
   }
   fn create<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
-    // Determine if the sample order of the AudioBuffer is supported by the 
-    // aiff format.
-    match audio.order {
-      Mono        => {},
-      Interleaved => {},
-      _           => 
-        return Err(AudioError::Unsupported(
-          "Multi-channel audio must be interleaved in RIFF containers".to_string()
-        ))
-    }
-
     // Determine if codec is supported by container and if it's supported by
     // aiff or aiff-c.
     let aifc: bool    = try!(is_aifc(codec));

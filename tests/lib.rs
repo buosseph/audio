@@ -4,7 +4,7 @@ extern crate audio;
 mod api {
   use super::audio;
   use std::path::Path;
-  use audio::{AudioBuffer, AudioResult, SampleOrder};
+  use audio::{AudioBuffer, AudioResult};
 
   #[test]
   fn open() {
@@ -37,14 +37,7 @@ mod api {
   #[test]
   fn save() {
     let samples: Vec<f32> = Vec::with_capacity(0);
-    let audio =
-      AudioBuffer {
-        bit_depth:   16u32,
-        sample_rate: 44100u32,
-        channels:    2u32,
-        order:       SampleOrder::Interleaved,
-        samples:     samples,
-      };
+    let audio = AudioBuffer::from_samples(44100, 2, samples);
     let mut result: AudioResult<()>;
 
     let err_cases =
@@ -76,14 +69,7 @@ mod api {
     use audio::Codec::{LPCM_F32_BE, LPCM_F32_LE};
 
     let samples: Vec<f32> = Vec::with_capacity(0);
-    let audio =
-      AudioBuffer {
-        bit_depth:   16u32,
-        sample_rate: 44100u32,
-        channels:    2u32,
-        order:       SampleOrder::Interleaved,
-        samples:     samples,
-      };
+    let audio = AudioBuffer::from_samples(44100, 2, samples);
     let mut result: AudioResult<()>;
 
     let err_cases =

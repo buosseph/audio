@@ -27,14 +27,10 @@ impl<'r, R> AudioDecoder for Decoder<'r, R> where R: Read + Seek {
   #[inline]
   fn decode(mut self) -> AudioResult<AudioBuffer> {
     let container = try!(AiffContainer::open(&mut self.reader));
-    Ok(
-      AudioBuffer {
-        bit_depth:    container.bit_depth,
-        sample_rate:  container.sample_rate,
-        channels:     container.channels,
-        order:        container.order,
-        samples:      container.samples
-      }
-    )
+    Ok(AudioBuffer::from_samples(
+      container.sample_rate,
+      container.channels,
+      container.samples
+    ))
   }
 }

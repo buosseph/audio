@@ -175,7 +175,7 @@ impl FormatChunk {
         // Note this is suppose to be the actual bit depth of the data,
         // the number of bits that may be non-zero, not the container
         // type of the encoded data. Ranges is [1, bit_depth].
-        try!(writer.write_u16::<LittleEndian>(audio.bit_depth as u16));
+        try!(writer.write_u16::<LittleEndian>(bit_depth));
         // Speaker position mask, for now only support mono and stereo
         match audio.channels {
           1 => try!(writer.write_u32::<LittleEndian>(0x4)),

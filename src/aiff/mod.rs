@@ -65,9 +65,7 @@ mod io {
         println!("File written");
         let verify: AudioBuffer = audio::open(&write_path).unwrap();
         assert_eq!(aiff.channels,      verify.channels);
-        assert_eq!(aiff.bit_depth,     verify.bit_depth);
         assert_eq!(aiff.sample_rate,   verify.sample_rate);
-        assert_eq!(aiff.order,         verify.order);
         assert_eq!(aiff.samples.len(), verify.samples.len());
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -106,9 +104,7 @@ mod io {
         println!("File written");
         let verify: AudioBuffer = audio::open(&write_path).unwrap();
         assert_eq!(aiff.channels,      verify.channels);
-        assert_eq!(aiff.bit_depth,     verify.bit_depth);
         assert_eq!(aiff.sample_rate,   verify.sample_rate);
-        assert_eq!(aiff.order,         verify.order);
         assert_eq!(aiff.samples.len(), verify.samples.len());
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -147,9 +143,7 @@ mod io {
         println!("File written");
         let verify: AudioBuffer = audio::open(&write_path).unwrap();
         assert_eq!(aiff.channels,      verify.channels);
-        assert_eq!(aiff.bit_depth,     verify.bit_depth);
         assert_eq!(aiff.sample_rate,   verify.sample_rate);
-        assert_eq!(aiff.order,         verify.order);
         assert_eq!(aiff.samples.len(), verify.samples.len());
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -188,9 +182,7 @@ mod io {
         println!("File written");
         let verify: AudioBuffer = audio::open(&write_path).unwrap();
         assert_eq!(aiff.channels,      verify.channels);
-        assert_eq!(aiff.bit_depth,     verify.bit_depth);
         assert_eq!(aiff.sample_rate,   verify.sample_rate);
-        assert_eq!(aiff.order,         verify.order);
         assert_eq!(aiff.samples.len(), verify.samples.len());
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -231,9 +223,7 @@ mod io {
           Err(e) => panic!(format!("Error: {:?}", e))
         };
       assert_eq!(aiff.channels,      aifc.channels);
-      assert_eq!(aiff.bit_depth,      aifc.bit_depth);
       assert_eq!(aiff.sample_rate,   aifc.sample_rate);
-      assert_eq!(aiff.order,         aifc.order);
       assert_eq!(aiff.samples.len(), aifc.samples.len());
       for (aiff_sample, aifc_sample) in aiff.samples.iter().zip(&aifc.samples) {
         assert_eq!(aiff_sample, aifc_sample);
@@ -263,9 +253,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(aifc.channels,      verify.channels);
-      assert_eq!(aifc.bit_depth,     verify.bit_depth);
       assert_eq!(aifc.sample_rate,   verify.sample_rate);
-      assert_eq!(aifc.order,         verify.order);
       assert_eq!(aifc.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -303,9 +291,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(aifc.channels,      verify.channels);
-      assert_eq!(aifc.bit_depth,     verify.bit_depth);
       assert_eq!(aifc.sample_rate,   verify.sample_rate);
-      assert_eq!(aifc.order,         verify.order);
       assert_eq!(aifc.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -343,9 +329,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(aifc.channels,      verify.channels);
-      assert_eq!(aifc.bit_depth,     verify.bit_depth);
       assert_eq!(aifc.sample_rate,   verify.sample_rate);
-      assert_eq!(aifc.order,         verify.order);
       assert_eq!(aifc.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -383,9 +367,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(aifc.channels,      verify.channels);
-      assert_eq!(aifc.bit_depth,     verify.bit_depth);
       assert_eq!(aifc.sample_rate,   verify.sample_rate);
-      assert_eq!(aifc.order,         verify.order);
       assert_eq!(aifc.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -423,9 +405,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(aifc.channels,      verify.channels);
-      assert_eq!(aifc.bit_depth,     verify.bit_depth);
       assert_eq!(aifc.sample_rate,   verify.sample_rate);
-      assert_eq!(aifc.order,         verify.order);
       assert_eq!(aifc.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in aifc.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);

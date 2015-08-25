@@ -49,22 +49,15 @@ mod io {
         path.set_file_name(file);
         println!("{:?}", path.as_path());
         let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
-        let total_samples = audio.samples.len();
-        let channels = audio.channels;
-        let bit_depth = audio.bit_depth;
-        let sample_rate = audio.sample_rate;
-        let sample_order = audio.order;
 
         let write_loc = Path::new("tests/results/tmp_u8.wav");
         let written = audio::save_as(&write_loc, &audio, LPCM_U8);
         println!("{:?}", written);
         assert!(written.is_ok());
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
-        assert_eq!(total_samples, verify.samples.len());
-        assert_eq!(channels, verify.channels);
-        assert_eq!(bit_depth, verify.bit_depth);
-        assert_eq!(sample_rate, verify.sample_rate);
-        assert_eq!(sample_order, verify.order);
+        assert_eq!(audio.channels,      verify.channels);
+        assert_eq!(audio.sample_rate,   verify.sample_rate);
+        assert_eq!(audio.samples.len(), verify.samples.len());
 
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -102,22 +95,15 @@ mod io {
             Ok(a) => a,
             Err(e) => panic!(format!("Error: {:?}", e))
           };
-        let total_samples = audio.samples.len();
-        let channels = audio.channels;
-        let bit_depth = audio.bit_depth;
-        let sample_rate = audio.sample_rate;
-        let sample_order = audio.order;
 
         let write_loc = Path::new("tests/results/tmp_i16.wav");
         let written = audio::save(&write_loc, &audio);
         println!("{:?}", written);
         assert!(written.is_ok());
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
-        assert_eq!(total_samples, verify.samples.len());
-        assert_eq!(channels, verify.channels);
-        assert_eq!(bit_depth, verify.bit_depth);
-        assert_eq!(sample_rate, verify.sample_rate);
-        assert_eq!(sample_order, verify.order);
+        assert_eq!(audio.channels,      verify.channels);
+        assert_eq!(audio.sample_rate,   verify.sample_rate);
+        assert_eq!(audio.samples.len(), verify.samples.len());
 
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -151,11 +137,6 @@ mod io {
         path.set_file_name(file);
         println!("{:?}", path.as_path());
         let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
-        let total_samples = audio.samples.len();
-        let channels = audio.channels;
-        let bit_depth = audio.bit_depth;
-        let sample_rate = audio.sample_rate;
-        let sample_order = audio.order;
 
         let write_loc = Path::new("tests/results/tmp_i24.wav");
         let written = audio::save_as(&write_loc, &audio, LPCM_I24_LE);
@@ -163,11 +144,9 @@ mod io {
         assert!(written.is_ok());
         
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
-        assert_eq!(total_samples, verify.samples.len());
-        assert_eq!(channels, verify.channels);
-        assert_eq!(bit_depth, verify.bit_depth);
-        assert_eq!(sample_rate, verify.sample_rate);
-        assert_eq!(sample_order, verify.order);
+        assert_eq!(audio.channels,      verify.channels);
+        assert_eq!(audio.sample_rate,   verify.sample_rate);
+        assert_eq!(audio.samples.len(), verify.samples.len());
 
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -202,22 +181,15 @@ mod io {
         path.set_file_name(file);
         println!("{:?}", path.as_path());
         let audio = audio::open(path.as_path()).ok().expect("Couldn't open read file");
-        let total_samples = audio.samples.len();
-        let channels = audio.channels;
-        let bit_depth = audio.bit_depth;
-        let sample_rate = audio.sample_rate;
-        let sample_order = audio.order;
 
         let write_loc = Path::new("tests/results/tmp_i32.wav");
         let written = audio::save_as(&write_loc, &audio, LPCM_I32_LE);
         println!("{:?}", written);
         assert!(written.is_ok());
         let verify: AudioBuffer = audio::open(&write_loc).unwrap();
-        assert_eq!(total_samples, verify.samples.len());
-        assert_eq!(channels, verify.channels);
-        assert_eq!(bit_depth, verify.bit_depth);
-        assert_eq!(sample_rate, verify.sample_rate);
-        assert_eq!(sample_order, verify.order);
+        assert_eq!(audio.channels,      verify.channels);
+        assert_eq!(audio.sample_rate,   verify.sample_rate);
+        assert_eq!(audio.samples.len(), verify.samples.len());
 
         // File sizes are the same
         let read_file = File::open(path.as_path()).unwrap();
@@ -260,9 +232,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
-      assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -300,9 +270,7 @@ mod io {
       // Read written file and verify read audio is the same.
       let verify: AudioBuffer = audio::open(&write_path).unwrap();
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
-      assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -344,9 +312,7 @@ mod io {
           Err(e) => panic!(format!("Error: {:?}", e))
         };
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
-      assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -388,9 +354,7 @@ mod io {
           Err(e) => panic!(format!("Error: {:?}", e))
         };
       assert_eq!(wave.channels,      verify.channels);
-      assert_eq!(wave.bit_depth,     verify.bit_depth);
       assert_eq!(wave.sample_rate,   verify.sample_rate);
-      assert_eq!(wave.order,         verify.order);
       assert_eq!(wave.samples.len(), verify.samples.len());
       for (inital_sample, written_sample) in wave.samples.iter().zip(&verify.samples) {
         assert_eq!(inital_sample, written_sample);
@@ -426,9 +390,7 @@ mod io {
           Err(e) => panic!(format!("Error: {:?}", e))
         };
       assert_eq!(wave.channels,      wavex.channels);
-      assert_eq!(wave.bit_depth,      wavex.bit_depth);
       assert_eq!(wave.sample_rate,   wavex.sample_rate);
-      assert_eq!(wave.order,         wavex.order);
       assert_eq!(wave.samples.len(), wavex.samples.len());
       for (wave_sample, wavex_sample) in wave.samples.iter().zip(&wavex.samples) {
         assert_eq!(wave_sample, wavex_sample);
