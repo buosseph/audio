@@ -18,18 +18,24 @@ pub use audio::{
 };
 
 mod buffer;
-pub use buffer::{
-  AudioBuffer,
+pub use buffer::AudioBuffer;
+
+mod codecs;
+pub use codecs::Codec as Codec;
+
+mod error;
+pub use error::{
+  AudioResult,
+  AudioError
+};
+
+mod sample;
+pub use sample::{
   FromSample,
   Sample,
   SampleOrder,
   ToSample
 };
-
-mod codecs;
-pub use codecs::Codec as Codec;
-
-pub mod error;
 
 mod traits;
 

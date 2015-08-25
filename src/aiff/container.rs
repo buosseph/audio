@@ -4,11 +4,12 @@ use aiff::chunks::*;
 use aiff::chunks::AiffChunk::*;
 use aiff::chunks::CompressionType::*;
 use buffer::*;
-use buffer::SampleOrder::*;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
+use sample::*;
+use sample::SampleOrder::*;
 use traits::{Chunk, Container};
 
 /// Struct containing all necessary information for encoding and decoding

@@ -8,6 +8,7 @@ use byteorder::*;
 use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
+use sample::*;
 
 fn get_bit_depth(codec: Codec) -> AudioResult<usize> {
   match codec {
@@ -234,6 +235,7 @@ mod coding {
     use byteorder::*;
     use ::codecs::Codec::*;
     use ::codecs::lpcm;
+    use sample::*;
 
     #[test]
     fn to_u8() {

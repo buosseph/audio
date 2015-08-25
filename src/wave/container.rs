@@ -1,10 +1,11 @@
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use buffer::*;
-use buffer::SampleOrder::*;
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
+use sample::*;
+use sample::SampleOrder::*;
 use traits::{Chunk, Container};
 use wave::{RIFF, WAVE, FMT, FACT, DATA};
 use wave::chunks::*;

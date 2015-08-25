@@ -1,6 +1,7 @@
 use std::fmt;
 use buffer::*;
 use error::*;
+use sample::*;
 
 mod lpcm;
 mod g711;

@@ -9,6 +9,7 @@ use buffer::*;
 use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
+use sample::*;
 
 /// µ-law to A-law conversion look-up table.
 ///

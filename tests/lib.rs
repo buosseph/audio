@@ -4,8 +4,7 @@ extern crate audio;
 mod api {
   use super::audio;
   use std::path::Path;
-  use audio::{AudioBuffer, SampleOrder};
-  use audio::error::AudioResult;
+  use audio::{AudioBuffer, AudioResult, SampleOrder};
 
   #[test]
   fn open() {
