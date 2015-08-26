@@ -239,7 +239,34 @@ pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
 #[cfg(test)]
 mod coding {
   mod encode {
+    use ::buffer::*;
+    use ::codecs::Codec::*;
+    use ::codecs::g711;
     use ::codecs::g711::*;
+
+    #[test]
+    fn with_unsupported_codec() {
+      let audio = AudioBuffer::from_samples(44100, 1, vec![0f32; 4]);
+      let codecs =
+        vec![
+          LPCM_U8,
+          LPCM_I8,
+          LPCM_I16_LE,
+          LPCM_I16_BE,
+          LPCM_I24_LE,
+          LPCM_I24_BE,
+          LPCM_I32_LE,
+          LPCM_I32_BE,
+          LPCM_F32_LE,
+          LPCM_F32_BE,
+          LPCM_F64_LE,
+          LPCM_F64_BE
+        ];
+      for unsupported_codec in codecs.iter() {
+        assert!(g711::create(&audio, *unsupported_codec).is_err());
+      }
+    }
+
 
     #[test]
     fn i16_to_alaw() {
@@ -257,7 +284,32 @@ mod coding {
     }
   }
   mod decode {
+    use ::codecs::Codec::*;
+    use ::codecs::g711;
     use ::codecs::g711::*;
+
+    #[test]
+    fn with_unsupported_codec() {
+      let bytes = vec![0u8; 4];
+      let codecs =
+        vec![
+          LPCM_U8,
+          LPCM_I8,
+          LPCM_I16_LE,
+          LPCM_I16_BE,
+          LPCM_I24_LE,
+          LPCM_I24_BE,
+          LPCM_I32_LE,
+          LPCM_I32_BE,
+          LPCM_F32_LE,
+          LPCM_F32_BE,
+          LPCM_F64_LE,
+          LPCM_F64_BE
+        ];
+      for unsupported_codec in codecs.iter() {
+        assert!(g711::read(&bytes, *unsupported_codec).is_err());
+      }
+    }
 
     #[test]
     fn alaw_to_i16() {

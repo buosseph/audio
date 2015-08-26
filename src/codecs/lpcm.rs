@@ -213,6 +213,19 @@ mod coding {
     use ::codecs::lpcm;
 
     #[test]
+    fn with_unsupported_codec() {
+      let audio = AudioBuffer::from_samples(44100, 1, vec![0f32; 4]);
+      let codecs =
+        vec![
+          G711_ALAW,
+          G711_ULAW
+        ];
+      for unsupported_codec in codecs.iter() {
+        assert!(lpcm::create(&audio, *unsupported_codec).is_err());
+      }
+    }
+
+    #[test]
     fn to_u8() {
       let samples = vec![0f32, 1f32, -1f32];
       let audio = AudioBuffer::from_samples(44100, 1, samples);
@@ -319,6 +332,19 @@ mod coding {
   mod decode {
     use ::codecs::Codec::*;
     use ::codecs::lpcm;
+
+    #[test]
+    fn with_unsupported_codec() {
+      let bytes = vec![0u8; 4];
+      let codecs =
+        vec![
+          G711_ALAW,
+          G711_ULAW
+        ];
+      for unsupported_codec in codecs.iter() {
+        assert!(lpcm::read(&bytes, *unsupported_codec).is_err());
+      }
+    }
 
     #[test]
     fn from_u8() {
