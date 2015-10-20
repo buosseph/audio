@@ -1,12 +1,12 @@
 use std::fs::File;
 use std::io::{BufWriter, Read, Seek, Write};
 use std::path::Path;
-use aiff::Decoder as AiffDecoder;
-use aiff::Encoder as AiffEncoder;
 use buffer::*;
 use codecs::Codec;
 use error::*;
 use traits::{AudioDecoder, AudioEncoder};
+
+use ::aiff;
 use wave::Decoder as WaveDecoder;
 use wave::Encoder as WaveEncoder;
 
@@ -14,9 +14,9 @@ use wave::Encoder as WaveEncoder;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AudioFormat {
   /// Waveform Audio File Format
-  WAVE,
+  Wave,
   /// Audio Interchange File Format
-  AIFF
+  Aiff
 }
 
 /// Opens and loads the audio file into memory from a `Path`.
@@ -28,8 +28,8 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
   let ext = path.extension().and_then(|s| s.to_str());
   if let Some(file_format) = ext {
     let format = match file_format {
-      "wav"|"wave"        => AudioFormat::WAVE,
-      "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
+      "wav"|"wave"        => AudioFormat::Wave,
+      "aif"|"aiff"|"aifc" => AudioFormat::Aiff,
       f_ext @ _           => return
         Err(AudioError::Format(
           format!("Did not recognize audio file format .{}", f_ext)
@@ -53,8 +53,9 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 #[inline]
 pub fn load<R: Read+Seek>(reader: &mut R, format: AudioFormat) -> AudioResult<AudioBuffer> {
   match format {
-    AudioFormat::WAVE => WaveDecoder::new(reader).decode(),
-    AudioFormat::AIFF => AiffDecoder::new(reader).decode(),
+    AudioFormat::Wave => WaveDecoder::new(reader).decode(),
+    // AudioFormat::Aiff => AiffDecoder::new(reader).decode(),
+    AudioFormat::Aiff => aiff::decode(reader),
   }
 }
 
@@ -67,8 +68,8 @@ pub fn save(path: &Path, audio: &AudioBuffer) -> AudioResult<()> {
   let ext = path.extension().and_then(|s| s.to_str());
   if let Some(file_format) = ext {
     let format = match file_format {
-      "wav"|"wave"        => AudioFormat::WAVE,
-      "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
+      "wav"|"wave"        => AudioFormat::Wave,
+      "aif"|"aiff"|"aifc" => AudioFormat::Aiff,
       f_ext @ _           => return
         Err(AudioError::Format(
           format!("Did not recognize audio file format .{}", f_ext)
@@ -94,8 +95,8 @@ pub fn save_as(path: &Path, audio: &AudioBuffer, codec: Codec) -> AudioResult<()
   let ext = path.extension().and_then(|s| s.to_str());
   if let Some(file_format) = ext {
     let format = match file_format {
-      "wav"|"wave"        => AudioFormat::WAVE,
-      "aif"|"aiff"|"aifc" => AudioFormat::AIFF,
+      "wav"|"wave"        => AudioFormat::Wave,
+      "aif"|"aiff"|"aifc" => AudioFormat::Aiff,
       f_ext @ _           => return
         Err(AudioError::Format(
           format!("Did not recognize audio file format .{}", f_ext)
@@ -122,10 +123,9 @@ pub fn write<W: Write>(writer: &mut W,
                        audio: &AudioBuffer, 
                        format: AudioFormat) -> AudioResult<()> {
   match format {
-    AudioFormat::WAVE => WaveEncoder::new(&mut BufWriter::new(writer))
+    AudioFormat::Wave => WaveEncoder::new(&mut BufWriter::new(writer))
                          .encode(audio),
-    AudioFormat::AIFF => AiffEncoder::new(&mut BufWriter::new(writer))
-                         .encode(audio)
+    AudioFormat::Aiff => aiff::encode(&mut BufWriter::new(writer), audio)
   }
 }
 
@@ -142,9 +142,8 @@ pub fn write_as<W: Write>(writer: &mut W,
                           format: AudioFormat,
                           codec: Codec) -> AudioResult<()> {
   match format {
-    AudioFormat::WAVE => WaveEncoder::new(&mut BufWriter::new(writer))
+    AudioFormat::Wave => WaveEncoder::new(&mut BufWriter::new(writer))
                          .encode_as(audio, codec),
-    AudioFormat::AIFF => AiffEncoder::new(&mut BufWriter::new(writer))
-                         .encode_as(audio, codec)
+    AudioFormat::Aiff => aiff::encode_as(&mut BufWriter::new(writer), audio, codec)
   }
 }

@@ -9,7 +9,7 @@ mod g711;
 /// All supported audio codecs.
 ///
 /// Any codec where endianess, sample ordering, or type influence coding is
-/// represented with a separate variant. If not specifiec, the codec is for
+/// represented with a separate variant. If not specified, the codec is for
 /// interleaved sample data.
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

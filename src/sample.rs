@@ -1,6 +1,7 @@
 /// Audio sample.
 pub type Sample = f32;
 
+// This will be removed until such functionality is needed.
 /// The channel ordering of audio `Sample`s.
 ///
 /// Multichannel samples are usually interleaved, but other orderings are

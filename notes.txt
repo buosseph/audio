@@ -1,0 +1,65 @@
+Design
+-------------------------------------------------------
+Library just provides a front-end for using other formats via load() and save().
+
+Front-end implementation:
+  - audio::open(path)
+    - opens and buffers a file from path using BufReader::new(File::open(path))
+    - calls audio::load
+  - audio::load(reader, format)
+    - decodes data from reader as given format
+    - does NOT buffer data, so use open if reading from a file
+  - audio::save(path, audio_buffer)
+    - creates a file writing audio data using a BufWriter
+    - format is determined by path extension
+    - calls audio::write
+  - audio::save_as(path, audio_buffer, codec)
+    - creates a file writing audio data using a BufWriter using given codec
+    - format is determined by path extension
+  - audio::write(writer, audio_buffer, format)
+    - encodes audio_buffer data to writer as given format
+    - does NOT buffer data
+    - assumes codec based on format (Wave -> Pcm16Le, Aiff -> Pcm16Be)
+  - audio::write_as(writer, audio_buffer, format, codec)
+    - encodes audio_buffer data to writer as given format and codec
+    - does NOT buffer data
+
+
+Format specific functions:
+  - format::decode(reader)
+  - format::encode(writer, audio_buffer)
+  - format::encode_as(writer, audio_buffer, codec)
+
+
+General approach to decoding:
+  1. Seek for container chunk (RIFF / IFF) and read to validate container
+  2. Seek for FMT_/COMM chunk and read relevant data for decoding
+  3. Seek for DATA/SSND chunk and read audio using codec
+  Notes:
+  - Eliminates reading of unnecessary chunks
+    - Metadata and other chunks can be read using separate functions
+  - Does seek work in a way that this makes sense? Or is a custom implementation needed
+    - Not too difficult, if chunk isn't what we're looking for skip the size of it 
+
+
+General approach to encoding:
+  1. Determine format variant from given codec
+  2. Write format chunks containing decoding data
+  3. Encode audio_buffer using codec and write
+  - Besides accounting for variant cases, it's simple
+  - Doesn't account for metadata or extra chunks the user may want to write
+    - Althought it's not an issue now, adding support for this would be a good idea
+      - Probably create an Format::encode_with(audio_buffer, codec, metadata)
+      - AudioMetadata struct would be needed to keep information consistent between multiple formats
+
+
+Formats:
+- Wave/Wave-x (RIFF)
+- Aiff/Aiff-C (IFF)
+
+
+Codecs:
+- Pcm (u8, i8, i16, i24, i32, f32, f64)
+- ALaw
+- MuLaw
+

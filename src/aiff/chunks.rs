@@ -24,13 +24,6 @@ const FL32: (&'static [u8; 4], &'static [u8]) =
 const FL64: (&'static [u8; 4], &'static [u8]) =
   (b"fl64", b"IEEE 64-bit float");
 
-/// Supported AIFF chunks.
-pub enum AiffChunk {
-  FormatVersion,
-  Common,
-  SoundData
-}
-
 /// Supported compression codes in the AIFC common chunk.
 ///
 /// In traditional AIFF files there is no option for compression. However, AIFC

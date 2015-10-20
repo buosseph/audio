@@ -8,33 +8,27 @@ A Rust audio coding library.
 
 ## Decoding
 
-| Audio Format | Codec | Data formats |
-| ------ | ----- | --------- |
-| WAVE | PCM   | u8, i16, i24, i32, f32, f64 |
-|      | G.711 | alaw, ulaw |
-| AIFF | PCM   | u8, i8, i16, i24, i32, f32, f64 |
-|      | G.711 | alaw, ulaw |
+| Audio Format | Variant | Codec | Data formats |
+| ---- | ---------- | ----- | ------------------------------- |
+| WAVE |            | PCM   | u8, i16, i24, i32, f32, f64     |
+|      |            | G.711 | alaw, ulaw                      |
+| AIFF | Aiff, Aifc | PCM   | u8, i8, i16, i24, i32, f32, f64 |
+|      |            | G.711 | alaw, ulaw                      |
 
 ## Encoding
 
-| Audio Format | Codec | Bit Rates |
-| ------ | ----- | --------- |
-| WAVE | PCM   | u8, i16, i24, i32, f32, f64 |
-|      | G.711 | alaw, ulaw |
-| AIFF | PCM   | u8, i8, i16, i24, i32, f32, f64 |
-|      | G.711 | alaw, ulaw |
+| Audio Format | Variant | Codec | Bit Rates |
+| ---- | ---------- | ----- | ------------------------------- |
+| WAVE |            | PCM   | u8, i16, i24, i32, f32, f64     |
+|      |            | G.711 | alaw, ulaw                      |
+| AIFF | Aiff, Aifc | PCM   | u8, i8, i16, i24, i32, f32, f64 |
+|      |            | G.711 | alaw, ulaw                      |
 
 ## TODO
-- Improved multichannel support
-  - Represent channel layout
 - Improved support for alternative WAVE formats
   - Clear up ambiguity on use cases of `WAVE_FORMAT_EXTENSIBLE`
   - Should the user specify when to use format variants, as done in Audacity?
     - This would also apply to AIFF-C
-- Add metadata support?
-  - Requires additional support for RIFF and IFF textual chunks
-  - Requires handling of possible ID3 metadata
-    - Using `crate rust-id3`
 - Improved error messages
   - Revise messages throughout code
 - Improved testing
@@ -44,10 +38,14 @@ A Rust audio coding library.
   - Inspect generated docs and apply revisions where needed
   - Add examples in documentation
   - Create more example programs
+- Improved multichannel support?
+  - Represent channel layout
+- Add metadata support?
+  - Requires additional support for RIFF and IFF textual chunks
+  - Requires handling of possible ID3 metadata
+    - Using `crate rust-id3`
 - Miscellaneous
   - Add a "from_buffer" function?
   - Add `load_as` for reading data as a different audio format?
-  - Expand API?
-    - Export `Container::open` and `Container::create`
   - Come up with a name!
   - Explore other audio formats

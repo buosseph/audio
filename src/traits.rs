@@ -19,6 +19,9 @@ pub trait AudioEncoder {
                codec: Codec) -> AudioResult<()>;
 }
 
+// Container and Chunk traits must be refactored or removed, they will cause errors
+// in future release
+
 /// A `Container` is the higher level representation of the audio format.
 pub trait Container {
   /// Decodes metadata provided by the container format. Audio bytes are not
