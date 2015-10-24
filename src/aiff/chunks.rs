@@ -1,11 +1,14 @@
 //! AIFF Chunks
 use std::fmt;
-use std::io::Write;
-use aiff::{COMM, SSND};
+use std::io::{Read, Seek, SeekFrom, Write};
+use aiff;
+use aiff::is_aifc;
+use aiff::read_codec;
 use buffer::AudioBuffer;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use codecs::Codec;
 use codecs::Codec::*;
+use sample::*;
 use self::CompressionType::*;
 use traits::Chunk;
 use error::*;
@@ -49,9 +52,9 @@ impl fmt::Display for CompressionType {
 ///
 /// This chunk provides most of the information required to decode the sampled
 /// data. In AIFC files, bit_depth represents the number of samples used in the
-/// uncompressed audio data. For example, although uLaw and aLaw codecs compress
-/// 16-bit audio to 8-bits, the bit_depth is be set to 16 since the original
-/// data uses 16-bits.
+/// uncompressed audio data. For example, although uLaw and aLaw codecs
+/// compress 16-bit audio to 8-bits, the bit_depth is be set to 16 since the
+/// original data uses 16-bits.
 #[derive(Debug, Clone, Copy)]
 pub struct CommonChunk {
   pub num_channels:     i16,
@@ -61,45 +64,10 @@ pub struct CommonChunk {
   pub compression_type: CompressionType
 }
 
-/// Determines if the `Codec` given requires the audio to be encoded as AIFF-C.
-#[inline]
-pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
-  match codec {
-    G711_ALAW   |
-    G711_ULAW   |
-    LPCM_U8     |
-    LPCM_F32_BE |
-    LPCM_F64_BE => Ok(true),
-    LPCM_I8     |
-    LPCM_I16_BE |
-    LPCM_I24_BE |
-    LPCM_I32_BE => Ok(false),
-    c @ _       =>
-      return Err(AudioError::Unsupported(
-        format!("Aiff does not support {:?} codec", c)
-      ))
-  }
-}
-
-fn get_bit_depth(codec: Codec) -> AudioResult<i16> {
-  match codec {
-    LPCM_U8      |
-    LPCM_I8      => Ok(8),
-    G711_ALAW    |
-    G711_ULAW    |
-    LPCM_I16_BE  => Ok(16),
-    LPCM_I24_BE  => Ok(24),
-    LPCM_I32_BE  |
-    LPCM_F32_BE  => Ok(32),
-    LPCM_F64_BE  => Ok(64),
-    c @ _ =>
-      return Err(AudioError::Unsupported(
-        format!("Aiff does not support the {:?} codec", c)
-      ))
-  }
-}
 
 impl CommonChunk {
+  /// Returns the size of the chunk based on the codec to be used to encode
+  /// the relevant audio samples.
   #[inline]
   pub fn calculate_size(codec: Codec) -> AudioResult<i32> {
     match codec {
@@ -118,30 +86,61 @@ impl CommonChunk {
         ))
     }
   }
+
+  /// Returns the bit depth corresponding to the given codec used in this
+  /// format.
+  #[inline]
+  fn get_bit_depth(codec: Codec) -> AudioResult<i16> {
+    match codec {
+      LPCM_U8      |
+      LPCM_I8      => Ok(8),
+      G711_ALAW    |
+      G711_ULAW    |
+      LPCM_I16_BE  => Ok(16),
+      LPCM_I24_BE  => Ok(24),
+      LPCM_I32_BE  |
+      LPCM_F32_BE  => Ok(32),
+      LPCM_F64_BE  => Ok(64),
+      c @ _ =>
+        return Err(AudioError::Unsupported(
+          format!("Aiff does not support the {:?} codec", c)
+        ))
+    }
+  }
+
+  /// Writes the Common Chunk to the given writer using information from the
+  /// provided `AudioBuffer` and `Codec` to be used for sample encoding.
+  ///
+  /// This function writes the entire Common Chunk, including the chunk
+  /// identifier and the chunk size.
   pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
-    try!(writer.write(COMM));
     let chunk_size: i32 = try!(Self::calculate_size(codec));
+    let is_aifc: bool   = try!(is_aifc(codec));
+
+    try!(writer.write(aiff::COMM));
     try!(writer.write_i32::<BigEndian>(chunk_size));
     try!(writer.write_i16::<BigEndian>(audio.channels as i16));
     try!(writer.write_u32::<BigEndian>(audio.samples.len() as u32 / audio.channels));
-    try!(writer.write_i16::<BigEndian>(try!(get_bit_depth(codec))));
+    try!(writer.write_i16::<BigEndian>(try!(Self::get_bit_depth(codec))));
     try!(writer.write(&convert_to_ieee_extended(audio.sample_rate as f64)));
-    // Write additional information if aifc
-    if try!(is_aifc(codec)) {
+
+    // Write additional AIFF-C information
+    if is_aifc {
       // Write compression type identifier
       let compression =
         match codec {
-          LPCM_U8 => RAW,
-          G711_ALAW => ALAW,
-          G711_ULAW => ULAW,
+          LPCM_U8     => RAW,
+          G711_ALAW   => ALAW,
+          G711_ULAW   => ULAW,
           LPCM_F32_BE => FL32,
           LPCM_F64_BE => FL64,
-          fmt @ _   =>
+          fmt @ _     =>
             return Err(AudioError::Unsupported(
               format!("Common chunk does not support {:?}", fmt)
             ))
         };
       try!(writer.write(compression.0));
+
       if compression.1.len() == 0 {
         try!(writer.write_i16::<BigEndian>(0));
       }
@@ -155,23 +154,30 @@ impl CommonChunk {
         }
       }
     }
+
     Ok(())
   }
-}
 
-impl Chunk for CommonChunk {
-  fn read(buffer: &[u8]) -> AudioResult<CommonChunk> {
+  /// Reads the data within the Common Chunk from the given reader.
+  ///
+  /// This function assumes the Common Chunk has already been found and its
+  /// header read using `find_chunk(reader, COMM)` and should use the
+  /// chunk_size returned by that function.
+  pub fn read_chunk_data<R: Read + Seek>(reader: &mut R, chunk_size: usize) -> AudioResult<Self> {
+    let mut chunk_buffer = vec![0u8; chunk_size];
+    try!(reader.read(&mut chunk_buffer));
+
     let compression_type =
-      if buffer.len() > 18 {
-        match &buffer[18..22] {
-          tag if tag == NONE.0  => Pcm,
-          tag if tag ==  RAW.0  => Raw,
+      if chunk_buffer.len() > 18 {
+        match &chunk_buffer[18..22] {
+          tag if tag == NONE.0  => CompressionType::Pcm,
+          tag if tag == RAW.0  => CompressionType::Raw,
           tag if tag == FL32.0
-              || tag == b"FL32" => Float32,
+              || tag == b"FL32" => CompressionType::Float32,
           tag if tag == FL64.0
-              || tag == b"FL64" => Float64,
-          tag if tag == ALAW.0  => ALaw,
-          tag if tag == ULAW.0  => MuLaw,
+              || tag == b"FL64" => CompressionType::Float64,
+          tag if tag == ALAW.0  => CompressionType::ALaw,
+          tag if tag == ULAW.0  => CompressionType::MuLaw,
           _ => {
             return Err(AudioError::Unsupported(
               "Unknown compression type".to_string()
@@ -180,35 +186,75 @@ impl Chunk for CommonChunk {
         }
       }
       else {
-        Pcm
+        CompressionType::Pcm
       };
     Ok(
       CommonChunk {
         compression_type: compression_type,
-        num_channels:     BigEndian::read_i16(&buffer[0..2]),
-        num_frames:       BigEndian::read_u32(&buffer[2..6]),
-        bit_depth:        BigEndian::read_i16(&buffer[6..8]),
-        sample_rate:      convert_from_ieee_extended(&buffer[8..18])
+        num_channels:     BigEndian::read_i16(&chunk_buffer[0..2]),
+        num_frames:       BigEndian::read_u32(&chunk_buffer[2..6]),
+        bit_depth:        BigEndian::read_i16(&chunk_buffer[6..8]),
+        sample_rate:      convert_from_ieee_extended(&chunk_buffer[8..18])
       }
     )
   }
 }
 
+/// The AIFF Sound Data Chunk.
+///
+/// This chunk contains the encoded sound data, which cannot be read without
+/// the information from the Common Chunk. This chunk also contains offset
+/// and block size values within 8 bytes prior to the actual sound data.
+/// Because there is little additional information other than the encoded
+/// audio samples, reading this chunks results in the return of the actual
+/// audio samples rather than a struct representing this chunk.
 pub struct SoundDataChunk;
+
 impl SoundDataChunk {
+  /// Writes the Sound Data Chunk to the given writer using the provided
+  /// encoded data.
+  ///
+  /// This function writes the entire Sound Data Chunk, including the chunk
+  /// identifier and the chunk size. The offset and block size values are
+  /// always written as zero. A pad byte is added if the encoded data is not
+  /// of even size.
   pub fn write<W: Write>(writer: &mut W, encoded_data: &[u8]) -> AudioResult<()> {
-    try!(writer.write(SSND));
+    try!(writer.write(aiff::SSND));
     try!(writer.write_i32::<BigEndian>((encoded_data.len() + 8) as i32));
-    try!(writer.write_u32::<BigEndian>(0u32));   // offset. For now, always 0
-    try!(writer.write_u32::<BigEndian>(0u32));   // block_size. For now, always 0
+    try!(writer.write_u64::<BigEndian>(0)); // offset and block_size. Both 0
     try!(writer.write_all(encoded_data));
-    // Add trailing byte if data size is odd, all chunks must be of even size.
+
+    // IFF chunks must be of even size
     if encoded_data.len() % 2 != 0 {
       try!(writer.write_u8(0));
     }
     Ok(())
   }
-} 
+
+  /// Reads the data within the SSND chunk from the given reader.
+  ///
+  /// This function assumes the SSND chunk has already been found and its header
+  /// read using `find_chunk(reader, SSND)` and should use the chunk_size returned
+  /// by that function. The audio data within the chunk is decoded using the give
+  /// codec, which can be determined using
+  /// `determine_codec(compression_type, bit_depth)`.
+  ///
+  /// The current implementaiton skips the first 8 bytes of the data inside the
+  /// SSND chunk, which contains the sample offset and block_size, as that
+  /// information is not used in decoding.
+  pub fn read_chunk_data<R: Read + Seek>(reader: &mut R, chunk_size: usize, codec: Codec) -> AudioResult<Vec<Sample>> {
+    // Skip the offset and block_size bytes, we don't use them.
+    try!(reader.seek(SeekFrom::Current(8)));
+
+    let mut data_buffer = vec![0u8; chunk_size - 8];
+    try!(reader.read(&mut data_buffer));
+    read_codec(&data_buffer, codec)
+  }
+}
+
+// ----------------------------------------------------------
+// IEEE-Extended Functions
+// ----------------------------------------------------------
 
 /// Breaks number into a normalized fraction and a base-2 exponent, satisfying:
 /// > - `self = x * 2^exp`

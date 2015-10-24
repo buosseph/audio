@@ -3,11 +3,6 @@
 //! AIFF files use the Interchange File Format (IFF), a generic file container
 //! format that uses chunks to store data. All bytes are stored in big-endian
 //! format.
-//!
-//! References
-//! - [McGill University](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html)
-//! - [AIFF Spec](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/Docs/AIFF-1.3.pdf)
-//! - [AIFF/AIFFC Spec from Apple](http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/Docs/MacOS_Sound-extract.pdf)
 
 use std::io::{
   Error,
@@ -18,7 +13,6 @@ use std::io::{
   Write
 };
 
-use ::aiff::chunks::*;
 use buffer::AudioBuffer;
 use byteorder::{
   BigEndian,
@@ -30,35 +24,32 @@ use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
 use sample::*;
+use self::chunks::*;
 
 mod chunks;
 
-/// AIFF/AIFC chunk identifiers.
+// AIFF/AIFC chunk identifiers.
+
+/// IFF form group identifier.
 const FORM: &'static [u8; 4] = b"FORM";
+
+/// AIFF form type identifier.
 const AIFF: &'static [u8; 4] = b"AIFF";
+
+/// AIFF-C form type identifier.
 const AIFC: &'static [u8; 4] = b"AIFC";
+
+/// AIFF-C Format Version Chunk identifier.
 const FVER: &'static [u8; 4] = b"FVER";
-const COMM: &'static [u8; 4] = b"COMM";
-const SSND: &'static [u8; 4] = b"SSND";
 
 /// AIFF-C Version 1 timestamp for the FVER chunk.
 const AIFC_VERSION_1: u32 = 0xA2805140;
 
+/// AIFF Common Cchunk identifier.
+const COMM: &'static [u8; 4] = b"COMM";
 
-// TODO: Remove duplicate constants
-// AIFF-C compression types and strings
-const NONE: (&'static [u8; 4], &'static [u8]) =
-  (b"NONE", b"not compressed");
-const RAW : (&'static [u8; 4], &'static [u8]) =
-  (b"raw ", b"");
-const ULAW: (&'static [u8; 4], &'static [u8]) =
-  (b"ulaw", &[0xB5, 0x6C, 0x61, 0x77, 0x20, 0x32, 0x3A, 0x31]); // µLaw 2:1
-const ALAW: (&'static [u8; 4], &'static [u8]) =
-  (b"alaw", b"ALaw 2:1");
-const FL32: (&'static [u8; 4], &'static [u8]) =
-  (b"fl32", b"IEEE 32-bit float");
-const FL64: (&'static [u8; 4], &'static [u8]) =
-  (b"fl64", b"IEEE 64-bit float");
+/// AIFF Sound Data Chunk identifier.
+const SSND: &'static [u8; 4] = b"SSND";
 
 /// All supported AIFF format variants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,6 +58,7 @@ enum FormatVariant {
   ///
   /// This format only supports uncompressed LPCM codecs.
   Aiff,
+
   /// AIFF-C
   ///
   /// This format supports compressed codecs.
@@ -168,9 +160,9 @@ fn find_chunk<R: Read + Seek>(reader: &mut R,id: &[u8; 4]) -> AudioResult<(i64, 
   loop {
     let num_bytes = try!(reader.read(&mut buffer));
     if num_bytes == 0 {
-      // TODO: Simplify
       return Err(AudioError::from(
-                 Error::new(ErrorKind::Other, "Chunk not found")));
+                 Error::new(ErrorKind::Other,
+                            "Chunk not found")));
     }
 
     chunk_size = BigEndian::read_i32(&buffer[4..8]) as i64;
@@ -192,47 +184,6 @@ fn find_chunk<R: Read + Seek>(reader: &mut R,id: &[u8; 4]) -> AudioResult<(i64, 
   Ok((offset, chunk_size as usize))
 }
 
-/// Reads the data within the COMM chunk from the given reader.
-///
-/// This function assumes the COMM chunk has already been found and its header
-/// read using `find_chunk(reader, COMM)` and should use the chunk_size returned
-/// by that function.
-fn read_comm_chunk<R: Read + Seek>(reader: &mut R, chunk_size: usize) -> AudioResult<chunks::CommonChunk> {
-  let mut chunk_buffer = vec![0u8; chunk_size as usize];
-  try!(reader.read(&mut chunk_buffer));
-
-  let compression_type =
-    if chunk_buffer.len() > 18 {
-      match &chunk_buffer[18..22] {
-        tag if tag == NONE.0  => CompressionType::Pcm,
-        tag if tag == RAW.0  => CompressionType::Raw,
-        tag if tag == FL32.0
-            || tag == b"FL32" => CompressionType::Float32,
-        tag if tag == FL64.0
-            || tag == b"FL64" => CompressionType::Float64,
-        tag if tag == ALAW.0  => CompressionType::ALaw,
-        tag if tag == ULAW.0  => CompressionType::MuLaw,
-        _ => {
-          return Err(AudioError::Unsupported(
-            "Unknown compression type".to_string()
-          ))
-        }
-      }
-    }
-    else {
-      CompressionType::Pcm
-    };
-  Ok(
-    chunks::CommonChunk {
-      compression_type: compression_type,
-      num_channels:     BigEndian::read_i16(&chunk_buffer[0..2]),
-      num_frames:       BigEndian::read_u32(&chunk_buffer[2..6]),
-      bit_depth:        BigEndian::read_i16(&chunk_buffer[6..8]),
-      sample_rate:      chunks::convert_from_ieee_extended(&chunk_buffer[8..18])
-    }
-  )
-}
-
 /// Returns the `Codec` used by the read audio attributes.
 fn determine_codec(compression_type: CompressionType, bit_depth: i16) -> AudioResult<Codec> {
   match (compression_type, bit_depth) {
@@ -252,29 +203,6 @@ fn determine_codec(compression_type: CompressionType, bit_depth: i16) -> AudioRe
         "Audio encoded with unsupported codec".to_string()
       ))
   }
-}
-
-/// Reads the data within the SSND chunk from the given reader.
-///
-/// This function assumes the SSND chunk has already been found and its header
-/// read using `find_chunk(reader, SSND)` and should use the chunk_size returned
-/// by that function. The audio data within the chunk is decoded using the give
-/// codec, which can be determined using
-/// `determine_codec(compression_type, bit_depth)`.
-///
-/// The current implementaiton skips the first 8 bytes of the data inside the
-/// SSND chunk, which contains the sample offset and block_size, as that
-/// information is not used in decoding.
-fn read_ssnd_chunk<R: Read + Seek>(reader: &mut R, chunk_size: usize, codec: Codec) -> AudioResult<Vec<Sample>> {
-  // let mut buffer = [0u8; 8];
-  // try!(reader.read(&mut buffer));
-  // let offset      : u32 = BigEndian::read_u32(&chunk_bytes[0..4]);
-  // let block_size  : u32 = BigEndian::read_u32(&chunk_bytes[4..8]);
-  try!(reader.seek(SeekFrom::Current(8)));
-
-  let mut data_buffer = vec![0u8; chunk_size - 8];
-  try!(reader.read(&mut data_buffer));
-  read_codec(&data_buffer, codec)
 }
 
 /// Returns samples read using the given codec. If the container does not
@@ -311,36 +239,27 @@ fn is_supported(codec: Codec) -> AudioResult<bool> {
 /// decoding the stored audio data. All other chunks are ignored.
 pub fn decode<R: Read + Seek>(reader: &mut R) -> AudioResult<AudioBuffer> {
   // TODO: Verify that IFF header may start later in file
-  // 1.1 Find IFF header
   try!(find_iff_header(reader));
-
-  // 1.2 Validate container
   let (variant, _) = try!(validate_container(reader));
-
-  // 1.3 If Aifc, immediate read FVER chunk or return Err
   if variant == FormatVariant::Aifc {
     try!(find_aifc_fver(reader));
   }
 
-  // 2.1 Find comm chunk, if not found return Err
   let (_, comm_chunk_size) = try!(find_chunk(reader, COMM));
+  let comm_chunk  = try!(CommonChunk::read_chunk_data(reader,
+                                                      comm_chunk_size));
 
-  // 2.2 Read comm chunk
-  let comm_chunk  = try!(read_comm_chunk(reader, comm_chunk_size));
-
-  // 2.3 Determine data codec
   let codec = try!(determine_codec(
                    comm_chunk.compression_type,
                    comm_chunk.bit_depth));
 
-  // 3.1 Seek ssnd chunk, if not found return Err
   let (_, ssnd_chunk_size) = try!(find_chunk(reader, SSND));
-
-  // 3.2 Read ssnd chunk
-  let samples = try!(read_ssnd_chunk(reader,ssnd_chunk_size, codec));
+  let samples = try!(SoundDataChunk::read_chunk_data(reader, 
+                                                     ssnd_chunk_size,
+                                                     codec));
 
   Ok(AudioBuffer::from_samples(
-    comm_chunk.sample_rate as u32,
+    comm_chunk.sample_rate  as u32,
     comm_chunk.num_channels as u32,
     samples
   ))
@@ -349,6 +268,30 @@ pub fn decode<R: Read + Seek>(reader: &mut R) -> AudioResult<AudioBuffer> {
 // ----------------------------------------------------------
 // Encoding
 // ----------------------------------------------------------
+
+/// Determines if the `Codec` given requires the audio to be encoded as AIFF-C.
+///
+/// This function also doubles as a check for codec support by this format. If
+/// the codec is not supported by this format, or library, then an `AudioError`
+/// is returned.
+#[inline]
+pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
+  match codec {
+    G711_ALAW   |
+    G711_ULAW   |
+    LPCM_U8     |
+    LPCM_F32_BE |
+    LPCM_F64_BE => Ok(true),
+    LPCM_I8     |
+    LPCM_I16_BE |
+    LPCM_I24_BE |
+    LPCM_I32_BE => Ok(false),
+    c @ _       =>
+      return Err(AudioError::Unsupported(
+        format!("Aiff does not support {:?} codec", c)
+      ))
+  }
+}
 
 /// Returns samples as bytes created using the given codec. If the container
 /// does not support a codec, an error is returned.
@@ -373,30 +316,28 @@ pub fn encode<W: Write>(writer: &mut W, audio: &AudioBuffer) -> AudioResult<()> 
 /// If the given codec is not supported by the AIFF format, then an `AudioError`
 /// is returned.
 pub fn encode_as<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
-  // Determine if codec is supported by container and if it's supported by
-  // aiff or aiff-c.
-  let aifc: bool    = try!(is_aifc(codec));
-  // println!("{:?}", aifc);
-
-  // Encode audio samples using codec.
-  let data: Vec<u8> = try!(write_codec(audio, codec));
+  // Determine if codec is supported by format variants.
+  let aifc = try!(is_aifc(codec));
+  let data = try!(write_codec(audio, codec));
 
   // Calculate file_size
-  let comm_chunk_size: u32 = try!(chunks::CommonChunk::calculate_size(codec)) as u32;
-  let ssnd_chunk_size: u32 = 8 + data.len() as u32;
+  let comm_chk_size: u32 = try!(CommonChunk::calculate_size(codec)) as u32;
+  let ssnd_chk_size: u32 = 8 + data.len() as u32;
   // Ignoring 8 bytes to write FORM and file_size
-  let mut file_size: u32  = 4 + (8 + comm_chunk_size)
-                                 + (8 + ssnd_chunk_size);
+  let mut file_size: u32 = 4 + (8 + comm_chk_size)
+                             + (8 + ssnd_chk_size);
+
   // AIFF-C files must include a format version chunk.
   if aifc {
     file_size += 12;
   }
 
-  // Write the IFF header
+  // Write the IFF header.
   try!(writer.write(FORM));
   try!(writer.write_u32::<BigEndian>(file_size));
   if aifc {
     try!(writer.write(AIFC));
+
     // Write form version chunk to writer. Requried by aiff-c.
     try!(writer.write(FVER));
     try!(writer.write_u32::<BigEndian>(4));
@@ -406,10 +347,10 @@ pub fn encode_as<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) ->
     try!(writer.write(AIFF));
   }
 
-  // Write comm chunk to the writer.
+  // Write comm chunk.
   try!(CommonChunk::write(writer, audio, codec));
 
-  // Write ssnd chunk to the writer.
+  // Write ssnd chunk.
   try!(SoundDataChunk::write(writer, &data));
 
   Ok(())
