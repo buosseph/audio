@@ -2,6 +2,7 @@
 //!
 //! These are traits shared by multiple audio formats
 use std::io::{Read, Seek, Write};
+use std::marker::Sized;
 use buffer::AudioBuffer;
 use codecs::Codec;
 use error::*;
@@ -20,7 +21,7 @@ pub trait AudioEncoder {
 }
 
 /// A `Container` is the higher level representation of the audio format.
-pub trait Container {
+pub trait Container : Sized {
   /// Decodes metadata provided by the container format. Audio bytes are not
   /// decoded.
   fn open<R: Read + Seek>(reader: &mut R) -> AudioResult<Self>;
@@ -33,7 +34,7 @@ pub trait Container {
 
 /// A `Chunk` contains data relevant to the audio format, such as track metadata
 /// or decoding details.
-pub trait Chunk {
+pub trait Chunk : Sized {
   /// Decodes chunk from byte slice.
   fn read(buffer: &[u8]) -> AudioResult<Self>;
 }
