@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["AudioError","An enumeration for reporting audio errors"]],"type":[["AudioResult","Result type of an audio encoding or decoding process"]]});
