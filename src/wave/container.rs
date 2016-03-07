@@ -5,7 +5,6 @@ use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
 use sample::*;
-use sample::SampleOrder::*;
 use traits::{Chunk, Container};
 use wave::{RIFF, WAVE, FMT, FACT, DATA};
 use wave::chunks::*;
@@ -55,7 +54,7 @@ impl Container for WaveContainer {
     let mut read_data_chunk   : bool    = false;
     while buffer.position() < file_size as u64 {
       try!(buffer.read(&mut chunk_header));
-      let chunk_size: usize = 
+      let chunk_size: usize =
         LittleEndian::read_u32(&chunk_header[4..8]) as usize;
       let pos: usize = buffer.position() as usize;
       match identify(&chunk_header[0..4]).ok() {
@@ -72,7 +71,7 @@ impl Container for WaveContainer {
             } else {
               SampleOrder::Interleaved
             };
-          container.codec           = 
+          container.codec           =
             try!(determine_codec(fmt_chunk.format_tag,
                                  fmt_chunk.bit_depth));
           read_fmt_chunk            = true;
@@ -160,7 +159,7 @@ fn identify(bytes: &[u8]) -> AudioResult<WaveChunk> {
     FMT  => Ok(Format),
     FACT => Ok(Fact),
     DATA => Ok(Data),
-    err @ _ => 
+    err @ _ =>
       Err(AudioError::Format(
         format!("Do not recognize WAVE chunk with identifier {:?}", err)
       ))

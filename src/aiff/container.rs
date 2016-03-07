@@ -9,7 +9,6 @@ use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
 use sample::*;
-use sample::SampleOrder::*;
 use traits::{Chunk, Container};
 
 /// Struct containing all necessary information for encoding and decoding
@@ -45,7 +44,7 @@ impl Container for AiffContainer {
     try!(reader.read(buffer.get_mut()));
 
     // Read all supported chunks
-    let mut container = 
+    let mut container =
       AiffContainer {
         codec:          LPCM_I16_BE,
         bit_depth:      0u32,
@@ -116,7 +115,7 @@ impl Container for AiffContainer {
       return Err(AudioError::Format(
         "File is not valid AIFC \
         (Missing required FormatVersion chunk)".to_string()
-      ))      
+      ))
     }
     if !read_comm_chunk {
       return Err(AudioError::Format(
@@ -178,7 +177,7 @@ fn identify(bytes: &[u8]) -> AudioResult<AiffChunk> {
     FVER => Ok(FormatVersion),
     COMM => Ok(Common),
     SSND => Ok(SoundData),
-    err @ _ => 
+    err @ _ =>
       Err(AudioError::Format(
         format!("Do not recognize AIFF chunk with identifier {:?}", err)
       ))

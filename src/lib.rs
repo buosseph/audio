@@ -23,11 +23,15 @@ pub use buffer::AudioBuffer;
 mod codecs;
 pub use codecs::Codec as Codec;
 
+mod decoder;
+
 mod error;
 pub use error::{
   AudioResult,
   AudioError
 };
+
+pub mod format;
 
 mod sample;
 pub use sample::{

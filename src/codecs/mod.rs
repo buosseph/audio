@@ -3,8 +3,8 @@ use buffer::*;
 use error::*;
 use sample::*;
 
-mod lpcm;
-mod g711;
+pub mod lpcm;
+pub mod g711;
 
 /// All supported audio codecs.
 ///
