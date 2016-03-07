@@ -12,7 +12,6 @@ use traits::{
   AudioDecoder,
   AudioEncoder
 };
-use wave::Decoder as WaveDecoder;
 use wave::Encoder as WaveEncoder;
 
 /// All supported audio formats.
@@ -59,18 +58,17 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 pub fn load<R: Read+Seek>(reader: &mut R,
                           format: AudioFormat)
 -> AudioResult<AudioBuffer> {
-  match format {
-    AudioFormat::Wave => WaveDecoder::new(reader).decode(),
-    AudioFormat::Aiff => {
-      let mut decoder = try!(::format::aiff::read(reader));
-      let data = try!(decoder.decode());
-      Ok(AudioBuffer::from_samples(
-        decoder.sample_rate,
-        decoder.channels,
-        data
-      ))
-    }
-  }
+  let mut decoder =
+    match format {
+      AudioFormat::Wave => try!(::format::wave::read(reader)),
+      AudioFormat::Aiff => try!(::format::aiff::read(reader))
+    };
+
+  Ok(AudioBuffer::from_samples(
+    decoder.sample_rate,
+    decoder.channels,
+    try!(decoder.decode())
+  ))
 }
 
 /// Saves an `AudioBuffer` to a `Path`.
