@@ -24,6 +24,7 @@ mod codecs;
 pub use codecs::Codec as Codec;
 
 mod decoder;
+mod encoder;
 
 mod error;
 pub use error::{

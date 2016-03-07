@@ -54,6 +54,7 @@ impl AudioDecoder {
       LPCM_F64_BE => {
         ::codecs::lpcm::read(self.data.as_slice(), self.codec)
       },
+
       G711_ALAW |
       G711_ULAW => {
         ::codecs::g711::read(self.data.as_slice(), self.codec)

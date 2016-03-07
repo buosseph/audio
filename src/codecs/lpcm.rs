@@ -204,6 +204,111 @@ pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
   Ok(bytes)
 }
 
+
+pub fn write(samples: &[Sample], codec: Codec) -> AudioResult<Vec<u8>> {
+  let num_bytes = samples.len() * (codec.bit_depth() / 8);
+  let mut bytes = vec![0u8; num_bytes];
+  if num_bytes != 0 {
+    match codec {
+      LPCM_U8     => {
+        for (i, sample) in samples.iter().enumerate() {
+          bytes[i] = u8::from_sample(*sample);
+        }
+      },
+      LPCM_I8     => {
+        for (i, sample) in samples.iter().enumerate() {
+          bytes[i] = unsafe { mem::transmute_copy(&(i8::from_sample(*sample))) };
+        }
+      },
+      LPCM_I16_LE => {
+        for (i, sample) in samples.iter().enumerate() {
+          LittleEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
+        }
+      },
+      LPCM_I16_BE => {
+        for (i, sample) in samples.iter().enumerate() {
+          BigEndian::write_i16(&mut bytes[2 * i .. 2 * i + 2], i16::from_sample(*sample));
+        }
+      },
+      LPCM_I24_LE => {
+        for (i, sample) in samples.iter().enumerate() {
+          let tmp_f32 = sample * 8_388_608f32;
+          let mut integer = tmp_f32 as i32;
+          if tmp_f32 > 8_388_607f32 {
+            integer = 8_388_607i32
+          }
+          else if tmp_f32 < -8_388_608f32 {
+            integer = -8_388_608i32
+          }
+          // Handle for sign
+          if integer & 0x800000 != 0 {
+            integer |= !0xffffff;
+          }
+          bytes[3 * i + 2] = (integer >> 16) as u8;
+          bytes[3 * i + 1] = (integer >> 8)  as u8;
+          bytes[3 * i]     =  integer        as u8;
+        }
+      },
+      LPCM_I24_BE => {
+        for (i, sample) in samples.iter().enumerate() {
+          let tmp_f32 = sample * 8_388_608f32;
+          let mut integer = tmp_f32 as i32;
+          if tmp_f32 > 8_388_607f32 {
+            integer = 8_388_607i32
+          }
+          else if tmp_f32 < -8_388_608f32 {
+            integer = -8_388_608i32
+          }
+          // Handle for sign
+          if (integer & 0x800000) >> 23 == 1 {
+            integer |= !0xffffff;
+          }
+          bytes[3 * i]     = (integer >> 16) as u8;
+          bytes[3 * i + 1] = (integer >> 8)  as u8;
+          bytes[3 * i + 2] =  integer        as u8;
+        }
+      },
+      LPCM_I32_LE => {
+        for (i, sample) in samples.iter().enumerate() {
+          LittleEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
+        }
+      },
+      LPCM_I32_BE => {
+        for (i, sample) in samples.iter().enumerate() {
+          BigEndian::write_i32(&mut bytes[4 * i .. 4 * i + 4], i32::from_sample(*sample));
+        }
+      },
+      LPCM_F32_LE => {
+        for (i, sample) in samples.iter().enumerate() {
+          LittleEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
+        }
+      },
+      LPCM_F32_BE => {
+        for (i, sample) in samples.iter().enumerate() {
+          BigEndian::write_f32(&mut bytes[4 * i .. 4 * i + 4], f32::from_sample(*sample));
+        }
+      },
+      LPCM_F64_LE => {
+        for (i, sample) in samples.iter().enumerate() {
+          LittleEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
+        }
+      },
+      LPCM_F64_BE => {
+        for (i, sample) in samples.iter().enumerate() {
+          BigEndian::write_f64(&mut bytes[8 * i .. 8 * i + 8], f64::from_sample(*sample));
+        }
+      },
+      c => {
+        return Err(AudioError::Unsupported(
+          format!("Unsupported codec {} was passed into the LPCM decoder", c)
+        ))
+      }
+    }
+  }
+  Ok(bytes)
+}
+
+
 #[cfg(test)]
 mod coding {
   mod encode {
@@ -368,7 +473,7 @@ mod coding {
 
     #[test]
     fn from_i16_le() {
-      let bytes = 
+      let bytes =
         vec![
           0u8, 0x00,
           0xff, 0x7f,
@@ -383,7 +488,7 @@ mod coding {
 
     #[test]
     fn from_i16_be() {
-      let bytes = 
+      let bytes =
         vec![
           0u8, 0x00,
           0x7f, 0xff,
@@ -398,7 +503,7 @@ mod coding {
 
     #[test]
     fn from_i24_le() {
-      let bytes = 
+      let bytes =
         vec![
           0u8, 0x00, 0x00,
           0xff, 0xff, 0x7f,
@@ -413,7 +518,7 @@ mod coding {
 
     #[test]
     fn from_i24_be() {
-      let bytes = 
+      let bytes =
         vec![
           0u8, 0x00, 0x00,
           0x7f, 0xff, 0xff,
@@ -428,7 +533,7 @@ mod coding {
 
     #[test]
     fn from_i32_le() {
-      let bytes = 
+      let bytes =
         vec![
           0u8, 0x00, 0x00, 0x00,
           0xff, 0xff, 0xff, 0x7f,
@@ -443,7 +548,7 @@ mod coding {
 
     #[test]
     fn from_i32_be() {
-      let bytes = 
+      let bytes =
         vec![
           0u8, 0x00, 0x00, 0x00,
           0x7f, 0xff, 0xff, 0xff,

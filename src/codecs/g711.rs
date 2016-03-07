@@ -89,7 +89,7 @@ const ALAW_TO_LINEAR: [i16; 256] = [
     1376,  1312,  1504,  1440,  1120,  1056,  1248,  1184,
     1888,  1824,  2016,  1952,  1632,  1568,  1760,  1696,
     688,   656,   752,   720,   560,   528,   624,   592,
-    944,   912,  1008,   976,   816,   784,   880,   848 
+    944,   912,  1008,   976,   816,   784,   880,   848
 ];
 
 const ULAW_TO_LINEAR: [i16; 256] = [
@@ -224,6 +224,30 @@ pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
     },
     G711_ULAW => {
       for (i, sample) in audio.samples.iter().enumerate() {
+        bytes[i] = linear_to_ulaw(i16::from_sample(*sample));
+      }
+    },
+    c => {
+      return Err(AudioError::Unsupported(
+        format!("Unsupported codec {} was passed into the G711 decoder", c)
+      ))
+    }
+  }
+  Ok(bytes)
+}
+
+
+pub fn write(samples: &[Sample], codec: Codec) -> AudioResult<Vec<u8>> {
+  let num_bytes = samples.len();
+  let mut bytes = vec![0u8; num_bytes];
+  match codec {
+    G711_ALAW => {
+      for (i, sample) in samples.iter().enumerate() {
+        bytes[i] = linear_to_alaw(i16::from_sample(*sample));
+      }
+    },
+    G711_ULAW => {
+      for (i, sample) in samples.iter().enumerate() {
         bytes[i] = linear_to_ulaw(i16::from_sample(*sample));
       }
     },

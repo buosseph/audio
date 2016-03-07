@@ -11,8 +11,10 @@
 
 mod chunks;
 mod read;
+mod write;
 
-pub use self::read::read as read;
+pub use self::read::read   as read;
+pub use self::write::write as write;
 
 /// AIFF/AIFC chunk identifiers.
 const FORM: &'static [u8; 4] = b"FORM";

@@ -6,7 +6,6 @@ use format::aiff::{
   COMM,
   SSND
 };
-use buffer::AudioBuffer;
 use byteorder::{
   BigEndian,
   ByteOrder,
@@ -15,6 +14,7 @@ use byteorder::{
 };
 use codecs::Codec;
 use codecs::Codec::*;
+use ::encoder::AudioEncoder;
 use self::CompressionType::*;
 use traits::Chunk;
 use error::*;
@@ -99,7 +99,6 @@ pub fn is_aifc(codec: Codec) -> AudioResult<bool> {
   }
 }
 
-#[allow(dead_code)]
 fn get_bit_depth(codec: Codec) -> AudioResult<i16> {
   match codec {
     LPCM_U8      |
@@ -119,7 +118,6 @@ fn get_bit_depth(codec: Codec) -> AudioResult<i16> {
 }
 
 impl CommonChunk {
-  #[allow(dead_code)]
   #[inline]
   pub fn calculate_size(codec: Codec) -> AudioResult<i32> {
     match codec {
@@ -139,20 +137,23 @@ impl CommonChunk {
     }
   }
 
-  #[allow(dead_code)]
-  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
+  pub fn write<W: Write>(writer: &mut W,
+                         encoder: &AudioEncoder)
+  -> AudioResult<()> {
+
     try!(writer.write(COMM));
-    let chunk_size: i32 = try!(Self::calculate_size(codec));
+    let chunk_size: i32 = try!(Self::calculate_size(encoder.codec));
+
     try!(writer.write_i32::<BigEndian>(chunk_size));
-    try!(writer.write_i16::<BigEndian>(audio.channels as i16));
-    try!(writer.write_u32::<BigEndian>(audio.samples.len() as u32 / audio.channels));
-    try!(writer.write_i16::<BigEndian>(try!(get_bit_depth(codec))));
-    try!(writer.write(&convert_to_ieee_extended(audio.sample_rate as f64)));
+    try!(writer.write_i16::<BigEndian>(encoder.channels as i16));
+    try!(writer.write_u32::<BigEndian>(encoder.samples.len() as u32 / encoder.channels));
+    try!(writer.write_i16::<BigEndian>(try!(get_bit_depth(encoder.codec))));
+    try!(writer.write(&convert_to_ieee_extended(encoder.sample_rate as f64)));
     // Write additional information if aifc
-    if try!(is_aifc(codec)) {
+    if try!(is_aifc(encoder.codec)) {
       // Write compression type identifier
       let compression =
-        match codec {
+        match encoder.codec {
           LPCM_U8 => RAW,
           G711_ALAW => ALAW,
           G711_ULAW => ULAW,
@@ -216,10 +217,8 @@ impl Chunk for CommonChunk {
   }
 }
 
-#[allow(dead_code)]
 pub struct SoundDataChunk;
 impl SoundDataChunk {
-  #[allow(dead_code)]
   pub fn write<W: Write>(writer: &mut W, encoded_data: &[u8]) -> AudioResult<()> {
     try!(writer.write(SSND));
     try!(writer.write_i32::<BigEndian>((encoded_data.len() + 8) as i32));
