@@ -4,7 +4,6 @@ use std::io::{
 };
 use std::path::Path;
 
-use aiff::Encoder as AiffEncoder;
 use buffer::*;
 use codecs::Codec;
 use encoder::AudioEncoder as Encoder;
@@ -143,19 +142,8 @@ pub fn write<W: Write>(writer: &mut W,
   match format {
     AudioFormat::Wave => WaveEncoder::new(&mut BufWriter::new(writer))
                          .encode(audio),
-    // AudioFormat::Aiff => AiffEncoder::new(&mut BufWriter::new(writer))
-    //                      .encode(audio)
     AudioFormat::Aiff => {
-      // TODO: Refactor encoder to use reference to samples
-      let mut encoder = Encoder {
-        codec: Codec::LPCM_I16_BE, // default codec
-        bit_depth: 16,
-        sample_rate: audio.sample_rate.clone(),
-        channels: audio.channels.clone(),
-        samples: audio.samples.clone()
-      };
-
-      // Writer needs metadata and encode internally
+      let mut encoder = Encoder::from_buffer(audio, Codec::LPCM_I16_BE);
       ::format::aiff::write(writer, &mut encoder)
     }
   }
@@ -177,7 +165,9 @@ pub fn write_as<W: Write>(writer: &mut W,
   match format {
     AudioFormat::Wave => WaveEncoder::new(&mut BufWriter::new(writer))
                          .encode_as(audio, codec),
-    AudioFormat::Aiff => AiffEncoder::new(&mut BufWriter::new(writer))
-                         .encode_as(audio, codec)
+    AudioFormat::Aiff => {
+      let mut encoder = Encoder::from_buffer(audio, codec);
+      ::format::aiff::write(writer, &mut encoder)
+    }
   }
 }

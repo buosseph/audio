@@ -1,53 +1,44 @@
-use std::iter::IntoIterator;
-
 use codecs::Codec;
 use codecs::Codec::*;
+use buffer::AudioBuffer;
 use error::*;
 use sample::*;
 
 
-// TODO: Refactor to use reference of samples (requires lifetime)
 #[derive(Debug)]
-pub struct AudioEncoder {
+pub struct AudioEncoder<'a> {
   pub codec:       Codec,
   pub bit_depth:   u32,
   pub sample_rate: u32,
   pub channels:    u32,
-  pub samples:     Vec<Sample>
+  pub samples:     &'a [Sample]
 }
 
-impl AudioEncoder {
+impl<'a> AudioEncoder<'a> {
   pub fn new() -> Self {
     AudioEncoder {
       codec: Codec::LPCM_I16_LE,
       bit_depth: 0,
       sample_rate: 0,
       channels: 0,
-      samples: Vec::new()
+      samples: &[]
     }
   }
 
-  // pub fn from_buffer(audio: &AudioBuffer, codec: Codec) -> Self {
-  //   AudioEncoder {
-  //     codec: codec,
-  //     bit_depth: codec.bit_depth(),
-  //     sample_rate; audio.sample_rate,
-  //     channels: audio.channels,
-  //     samples: &audio.samples
-  //   }
-  // }
-}
-
-impl IntoIterator for AudioEncoder {
-  type Item = Sample;
-  type IntoIter = ::std::vec::IntoIter<Sample>;
-
-  fn into_iter(self) -> Self::IntoIter {
-    self.samples.into_iter()
+  pub fn from_buffer(audio: &'a AudioBuffer,
+                     codec: Codec)
+  -> Self {
+    AudioEncoder {
+      codec:       codec,
+      bit_depth:   codec.bit_depth() as u32,
+      sample_rate: audio.sample_rate,
+      channels:    audio.channels,
+      samples:     &audio.samples
+    }
   }
 }
 
-impl AudioEncoder {
+impl<'a> AudioEncoder<'a> {
   pub fn encode(&mut self) -> AudioResult<Vec<u8>> {
     match self.codec {
       LPCM_U8     |
@@ -62,12 +53,12 @@ impl AudioEncoder {
       LPCM_F32_BE |
       LPCM_F64_LE |
       LPCM_F64_BE => {
-        ::codecs::lpcm::write(self.samples.as_slice(), self.codec)
+        ::codecs::lpcm::write(self.samples, self.codec)
       },
 
       G711_ALAW |
       G711_ULAW => {
-        ::codecs::g711::write(self.samples.as_slice(), self.codec)
+        ::codecs::g711::write(self.samples, self.codec)
       }
     }
   }
