@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::{
-  BufWriter, Read, Seek, Write
+  Read,
+  Seek,
+  Write
 };
 use std::path::Path;
 
@@ -8,11 +10,7 @@ use buffer::*;
 use codecs::Codec;
 use encoder::AudioEncoder as Encoder;
 use error::*;
-use traits::{
-  AudioDecoder,
-  AudioEncoder
-};
-use wave::Encoder as WaveEncoder;
+use traits::AudioDecoder;
 
 /// All supported audio formats.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -140,8 +138,10 @@ pub fn write<W: Write>(writer: &mut W,
                        format: AudioFormat)
 -> AudioResult<()> {
   match format {
-    AudioFormat::Wave => WaveEncoder::new(&mut BufWriter::new(writer))
-                         .encode(audio),
+    AudioFormat::Wave => {
+      let mut encoder = Encoder::from_buffer(audio, Codec::LPCM_I16_LE);
+      ::format::wave::write(writer, &mut encoder)
+    },
     AudioFormat::Aiff => {
       let mut encoder = Encoder::from_buffer(audio, Codec::LPCM_I16_BE);
       ::format::aiff::write(writer, &mut encoder)
@@ -162,11 +162,12 @@ pub fn write_as<W: Write>(writer: &mut W,
                           format: AudioFormat,
                           codec: Codec)
 -> AudioResult<()> {
+  let mut encoder = Encoder::from_buffer(audio, codec);
   match format {
-    AudioFormat::Wave => WaveEncoder::new(&mut BufWriter::new(writer))
-                         .encode_as(audio, codec),
+    AudioFormat::Wave => {
+      ::format::wave::write(writer, &mut encoder)
+    },
     AudioFormat::Aiff => {
-      let mut encoder = Encoder::from_buffer(audio, codec);
       ::format::aiff::write(writer, &mut encoder)
     }
   }

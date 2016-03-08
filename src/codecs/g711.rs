@@ -5,7 +5,6 @@
 //! - [hazelware](http://hazelware.luggle.com/tutorials/mulawcompression.html)
 //! - [g711.c](http://www.opensource.apple.com/source/tcl/tcl-20/tcl_ext/snack/snack/generic/g711.c)
 
-use buffer::*;
 use codecs::Codec;
 use codecs::Codec::*;
 use error::*;
@@ -213,30 +212,6 @@ pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
   Ok(samples)
 }
 
-pub fn create(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
-  let num_bytes = audio.samples.len();
-  let mut bytes = vec![0u8; num_bytes];
-  match codec {
-    G711_ALAW => {
-      for (i, sample) in audio.samples.iter().enumerate() {
-        bytes[i] = linear_to_alaw(i16::from_sample(*sample));
-      }
-    },
-    G711_ULAW => {
-      for (i, sample) in audio.samples.iter().enumerate() {
-        bytes[i] = linear_to_ulaw(i16::from_sample(*sample));
-      }
-    },
-    c => {
-      return Err(AudioError::Unsupported(
-        format!("Unsupported codec {} was passed into the G711 decoder", c)
-      ))
-    }
-  }
-  Ok(bytes)
-}
-
-
 pub fn write(samples: &[Sample], codec: Codec) -> AudioResult<Vec<u8>> {
   let num_bytes = samples.len();
   let mut bytes = vec![0u8; num_bytes];
@@ -287,7 +262,7 @@ mod coding {
           LPCM_F64_BE
         ];
       for unsupported_codec in codecs.iter() {
-        assert!(g711::create(&audio, *unsupported_codec).is_err());
+        assert!(g711::write(&audio.samples, *unsupported_codec).is_err());
       }
     }
 

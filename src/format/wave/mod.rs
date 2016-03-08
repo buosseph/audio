@@ -11,10 +11,12 @@
 
 mod chunks;
 mod read;
+mod write;
 
 pub use self::read::read as read;
+pub use self::write::write as write;
 
-/// WAVE chunk identifiers.
+/// Wave chunk identifiers.
 const RIFF: &'static [u8; 4] = b"RIFF";
 const WAVE: &'static [u8; 4] = b"WAVE";
 const FMT:  &'static [u8; 4] = b"fmt ";

@@ -16,7 +16,7 @@ mod write;
 pub use self::read::read   as read;
 pub use self::write::write as write;
 
-/// AIFF/AIFC chunk identifiers.
+/// Aiff/Aifc chunk identifiers.
 const FORM: &'static [u8; 4] = b"FORM";
 const AIFF: &'static [u8; 4] = b"AIFF";
 const AIFC: &'static [u8; 4] = b"AIFC";
@@ -24,7 +24,7 @@ const FVER: &'static [u8; 4] = b"FVER";
 const COMM: &'static [u8; 4] = b"COMM";
 const SSND: &'static [u8; 4] = b"SSND";
 
-/// AIFF-C Version 1 timestamp for the FVER chunk.
+/// Aiff-C Version 1 timestamp for the FVER chunk.
 #[allow(dead_code)]
 const AIFC_VERSION_1: u32 = 0xA2805140;
 

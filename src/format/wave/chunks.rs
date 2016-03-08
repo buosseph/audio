@@ -1,7 +1,6 @@
 //! WAVE Chunks
 use std::fmt;
 use std::io::Write;
-use buffer::AudioBuffer;
 use byteorder::{
   ByteOrder,
   LittleEndian,
@@ -10,6 +9,7 @@ use byteorder::{
 };
 use codecs::Codec;
 use codecs::Codec::*;
+use ::encoder::AudioEncoder;
 use error::*;
 use self::FormatChunkVariant::*;
 use self::FormatTag::*;
@@ -143,13 +143,15 @@ impl FormatChunk {
   //  - Data is LPCM (16 or 8 bit, mono or stereo)
   // else WAVE_FORMAT_NON_PCM
   #[allow(dead_code)]
-  fn determine_variant(audio: &AudioBuffer, codec: Codec) -> FormatChunkVariant {
+  fn determine_variant(encoder: &AudioEncoder,
+                       codec: Codec)
+  -> FormatChunkVariant {
     // When fmt is extensible
     // (ch, _) if ch >= 3  => true,
     // if bit_depth % 8 != 0 => true,
     // speaker_positions != 0 => true
     // else
-    match (audio.channels, codec) {
+    match (encoder.channels, codec) {
       (ch, _) if ch > 2 => WaveFormatExtensible,
       (_ , LPCM_U8)     => WaveFormatPcm,
       (_ , LPCM_I16_LE) => WaveFormatPcm,
@@ -161,26 +163,29 @@ impl FormatChunk {
 
   #[allow(dead_code)]
   #[inline]
-  pub fn calculate_size(audio: &AudioBuffer, codec: Codec) -> u32 {
-    FormatChunk::determine_variant(audio, codec) as u32
+  pub fn calculate_size(encoder: &AudioEncoder, codec: Codec) -> u32 {
+    FormatChunk::determine_variant(encoder, codec) as u32
   }
 
   #[allow(dead_code)]
-  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer, codec: Codec) -> AudioResult<()> {
+  pub fn write<W: Write>(writer: &mut W,
+                         encoder: &AudioEncoder,
+                         codec: Codec)
+  -> AudioResult<()> {
     try!(writer.write(FMT));
     let format_tag = try!(determine_format_tag(codec));
     let bit_depth  = try!(get_bit_depth(codec));
-    let data_rate  = audio.sample_rate * audio.channels * (bit_depth / 8) as u32;
-    let block_size = audio.channels as u16 * bit_depth / 8;
-    let variant = FormatChunk::determine_variant(audio, codec);
+    let data_rate  = encoder.sample_rate * encoder.channels * (bit_depth / 8) as u32;
+    let block_size = encoder.channels as u16 * bit_depth / 8;
+    let variant = FormatChunk::determine_variant(encoder, codec);
     try!(writer.write_u32::<LittleEndian>(variant as u32));
     match variant {
       WaveFormatExtensible =>
         try!(writer.write_u16::<LittleEndian>(WAVE_FORMAT_EXTENSIBLE_TAG)),
       _ => try!(writer.write_u16::<LittleEndian>(format_tag as u16))
     }
-    try!(writer.write_u16::<LittleEndian>(audio.channels as u16));
-    try!(writer.write_u32::<LittleEndian>(audio.sample_rate as u32));
+    try!(writer.write_u16::<LittleEndian>(encoder.channels as u16));
+    try!(writer.write_u32::<LittleEndian>(encoder.sample_rate as u32));
     try!(writer.write_u32::<LittleEndian>(data_rate));
     try!(writer.write_u16::<LittleEndian>(block_size));
     try!(writer.write_u16::<LittleEndian>(bit_depth));
@@ -194,7 +199,7 @@ impl FormatChunk {
         // type of the encoded data. Ranges is [1, bit_depth].
         try!(writer.write_u16::<LittleEndian>(bit_depth));
         // Speaker position mask, for now only support mono and stereo
-        match audio.channels {
+        match encoder.channels {
           1 => try!(writer.write_u32::<LittleEndian>(0x4)),
           2 => try!(writer.write_u32::<LittleEndian>(0x2 | 0x1)),
           _ => try!(writer.write_u32::<LittleEndian>(0x0)),
@@ -251,11 +256,30 @@ impl DataChunk {
 pub struct FactChunk;
 impl FactChunk {
   #[allow(dead_code)]
-  pub fn write<W: Write>(writer: &mut W, audio: &AudioBuffer) -> AudioResult<()> {
+  pub fn write<W: Write>(writer: &mut W, encoder: &AudioEncoder) -> AudioResult<()> {
     try!(writer.write(FACT));
     try!(writer.write_u32::<LittleEndian>(4));
-    try!(writer.write_u32::<LittleEndian>(audio.samples.len() as u32 / audio.channels));
+    try!(writer.write_u32::<LittleEndian>(encoder.samples.len() as u32 / encoder.channels));
     Ok(())
+  }
+}
+
+/// depends on whether the codec is integer-based PCM, the return value
+/// represeents if the codec as such.
+pub fn is_supported(codec: Codec) -> AudioResult<bool> {
+  match codec {
+    LPCM_U8      |
+    LPCM_I16_LE  |
+    LPCM_I24_LE  |
+    LPCM_I32_LE  => Ok(false),
+    LPCM_F32_LE  |
+    LPCM_F64_LE  |
+    G711_ALAW    |
+    G711_ULAW    => Ok(true),
+    c @ _ =>
+      return Err(AudioError::Unsupported(
+        format!("Wave does not support the {:?} codec", c)
+      ))
   }
 }
 

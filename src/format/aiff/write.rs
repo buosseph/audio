@@ -3,7 +3,7 @@ use std::io::Write;
 use byteorder::{
   BigEndian,
   ByteOrder,
-  WriteBytesExt,
+  WriteBytesExt
 };
 use ::encoder::AudioEncoder;
 use error::*;

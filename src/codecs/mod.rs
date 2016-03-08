@@ -1,7 +1,4 @@
 use std::fmt;
-use buffer::*;
-use error::*;
-use sample::*;
 
 pub mod lpcm;
 pub mod g711;
@@ -85,56 +82,6 @@ impl fmt::Display for Codec {
       &LPCM_F64_BE => fmt.write_str("64-bit big endian floating-point PCM"),
       &G711_ALAW   => fmt.write_str("G.711 8-bit A-law"),
       &G711_ULAW   => fmt.write_str("G.711 8-bit µ-law")
-    }
-  }
-}
-
-/// Decodes bytes using the specified `Codec`.
-pub fn decode(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
-  use Codec::*;
-  match codec {
-    LPCM_U8     |
-    LPCM_I8     |
-    LPCM_I16_LE |
-    LPCM_I16_BE |
-    LPCM_I24_LE |
-    LPCM_I24_BE |
-    LPCM_I32_LE |
-    LPCM_I32_BE |
-    LPCM_F32_LE |
-    LPCM_F32_BE |
-    LPCM_F64_LE |
-    LPCM_F64_BE => {
-      lpcm::read(bytes, codec)
-    },
-    G711_ALAW |
-    G711_ULAW => {
-      g711::read(bytes, codec)
-    }
-  }
-}
-
-/// Encodes `Sample`s the specified `Codec`.
-pub fn encode(audio: &AudioBuffer, codec: Codec) -> AudioResult<Vec<u8>> {
-  use Codec::*;
-  match codec {
-    LPCM_U8     |
-    LPCM_I8     |
-    LPCM_I16_LE |
-    LPCM_I16_BE |
-    LPCM_I24_LE |
-    LPCM_I24_BE |
-    LPCM_I32_LE |
-    LPCM_I32_BE |
-    LPCM_F32_LE |
-    LPCM_F32_BE |
-    LPCM_F64_LE |
-    LPCM_F64_BE => {
-      lpcm::create(audio, codec)
-    },
-    G711_ALAW |
-    G711_ULAW => {
-      g711::create(audio, codec)
     }
   }
 }
