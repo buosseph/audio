@@ -9,6 +9,8 @@ use codecs::Codec::*;
 use error::*;
 use sample::*;
 
+// TODO: Update unit tests
+#[allow(dead_code)]
 pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
   let num_samples = bytes.len() / (codec.bit_depth() / 8);
   let mut samples = vec![0f32; num_samples];
@@ -203,6 +205,88 @@ pub fn write(samples: &[Sample], codec: Codec) -> AudioResult<Vec<u8>> {
   Ok(bytes)
 }
 
+pub fn read_sample(bytes: &[u8], codec: Codec) -> AudioResult<Sample> {
+  let required_num_bytes = codec.bit_depth() / 8;
+  if bytes.len() != required_num_bytes {
+    return Err(AudioError::Unsupported(
+      "Missing some bytes for sample decode".to_string()))
+  }
+
+  let sample =
+    match codec {
+      LPCM_U8 => {
+        bytes[0].to_sample()
+      },
+
+      LPCM_I8 => {
+        (bytes[0] as i8).to_sample()
+      },
+
+      LPCM_I16_LE => {
+        LittleEndian::read_i16(&bytes[0..2]).to_sample()
+      },
+
+      LPCM_I16_BE => {
+        BigEndian::read_i16(&bytes[0..2]).to_sample()
+      },
+
+      LPCM_I24_LE => {
+        let mut tmp_i32 = 0;
+        tmp_i32 |= (bytes[2] as i32) << 16;
+        tmp_i32 |= (bytes[1] as i32) << 8;
+        tmp_i32 |=  bytes[0] as i32;
+
+        // Handle for sign
+        if (tmp_i32 & 0x800000) >> 23 == 1 {
+          tmp_i32 |= !0xffffff;
+        }
+
+        tmp_i32 as Sample / 8_388_608f32
+      },
+
+      LPCM_I24_BE => {
+        let mut tmp_i32 = 0;
+        tmp_i32 |= (bytes[0] as i32) << 16;
+        tmp_i32 |= (bytes[1] as i32) << 8;
+        tmp_i32 |=  bytes[2] as i32;
+
+        // Handle for sign
+        if (tmp_i32 & 0x800000) >> 23 == 1 {
+          tmp_i32 |= !0xffffff;
+        }
+
+        tmp_i32 as Sample / 8_388_608f32
+      },
+
+      LPCM_I32_LE => {
+        LittleEndian::read_i32(&bytes[0..4]).to_sample()
+      },
+
+      LPCM_I32_BE => {
+        BigEndian::read_i32(&bytes[0..4]).to_sample()
+      },
+
+      LPCM_F32_LE => {
+        LittleEndian::read_f32(&bytes[0..4]).to_sample()
+      },
+
+      LPCM_F32_BE => {
+        BigEndian::read_f32(&bytes[0..4]).to_sample()
+      },
+
+      LPCM_F64_LE => {
+        LittleEndian::read_f64(&bytes[0..8]).to_sample()
+      },
+
+      LPCM_F64_BE => {
+        BigEndian::read_f64(&bytes[0..8]).to_sample()
+      },
+
+      _ => unimplemented!()
+    };
+
+  Ok(sample)
+}
 
 #[cfg(test)]
 mod coding {
@@ -329,6 +413,7 @@ mod coding {
       }
     }
   }
+
   mod decode {
     use ::codecs::Codec::*;
     use ::codecs::lpcm;

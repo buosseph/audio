@@ -189,6 +189,8 @@ pub fn linear_to_ulaw(sample: i16) -> u8 {
   (!ulaw_value) as u8
 }
 
+// TODO: Update unit tests
+#[allow(dead_code)]
 pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
   let num_samples = bytes.len();
   let mut samples = vec![0f32; num_samples];
@@ -233,6 +235,33 @@ pub fn write(samples: &[Sample], codec: Codec) -> AudioResult<Vec<u8>> {
     }
   }
   Ok(bytes)
+}
+
+pub fn read_sample(bytes: &[u8], codec: Codec) -> AudioResult<Sample> {
+  let required_num_bytes = codec.bit_depth() / 8;
+  if bytes.len() != required_num_bytes {
+    return Err(AudioError::Unsupported(
+      "Missing some bytes for sample decode".to_string()))
+  }
+
+  let sample =
+    match codec {
+      G711_ALAW => {
+        alaw_to_linear(bytes[0]).to_sample()
+      },
+
+      G711_ULAW => {
+        ulaw_to_linear(bytes[0]).to_sample()
+      },
+
+      c => {
+        return Err(AudioError::Unsupported(
+          format!("Unsupported codec {} was passed into the G711 decoder", c)
+        ))
+      }
+    };
+
+  Ok(sample)
 }
 
 #[cfg(test)]
@@ -282,6 +311,7 @@ mod coding {
       assert_eq!(0x7f, linear_to_ulaw(-1));
     }
   }
+
   mod decode {
     use ::codecs::Codec::*;
     use ::codecs::g711;

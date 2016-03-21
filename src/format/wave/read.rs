@@ -111,10 +111,9 @@ fn read_chunks_for_audio<R: Read + Seek>(reader: &mut R,
         iterator.bit_depth   = chunk.bit_depth    as u32;
         iterator.sample_rate = chunk.sample_rate  as u32;
         iterator.channels    = chunk.num_channels as u32;
-        // iterator.num_frames  = chunk.num_frames;
 
-        iterator.codec  = try!(determine_codec(chunk.format_tag,
-                                               chunk.bit_depth));
+        iterator.codec  = determine_codec(chunk.format_tag,
+                                          chunk.bit_depth).ok();
 
         read_fmt_chunk = true;
         if chunk.format_tag == FormatTag::Pcm {

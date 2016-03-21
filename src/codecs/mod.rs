@@ -42,22 +42,27 @@ pub enum Codec {
 }
 
 impl Codec {
-  /// Returns the bit depth of the decoded audio from a codec.
+  /// Returns the bit depth of the encoded audio output by a codec.
   pub fn bit_depth(&self) -> usize {
     use Codec::*;
+
     match *self {
-      LPCM_U8     |
-      LPCM_I8     => 8,
       G711_ALAW   |
       G711_ULAW   |
+      LPCM_U8     |
+      LPCM_I8     => 8,
+
       LPCM_I16_LE |
       LPCM_I16_BE => 16,
+
       LPCM_I24_LE |
       LPCM_I24_BE => 24,
+
       LPCM_I32_LE |
       LPCM_I32_BE |
       LPCM_F32_LE |
       LPCM_F32_BE => 32,
+
       LPCM_F64_LE |
       LPCM_F64_BE => 64
     }
@@ -67,6 +72,7 @@ impl Codec {
 impl fmt::Display for Codec {
   fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
     use Codec::*;
+
     match self {
       &LPCM_U8     => fmt.write_str("Unsigned 8-bit PCM"),
       &LPCM_I8     => fmt.write_str("Signed 8-bit PCM"),
@@ -130,6 +136,7 @@ mod formatting {
       assert_eq!(*expected_str, format!("{}", codec));
     }
   }
+
   #[test]
   fn debug() {
     use Codec::*;

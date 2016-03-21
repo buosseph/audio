@@ -132,10 +132,9 @@ fn read_chunks_for_audio<R: Read + Seek>(reader: &mut R,
         iterator.bit_depth   = chunk.bit_depth    as u32;
         iterator.sample_rate = chunk.sample_rate  as u32;
         iterator.channels    = chunk.num_channels as u32;
-        iterator.num_frames  = chunk.num_frames;
 
-        iterator.codec  = try!(determine_codec(chunk.compression_type,
-                                               chunk.bit_depth));
+        iterator.codec  = determine_codec(chunk.compression_type,
+                                          chunk.bit_depth).ok();
         read_comm_chunk = true;
       },
 
@@ -163,7 +162,7 @@ fn read_chunks_for_audio<R: Read + Seek>(reader: &mut R,
   }
 
   // Check if required chunks were read
-  if try!(is_aifc(iterator.codec)) && !read_fver_chunk {
+  if try!(is_aifc(iterator.codec.unwrap())) && !read_fver_chunk {
     return Err(AudioError::Format(
       "File is not valid AIFC \
       (Missing required FormatVersion chunk)".to_string()

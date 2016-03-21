@@ -8,9 +8,8 @@ use std::path::Path;
 
 use buffer::*;
 use codecs::Codec;
-use encoder::AudioEncoder as Encoder;
+use encoder::AudioEncoder;
 use error::*;
-use traits::AudioDecoder;
 
 /// All supported audio formats.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -26,6 +25,18 @@ pub enum AudioFormat {
 /// The necessary decoder is determined by the `Path` file extension. An
 /// `AudioError` is returned if the file type is not supported or if an error
 /// occurred in the decoding process.
+///
+/// Examples
+///
+/// ```
+/// use std::path::Path;
+///
+/// let path = Path::new("tests/wav/Warrior Concerto - no meta.wav");
+/// assert_eq!(audio::open(path).is_ok(), true);
+///
+/// let path = Path::new("tests/aiff/Warrior Concerto - no meta.aiff");
+/// assert_eq!(audio::open(path).is_ok(), true);
+/// ```
 pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
   let ext = path.extension().and_then(|s| s.to_str());
   if let Some(file_format) = ext {
@@ -52,11 +63,28 @@ pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
 /// The necessary decoder is determined by the provided `AudioFormat`. An
 /// `AudioError` is returned if the format is not supported or if an error
 /// occurred in the decoding process.
+///
+/// Examples
+///
+/// ```
+/// use std::path::Path;
+/// use std::fs::File;
+///
+/// use audio::AudioFormat;
+///
+/// let path = Path::new("tests/wav/Warrior Concerto - no meta.wav");
+/// let mut file = File::open(path).ok().unwrap();
+/// assert_eq!(audio::load(&mut file, AudioFormat::Wave).is_ok(), true);
+///
+/// let path = Path::new("tests/aiff/Warrior Concerto - no meta.aiff");
+/// let mut file = File::open(path).ok().unwrap();
+/// assert_eq!(audio::load(&mut file, AudioFormat::Aiff).is_ok(), true);
+/// ```
 #[inline]
 pub fn load<R: Read+Seek>(reader: &mut R,
                           format: AudioFormat)
 -> AudioResult<AudioBuffer> {
-  let mut decoder =
+  let decoder =
     match format {
       AudioFormat::Wave => try!(::format::wave::read(reader)),
       AudioFormat::Aiff => try!(::format::aiff::read(reader))
@@ -65,7 +93,7 @@ pub fn load<R: Read+Seek>(reader: &mut R,
   Ok(AudioBuffer::from_samples(
     decoder.sample_rate,
     decoder.channels,
-    try!(decoder.decode())
+    decoder.collect()
   ))
 }
 
@@ -139,11 +167,11 @@ pub fn write<W: Write>(writer: &mut W,
 -> AudioResult<()> {
   match format {
     AudioFormat::Wave => {
-      let mut encoder = Encoder::from_buffer(audio, Codec::LPCM_I16_LE);
+      let mut encoder = AudioEncoder::from_buffer(audio, Codec::LPCM_I16_LE);
       ::format::wave::write(writer, &mut encoder)
     },
     AudioFormat::Aiff => {
-      let mut encoder = Encoder::from_buffer(audio, Codec::LPCM_I16_BE);
+      let mut encoder = AudioEncoder::from_buffer(audio, Codec::LPCM_I16_BE);
       ::format::aiff::write(writer, &mut encoder)
     }
   }
@@ -162,7 +190,7 @@ pub fn write_as<W: Write>(writer: &mut W,
                           format: AudioFormat,
                           codec: Codec)
 -> AudioResult<()> {
-  let mut encoder = Encoder::from_buffer(audio, codec);
+  let mut encoder = AudioEncoder::from_buffer(audio, codec);
   match format {
     AudioFormat::Wave => {
       ::format::wave::write(writer, &mut encoder)
