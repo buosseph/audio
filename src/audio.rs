@@ -39,16 +39,20 @@ pub enum AudioFormat {
 /// ```
 pub fn open(path: &Path) -> AudioResult<AudioBuffer> {
   let ext = path.extension().and_then(|s| s.to_str());
+
   if let Some(file_format) = ext {
     let format = match file_format {
       "wav"|"wave"        => AudioFormat::Wave,
       "aif"|"aiff"|"aifc" => AudioFormat::Aiff,
+
       f_ext @ _           => return
         Err(AudioError::Format(
           format!("Did not recognize audio file format .{}", f_ext)
         ))
     };
+
     let mut file = try!(File::open(path));
+
     load(&mut file, format)
   }
   else {
@@ -106,16 +110,20 @@ pub fn save(path: &Path,
             audio: &AudioBuffer)
 -> AudioResult<()> {
   let ext = path.extension().and_then(|s| s.to_str());
+
   if let Some(file_format) = ext {
     let format = match file_format {
       "wav"|"wave"        => AudioFormat::Wave,
       "aif"|"aiff"|"aifc" => AudioFormat::Aiff,
+
       f_ext @ _           => return
         Err(AudioError::Format(
           format!("Did not recognize audio file format .{}", f_ext)
         ))
     };
+
     let mut file = try!(File::create(path));
+
     write(&mut file, audio, format)
   }
   else {
@@ -135,16 +143,20 @@ pub fn save_as(path: &Path,
                audio: &AudioBuffer, codec: Codec)
 -> AudioResult<()> {
   let ext = path.extension().and_then(|s| s.to_str());
+
   if let Some(file_format) = ext {
     let format = match file_format {
       "wav"|"wave"        => AudioFormat::Wave,
       "aif"|"aiff"|"aifc" => AudioFormat::Aiff,
+
       f_ext @ _           => return
         Err(AudioError::Format(
           format!("Did not recognize audio file format .{}", f_ext)
         ))
     };
+
     let mut file = try!(File::create(path));
+
     write_as(&mut file, audio, format, codec)
   }
   else {
@@ -170,6 +182,7 @@ pub fn write<W: Write>(writer: &mut W,
       let mut encoder = AudioEncoder::from_buffer(audio, Codec::LPCM_I16_LE);
       ::format::wave::write(writer, &mut encoder)
     },
+
     AudioFormat::Aiff => {
       let mut encoder = AudioEncoder::from_buffer(audio, Codec::LPCM_I16_BE);
       ::format::aiff::write(writer, &mut encoder)
@@ -191,10 +204,12 @@ pub fn write_as<W: Write>(writer: &mut W,
                           codec: Codec)
 -> AudioResult<()> {
   let mut encoder = AudioEncoder::from_buffer(audio, codec);
+
   match format {
     AudioFormat::Wave => {
       ::format::wave::write(writer, &mut encoder)
     },
+
     AudioFormat::Aiff => {
       ::format::aiff::write(writer, &mut encoder)
     }

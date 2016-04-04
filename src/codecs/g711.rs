@@ -142,20 +142,25 @@ pub fn ulaw_to_linear(ulaw_value: u8) -> i16 {
 #[allow(overflowing_literals, unused_comparisons)]
 pub fn linear_to_alaw(sample: i16) -> u8 {
   let mut pcm_value = sample;
-  let sign = (pcm_value & 0x8000) >> 8;
+  let sign          = (pcm_value & 0x8000) >> 8;
+
   if sign != 0 {
     pcm_value = -pcm_value;
   }
+
   // Clip at 15-bits
   if pcm_value > 0x7fff {
     pcm_value = 0x7fff;
   }
+
   let mut exponent: i16 = 7;
-  let mut mask = 0x4000;
+  let mut mask          = 0x4000;
+
   while pcm_value & mask == 0 && exponent > 0 {
     exponent -= 1;
     mask >>= 1;
   }
+
   let manitssa: i16 =
     if exponent == 0 {
       (pcm_value >> 4) & 0x0f
@@ -163,82 +168,71 @@ pub fn linear_to_alaw(sample: i16) -> u8 {
     else {
       (pcm_value >> (exponent + 3)) & 0x0f
     };
+
   let alaw_value = sign | exponent << 4 | manitssa;
+
   (alaw_value ^ 0xd5) as u8
 }
 
 /// Convert a 16-bit LPCM sample to an 8-bit µ-law value.
 pub fn linear_to_ulaw(sample: i16) -> u8 {
   let mut pcm_value = sample;
-  let sign = (pcm_value >> 8) & 0x80;
+  let sign          = (pcm_value >> 8) & 0x80;
+
   if sign != 0 {
     pcm_value = -pcm_value;
   }
+
   if pcm_value > 32635 {
     pcm_value = 32635;
   }
-  pcm_value += 0x84;
-  let mut exponent: i16 = 7;
-  let mut mask = 0x4000;
-  while pcm_value & mask == 0 {
-    exponent -= 1;
-    mask >>= 1;
-  }
-  let manitssa: i16 = (pcm_value >> (exponent + 3)) & 0x0f;
-  let ulaw_value = sign | exponent << 4 | manitssa;
-  (!ulaw_value) as u8
-}
 
-// TODO: Update unit tests
-#[allow(dead_code)]
-pub fn read(bytes: &[u8], codec: Codec) -> AudioResult<Vec<Sample>> {
-  let num_samples = bytes.len();
-  let mut samples = vec![0f32; num_samples];
-  match codec {
-    G711_ALAW => {
-      for (i, sample) in samples.iter_mut().enumerate() {
-        *sample = alaw_to_linear(bytes[i]).to_sample();
-      }
-    },
-    G711_ULAW => {
-      for (i, sample) in samples.iter_mut().enumerate() {
-        *sample = ulaw_to_linear(bytes[i]).to_sample();
-      }
-    },
-    c => {
-      return Err(AudioError::Unsupported(
-        format!("Unsupported codec {} was passed into the G711 decoder", c)
-      ))
-    }
+  pcm_value += 0x84;
+
+  let mut exponent: i16 = 7;
+  let mut mask          = 0x4000;
+
+  while pcm_value & mask == 0 {
+    exponent -=  1;
+    mask     >>= 1;
   }
-  Ok(samples)
+
+  let manitssa: i16 = (pcm_value >> (exponent + 3)) & 0x0f;
+  let ulaw_value    = sign | exponent << 4 | manitssa;
+
+  (!ulaw_value) as u8
 }
 
 pub fn write(samples: &[Sample], codec: Codec) -> AudioResult<Vec<u8>> {
   let num_bytes = samples.len();
   let mut bytes = vec![0u8; num_bytes];
+
   match codec {
     G711_ALAW => {
       for (i, sample) in samples.iter().enumerate() {
         bytes[i] = linear_to_alaw(i16::from_sample(*sample));
       }
     },
+
     G711_ULAW => {
       for (i, sample) in samples.iter().enumerate() {
         bytes[i] = linear_to_ulaw(i16::from_sample(*sample));
       }
     },
+
     c => {
       return Err(AudioError::Unsupported(
         format!("Unsupported codec {} was passed into the G711 decoder", c)
       ))
     }
   }
+
   Ok(bytes)
 }
 
 pub fn read_sample(bytes: &[u8], codec: Codec) -> AudioResult<Sample> {
   let required_num_bytes = codec.bit_depth() / 8;
+
   if bytes.len() != required_num_bytes {
     return Err(AudioError::Unsupported(
       "Missing some bytes for sample decode".to_string()))
@@ -273,8 +267,8 @@ mod coding {
     use ::codecs::g711::*;
 
     #[test]
-    fn with_unsupported_codec() {
-      let audio = AudioBuffer::from_samples(44100, 1, vec![0f32; 4]);
+    fn unsupported_codec() {
+      let audio  = AudioBuffer::from_samples(44100, 1, vec![0f32; 4]);
       let codecs =
         vec![
           LPCM_U8,
@@ -290,6 +284,7 @@ mod coding {
           LPCM_F64_LE,
           LPCM_F64_BE
         ];
+
       for unsupported_codec in codecs.iter() {
         assert!(g711::write(&audio.samples, *unsupported_codec).is_err());
       }
@@ -318,8 +313,8 @@ mod coding {
     use ::codecs::g711::*;
 
     #[test]
-    fn with_unsupported_codec() {
-      let bytes = vec![0u8; 4];
+    fn unsupported_codec() {
+      let bytes  = vec![0u8; 4];
       let codecs =
         vec![
           LPCM_U8,
@@ -335,20 +330,21 @@ mod coding {
           LPCM_F64_LE,
           LPCM_F64_BE
         ];
+
       for unsupported_codec in codecs.iter() {
-        assert!(g711::read(&bytes, *unsupported_codec).is_err());
+        assert!(g711::read_sample(&bytes, *unsupported_codec).is_err());
       }
     }
 
     #[test]
     fn alaw_to_i16() {
-      assert_eq!(8,  alaw_to_linear(213));
+      assert_eq!( 8, alaw_to_linear(213));
       assert_eq!(-8, alaw_to_linear(85));
     }
 
     #[test]
     fn ulaw_to_i16() {
-      assert_eq!(0, ulaw_to_linear(0xff));
+      assert_eq!( 0, ulaw_to_linear(0xff));
       assert_eq!(-1, ulaw_to_linear(0x7f));
     }
   }
